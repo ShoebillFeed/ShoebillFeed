@@ -1,0 +1,193 @@
+import { useState, useEffect, useRef } from "react";
+import { RefreshCw } from "lucide-react";
+import type { Category, CategoryCreate } from "../../types/category";
+import { useCreateCategory, useUpdateCategory } from "../../hooks/useCategories";
+import { categoriesApi } from "../../api/categories";
+import { cn } from "../../lib/utils";
+
+const PRESET_COLORS = [
+  "#6366f1", "#ec4899", "#f59e0b", "#10b981", "#3b82f6",
+  "#8b5cf6", "#ef4444", "#14b8a6", "#f97316", "#06b6d4",
+];
+
+function buildFallbackPrompt(name: string, keywords: string): string {
+  const trimmedName = name.trim();
+  if (!trimmedName) return "";
+  const keywordList = keywords.split(",").map((k) => k.trim()).filter(Boolean);
+  const keywordPart = keywordList.length
+    ? ` Relevant keywords include: ${keywordList.join(", ")}.`
+    : "";
+  return `Articles about ${trimmedName}.${keywordPart} Assign this category to content that focuses on ${trimmedName} topics or closely related subjects.`;
+}
+
+interface Props {
+  category?: Category;
+  onClose: () => void;
+}
+
+export default function CategoryForm({ category, onClose }: Props) {
+  const isEdit = Boolean(category);
+  const create = useCreateCategory();
+  const update = useUpdateCategory();
+
+  const [name, setName] = useState(category?.name ?? "");
+  const [color, setColor] = useState(category?.color ?? "#6366f1");
+  const [keywords, setKeywords] = useState(category?.keywords.join(", ") ?? "");
+  const [prompt, setPrompt] = useState(
+    category?.prompt ?? buildFallbackPrompt(category?.name ?? "", category?.keywords.join(", ") ?? "")
+  );
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const promptManuallyEdited = useRef(Boolean(category?.prompt));
+
+  useEffect(() => {
+    if (!promptManuallyEdited.current) {
+      setPrompt(buildFallbackPrompt(name, keywords));
+    }
+  }, [name, keywords]);
+
+  const handlePromptChange = (value: string) => {
+    promptManuallyEdited.current = true;
+    setGenerateError(null);
+    setPrompt(value);
+  };
+
+  const regeneratePrompt = async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+
+    const keywordList = keywords.split(",").map((k) => k.trim()).filter(Boolean);
+    setGenerating(true);
+    setGenerateError(null);
+    promptManuallyEdited.current = false;
+
+    try {
+      const generated = await categoriesApi.generatePrompt(trimmedName, keywordList);
+      setPrompt(generated);
+    } catch {
+      setGenerateError("LLM generation failed — using template instead.");
+      setPrompt(buildFallbackPrompt(trimmedName, keywords));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const keywordList = keywords.split(",").map((k) => k.trim()).filter(Boolean);
+    const data: CategoryCreate = { name, color, keywords: keywordList, prompt: prompt || null };
+    if (isEdit && category) {
+      await update.mutateAsync({ id: category.id, data });
+    } else {
+      await create.mutateAsync(data);
+    }
+    onClose();
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div>
+        <label className="block text-sm font-medium mb-1">Name</label>
+        <input
+          className={inputClass}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          placeholder="e.g. AI, Politics, Logistics"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Color</label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {PRESET_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setColor(c)}
+              style={{ backgroundColor: c }}
+              className={cn(
+                "w-7 h-7 rounded-full border-2 transition-transform",
+                color === c ? "border-gray-900 dark:border-white scale-110" : "border-transparent"
+              )}
+            />
+          ))}
+        </div>
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+          className="w-full h-8 rounded cursor-pointer border border-gray-300 dark:border-gray-600"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Keywords (comma-separated)</label>
+        <input
+          className={inputClass}
+          value={keywords}
+          onChange={(e) => setKeywords(e.target.value)}
+          placeholder="LLM, GPT, AI, machine learning"
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          Keywords help the LLM classify articles into this category.
+        </p>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium">Classification prompt</label>
+          <button
+            type="button"
+            onClick={regeneratePrompt}
+            disabled={generating || !name.trim()}
+            className={cn(
+              "flex items-center gap-1 text-xs transition-colors",
+              generating || !name.trim()
+                ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                : "text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300"
+            )}
+            title="Generate with LLM"
+          >
+            <RefreshCw size={12} className={generating ? "animate-spin" : ""} />
+            {generating ? "Generating…" : "Regenerate"}
+          </button>
+        </div>
+        <textarea
+          className={cn(inputClass, "resize-none", generating && "opacity-50")}
+          rows={3}
+          value={generating ? "Asking the LLM to analyse this category…" : prompt}
+          onChange={(e) => handlePromptChange(e.target.value)}
+          readOnly={generating}
+          placeholder="Describe what articles belong in this category…"
+        />
+        {generateError && (
+          <p className="text-xs text-amber-500 mt-1">{generateError}</p>
+        )}
+        <p className="text-xs text-gray-400 mt-1">
+          The LLM first reasons about what topics belong here, then writes the prompt. You can edit it freely.
+        </p>
+      </div>
+
+      <div className="flex gap-2 mt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 px-4 py-2 text-sm font-medium rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={generating}
+          className="flex-1 px-4 py-2 text-sm font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+        >
+          {isEdit ? "Save" : "Add Category"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+const inputClass =
+  "w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500";

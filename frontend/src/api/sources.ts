@@ -1,0 +1,12 @@
+import client from "./client";
+import type { Source, SourceCreate, SourceUpdate } from "../types/source";
+
+export const sourcesApi = {
+  list: () => client.get<Source[]>("/sources").then((r) => r.data),
+  create: (data: SourceCreate) => client.post<Source>("/sources", data).then((r) => r.data),
+  update: (id: string, data: SourceUpdate) =>
+    client.patch<Source>(`/sources/${id}`, data).then((r) => r.data),
+  delete: (id: string) => client.delete(`/sources/${id}`),
+  fetch: (id: string) => client.post(`/sources/${id}/fetch`).then((r) => r.data),
+  fetchAll: () => client.post("/sources/fetch-all").then((r) => r.data),
+};

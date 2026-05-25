@@ -1,0 +1,67 @@
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api import news, sources, categories, settings as settings_router, clusters
+from app.api import auth as auth_router
+
+logger = logging.getLogger(__name__)
+
+
+def _ensure_default_user() -> None:
+    from app.config import get_settings
+    settings = get_settings()
+    if not settings.admin_username or not settings.admin_password:
+        return
+    from app.database import SessionLocal
+    from app.models.user import User
+    from app.services.auth import hash_password
+    from sqlalchemy import select
+    db = SessionLocal()
+    try:
+        existing = db.scalar(select(User).where(User.username == settings.admin_username))
+        if not existing:
+            db.add(User(
+                username=settings.admin_username,
+                hashed_password=hash_password(settings.admin_password),
+                is_admin=True,
+            ))
+            db.commit()
+            logger.info("Created default admin user '%s'", settings.admin_username)
+        elif not existing.is_admin:
+            existing.is_admin = True
+            db.commit()
+            logger.info("Promoted '%s' to admin", settings.admin_username)
+    finally:
+        db.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _ensure_default_user()
+    yield
+
+
+app = FastAPI(title="Harmonic Phoenix", version="1.0.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:80",
+        "http://localhost",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth_router.router, prefix="/api/auth", tags=["auth"])
+app.include_router(news.router, prefix="/api/news", tags=["news"])
+app.include_router(sources.router, prefix="/api/sources", tags=["sources"])
+app.include_router(categories.router, prefix="/api/categories", tags=["categories"])
+app.include_router(settings_router.router, prefix="/api/settings", tags=["settings"])
+app.include_router(clusters.router, prefix="/api/clusters", tags=["clusters"])

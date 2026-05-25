@@ -1,0 +1,35 @@
+import client from "./client";
+import type { NewsPage, FeedTab } from "../types/news";
+
+export interface NewsParams {
+  tab: FeedTab;
+  category_id?: string;
+  source_id?: string;
+  is_read?: boolean;
+  read_later?: boolean;
+  page?: number;
+  page_size?: number;
+}
+
+export const newsApi = {
+  list: (params: NewsParams) =>
+    client.get<NewsPage>("/news", { params }).then((r) => r.data),
+
+  toggleRead: (id: string) =>
+    client.patch(`/news/${id}/read`).then((r) => r.data),
+
+  toggleRelevant: (id: string) =>
+    client.patch(`/news/${id}/relevant`).then((r) => r.data),
+
+  toggleReadLater: (id: string) =>
+    client.patch(`/news/${id}/read-later`).then((r) => r.data),
+
+  markAllRead: (category_id?: string) =>
+    client.post("/news/mark-all-read", null, { params: { category_id } }).then((r) => r.data),
+
+  reprocess: (id: string) =>
+    client.post(`/news/${id}/reprocess`).then((r) => r.data),
+
+  delete: (id: string) =>
+    client.delete(`/news/${id}`).then((r) => r.data),
+};
