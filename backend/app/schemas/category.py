@@ -19,6 +19,7 @@ class CategoryUpdate(BaseModel):
     color: str | None = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
     keywords: list[str] | None = None
     prompt: str | None = None
+    is_active: bool | None = None
 
 
 class CategoryWeightOut(BaseModel):
@@ -31,6 +32,7 @@ class CategoryWeightOut(BaseModel):
 
 class CategoryOut(CategoryBase):
     id: uuid.UUID
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime
     weight: CategoryWeightOut | None = None

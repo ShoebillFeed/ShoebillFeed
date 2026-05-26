@@ -72,7 +72,7 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
       REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID:-}
       REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
-      REDDIT_USER_AGENT: ${REDDIT_USER_AGENT:-HarmonicPhoenix/1.0}
+      REDDIT_USER_AGENT: ${REDDIT_USER_AGENT:-ShoebillFeed/1.0}
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
@@ -102,7 +102,7 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
       REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID:-}
       REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
-      REDDIT_USER_AGENT: ${REDDIT_USER_AGENT:-HarmonicPhoenix/1.0}
+      REDDIT_USER_AGENT: ${REDDIT_USER_AGENT:-ShoebillFeed/1.0}
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
     depends_on:
       postgres:

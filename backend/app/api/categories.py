@@ -1,5 +1,6 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, update
 from sqlalchemy.orm import Session, joinedload
@@ -116,3 +117,43 @@ def generate_prompt(payload: GeneratePromptRequest, _: User = Depends(get_curren
         return {"prompt": prompt.strip()}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"LLM error: {exc}") from exc
+
+
+@router.get("/export")
+def export_categories(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    categories = db.scalars(
+        select(Category).where(Category.user_id == current_user.id).order_by(Category.name)
+    ).all()
+    data = [
+        {"name": c.name, "color": c.color, "keywords": c.keywords, "prompt": c.prompt}
+        for c in categories
+    ]
+    return JSONResponse(content=data, headers={"Content-Disposition": "attachment; filename=categories.json"})
+
+
+class CategoryImportItem(BaseModel):
+    name: str = Field(..., max_length=100)
+    color: str = Field(default="#6366f1", pattern=r"^#[0-9a-fA-F]{6}$")
+    keywords: list[str] = Field(default_factory=list)
+    prompt: str | None = None
+
+
+@router.post("/import", response_model=list[CategoryOut], status_code=201)
+def import_categories(
+    payload: list[CategoryImportItem],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    created = []
+    for item in payload:
+        existing = db.scalar(
+            select(Category).where(Category.user_id == current_user.id, Category.name == item.name)
+        )
+        if existing:
+            continue
+        category = Category(**item.model_dump(), user_id=current_user.id)
+        db.add(category)
+        db.flush()
+        created.append(category)
+    db.commit()
+    return [_build_out(db, c) for c in created]

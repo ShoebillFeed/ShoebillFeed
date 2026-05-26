@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Newspaper } from "lucide-react";
+import { ShoebillIcon } from "../components/icons/ShoebillIcon";
 import { useLogin, useMe } from "../hooks/useAuth";
 
 export default function LoginPage() {
@@ -29,8 +29,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2">
-            <Newspaper size={28} />
-            <span className="text-2xl font-bold">Harmonic Phoenix</span>
+            <ShoebillIcon size={28} />
+            <span className="text-2xl font-bold">Shoebill Feed</span>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to your account</p>
         </div>

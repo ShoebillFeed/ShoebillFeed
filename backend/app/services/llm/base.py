@@ -1,6 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Optional
 
 
 SYSTEM_PROMPT = """You are a news analyst. Given a news article title and content, return a JSON object with exactly these fields:
@@ -12,6 +13,19 @@ SYSTEM_PROMPT = """You are a news analyst. Given a news article title and conten
 
 Available categories: {categories_json}
 Each category has a name and keywords. If a description field is present, use it to judge whether the article fits that category. Include all categories that genuinely apply.
+
+Respond ONLY with valid JSON. No markdown fences, no extra text."""
+
+SOCIAL_SYSTEM_PROMPT = """You are a news analyst. Given a social media post, return a JSON object with exactly these fields:
+- "headline": string, a short punchy headline (max 12 words) that captures the core topic of the post. Write in the same language as the post.
+- "abstract": string, 1-2 sentence summary of the post. Write in the same language as the post.
+- "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent the post's topic.
+- "categories": array of category names from the provided list that fit this post (can be empty [], can have multiple matches)
+- "relevance_score": integer 1-10, how relevant this is to the matched categories' keywords (5 if no category matched)
+- "impact_score": integer 1-10, how broadly impactful this post is (10 = global significance, 1 = minor personal post)
+
+Available categories: {categories_json}
+Each category has a name and keywords. If a description field is present, use it to judge whether the post fits that category. Include all categories that genuinely apply.
 
 Respond ONLY with valid JSON. No markdown fences, no extra text."""
 
@@ -37,6 +51,7 @@ class ProcessedResult:
     category_names: list[str]
     relevance_score: int
     impact_score: int
+    generated_title: str | None = None
 
 
 @dataclass
@@ -47,6 +62,22 @@ class ClusterResult:
     relevance_score: int
     impact_score: int
     source_summaries: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class NewsletterItem:
+    headline: str
+    url: Optional[str]
+    summary: str
+    keywords: list[str]
+    category_names: list[str]
+    relevance_score: int
+    impact_score: int
+
+
+@dataclass
+class NewsletterResult:
+    items: list[NewsletterItem]
 
 
 def _clamp(v, default: int = 5) -> int:
@@ -70,7 +101,7 @@ def _parse_categories(raw, known_categories: list[str]) -> list[str]:
     return [name for name in (str(n).strip() for n in raw) if name in known_categories]
 
 
-def parse_llm_response(text: str, known_categories: list[str]) -> ProcessedResult:
+def parse_llm_response(text: str, known_categories: list[str], social_post: bool = False) -> ProcessedResult:
     text = text.strip()
     if text.startswith("```"):
         text = text.split("```")[1]
@@ -79,9 +110,9 @@ def parse_llm_response(text: str, known_categories: list[str]) -> ProcessedResul
     data = json.loads(text)
 
     abstract = str(data.get("abstract", "")).strip() or "No abstract available."
-    # Accept both "categories" (new) and legacy "category" (single string)
     raw_cats = data.get("categories", data.get("category"))
     category_names = _parse_categories(raw_cats, known_categories)
+    generated_title = str(data["headline"]).strip() if social_post and data.get("headline") else None
 
     return ProcessedResult(
         abstract=abstract,
@@ -89,6 +120,7 @@ def parse_llm_response(text: str, known_categories: list[str]) -> ProcessedResul
         category_names=category_names,
         relevance_score=_clamp(data.get("relevance_score"), 5),
         impact_score=_clamp(data.get("impact_score"), 5),
+        generated_title=generated_title,
     )
 
 
@@ -120,6 +152,72 @@ def parse_cluster_response(text: str, item_count: int, known_categories: list[st
     )
 
 
+NEWSLETTER_SYSTEM_PROMPT = """You are a newsletter parser. Extract individual news items from newsletter content.
+
+The content may appear in two formats:
+
+FORMAT A — Pre-extracted article blocks (each separated by a blank line):
+  TITLE: <headline>
+  URL: <link to full article>
+  TEASER: <short description>  (optional)
+
+FORMAT B — Raw text with inline [link text](url) markers:
+  Article headings appear before links labelled "weiterlesen", "read more", etc.
+  Those links are the article URLs.
+
+For each article, return one object with:
+- "headline": the article title, in the same language as the content (max 15 words)
+- "url": the article URL (tracking/redirect URLs are fine; set null only if truly absent)
+- "summary": 1-3 sentence summary in the same language
+- "keywords": array of 3-5 lowercase keywords
+- "categories": array of matching category names from the list (can be [])
+- "relevance_score": integer 1-10
+- "impact_score": integer 1-10
+
+Return: {{"items": [...]}}
+
+Available categories: {categories_json}
+
+Rules:
+- Skip ads, sponsored content, navigation, footer items, and subscription prompts
+- Process every TITLE block — do not skip any
+
+Respond ONLY with valid JSON. No markdown fences, no extra text."""
+
+
+def parse_newsletter_response(text: str, known_categories: list[str]) -> NewsletterResult:
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    data = json.loads(text)
+    raw_items = data.get("items", [])
+    if not isinstance(raw_items, list):
+        return NewsletterResult(items=[])
+
+    items = []
+    for entry in raw_items:
+        if not isinstance(entry, dict):
+            continue
+        headline = str(entry.get("headline", "")).strip()
+        if not headline:
+            continue
+        url = entry.get("url")
+        url = str(url).strip() if url and str(url).strip().startswith("http") else None
+        summary = str(entry.get("summary", "")).strip() or None
+        items.append(NewsletterItem(
+            headline=headline,
+            url=url,
+            summary=summary,
+            keywords=_parse_keywords(entry.get("keywords")),
+            category_names=_parse_categories(entry.get("categories", []), known_categories),
+            relevance_score=_clamp(entry.get("relevance_score"), 5),
+            impact_score=_clamp(entry.get("impact_score"), 5),
+        ))
+    return NewsletterResult(items=items)
+
+
 CATEGORY_TOPICS_PROMPT = """What topics, themes, subtopics, and related keywords typically appear in news coverage under the category "{name}"?{keywords_hint}
 
 List them concisely — no preamble, no explanation, just the topics and keywords."""
@@ -143,6 +241,7 @@ class LLMProvider(ABC):
         content: str,
         categories: list[dict],
         max_content_chars: int = 4000,
+        social_post: bool = False,
     ) -> ProcessedResult: ...
 
     @abstractmethod
@@ -152,6 +251,13 @@ class LLMProvider(ABC):
         categories: list[dict],
         max_content_chars: int = 2000,
     ) -> ClusterResult: ...
+
+    @abstractmethod
+    def extract_newsletter_items(
+        self,
+        content: str,
+        categories: list[dict],
+    ) -> NewsletterResult: ...
 
     @abstractmethod
     def _complete(self, system: str, user: str, max_tokens: int = 512) -> str: ...

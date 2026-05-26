@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { newsApi } from "../api/news";
 import { clustersApi } from "../api/clusters";
-import type { FeedTab } from "../types/news";
+import type { ApiTab } from "../api/news";
 
 export function useNews(params: {
-  tab: FeedTab;
+  tab: ApiTab;
   category_id?: string;
   source_id?: string;
   is_read?: boolean;

@@ -1,29 +1,29 @@
 import { useFilterStore } from "../stores/filterStore";
-import { usePreferencesStore } from "../stores/preferencesStore";
 import { useNews, useMarkAllRead } from "../hooks/useNews";
 import FeedTabs from "../components/feed/FeedTabs";
 import CategoryFilter from "../components/feed/CategoryFilter";
 import SourceFilter from "../components/feed/SourceFilter";
 import NewsFeed from "../components/feed/NewsFeed";
-import { CheckCheck, RefreshCw, Info } from "lucide-react";
+import { CheckCheck, RefreshCw } from "lucide-react";
 import { sourcesApi } from "../api/sources";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function FeedPage() {
   const { activeTab, setTab, selectedCategoryIds, selectedSourceIds, showUnreadOnly, setShowUnreadOnly } =
     useFilterStore();
-  const { autoLabelOnRead, setAutoLabelOnRead } = usePreferencesStore();
   const qc = useQueryClient();
   const markAllRead = useMarkAllRead();
 
   const categoryId = selectedCategoryIds.length === 1 ? selectedCategoryIds[0] : undefined;
   const sourceId = selectedSourceIds.length === 1 ? selectedSourceIds[0] : undefined;
 
+  const isReadLater = activeTab === "read_later";
   const { data, isLoading } = useNews({
-    tab: activeTab,
+    tab: isReadLater ? "newest" : activeTab,
     category_id: categoryId,
     source_id: sourceId,
     is_read: showUnreadOnly ? false : undefined,
+    read_later: isReadLater ? true : undefined,
   });
 
   const handleFetchAll = async () => {
@@ -45,22 +45,7 @@ export default function FeedPage() {
             />
             Unread only
           </label>
-          <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={autoLabelOnRead}
-              onChange={(e) => setAutoLabelOnRead(e.target.checked)}
-              className="rounded"
-            />
-            Auto-label relevant
-            <span
-              title="When enabled, marking an article as read automatically marks it as relevant (★). The star will highlight so you can undo it."
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help"
-              onClick={(e) => e.preventDefault()}
-            >
-              <Info size={13} />
-            </span>
-          </label>
+
           <button
             onClick={handleFetchAll}
             title="Fetch all sources now"

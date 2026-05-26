@@ -1,0 +1,21 @@
+from pydantic import BaseModel, Field
+
+
+class UserSettingsOut(BaseModel):
+    weight_base: float = 1.0
+    weight_log_multiplier: float = 0.5
+    relevance_llm_weight: float = 1.0
+    relevance_learning_weight: float = 1.0
+    relevance_cluster_weight: float = 0.5
+    stats_enabled: bool = True
+
+    model_config = {"from_attributes": True}
+
+
+class UserSettingsUpdate(BaseModel):
+    weight_base: float | None = Field(None, ge=0.0, le=10.0)
+    weight_log_multiplier: float | None = Field(None, ge=0.0, le=5.0)
+    relevance_llm_weight: float | None = Field(None, ge=0.0, le=5.0)
+    relevance_learning_weight: float | None = Field(None, ge=0.0, le=5.0)
+    relevance_cluster_weight: float | None = Field(None, ge=0.0, le=5.0)
+    stats_enabled: bool | None = None

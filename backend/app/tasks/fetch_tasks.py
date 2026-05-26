@@ -13,6 +13,8 @@ import app.services.fetchers.rss  # noqa: F401 — register fetchers
 import app.services.fetchers.reddit  # noqa: F401
 import app.services.fetchers.youtube  # noqa: F401
 import app.services.fetchers.email_imap  # noqa: F401
+import app.services.fetchers.mastodon  # noqa: F401
+import app.services.fetchers.scholar  # noqa: F401
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)

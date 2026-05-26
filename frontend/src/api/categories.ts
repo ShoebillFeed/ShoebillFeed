@@ -1,6 +1,13 @@
 import client from "./client";
 import type { Category, CategoryCreate, CategoryUpdate } from "../types/category";
 
+export interface CategoryExportItem {
+  name: string;
+  color: string;
+  keywords: string[];
+  prompt: string | null;
+}
+
 export const categoriesApi = {
   list: () => client.get<Category[]>("/categories").then((r) => r.data),
   create: (data: CategoryCreate) => client.post<Category>("/categories", data).then((r) => r.data),
@@ -14,4 +21,7 @@ export const categoriesApi = {
       .then((r) => r.data.prompt),
   setManualWeight: (id: string, manual_weight: number) =>
     client.patch<Category>(`/categories/${id}/weight`, { manual_weight }).then((r) => r.data),
+  export: () => client.get<CategoryExportItem[]>("/categories/export").then((r) => r.data),
+  import: (data: CategoryExportItem[]) =>
+    client.post<Category[]>("/categories/import", data).then((r) => r.data),
 };

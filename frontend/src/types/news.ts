@@ -56,7 +56,7 @@ export interface NewsCluster {
 
 export type FeedEntry = NewsItem | NewsCluster;
 
-export type FeedTab = "newest" | "relevant" | "impact";
+export type FeedTab = "newest" | "relevant" | "impact" | "read_later";
 
 export interface NewsPage {
   items: FeedEntry[];

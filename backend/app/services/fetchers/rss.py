@@ -58,7 +58,7 @@ class RSSFetcher(NewsFetcher):
 
     def _autodiscover_feed(self, url: str) -> str | None:
         try:
-            resp = httpx.get(url, timeout=10, follow_redirects=True, headers={"User-Agent": "HarmonicPhoenix/1.0"})
+            resp = httpx.get(url, timeout=10, follow_redirects=True, headers={"User-Agent": "ShoebillFeed/1.0"})
             soup = BeautifulSoup(resp.text, "lxml")
             for link_tag in soup.find_all("link", rel="alternate"):
                 if link_tag.get("type") in ("application/rss+xml", "application/atom+xml"):
@@ -80,7 +80,7 @@ class RSSFetcher(NewsFetcher):
                     return BeautifulSoup(text, "lxml").get_text(separator=" ", strip=True)
 
         try:
-            resp = httpx.get(link, timeout=10, follow_redirects=True, headers={"User-Agent": "HarmonicPhoenix/1.0"})
+            resp = httpx.get(link, timeout=10, follow_redirects=True, headers={"User-Agent": "ShoebillFeed/1.0"})
             soup = BeautifulSoup(resp.text, "lxml")
             article = soup.find("article") or soup.find("main") or soup.body
             if article:

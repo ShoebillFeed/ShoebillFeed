@@ -80,7 +80,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
                 {item.source.name}
               </span>
             )}
-            {item.categories.map((cat) => (
+            {item.categories.filter((cat, i, arr) => arr.findIndex(c => c.id === cat.id) === i).map((cat) => (
               <span
                 key={cat.id}
                 className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded text-white shrink-0"
@@ -253,6 +253,9 @@ function sourceTypeIcon(type: string) {
     reddit: "🔴",
     youtube: "▶️",
     email: "✉️",
+    mastodon: "🐘",
+    arxiv: "🎓",
+    scholar: "🎓",
   };
   return icons[type] ?? "📄";
 }

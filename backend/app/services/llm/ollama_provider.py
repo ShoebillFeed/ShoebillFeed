@@ -2,9 +2,9 @@ import json
 import httpx
 
 from app.services.llm.base import (
-    LLMProvider, ProcessedResult, ClusterResult,
-    SYSTEM_PROMPT, CLUSTER_SYSTEM_PROMPT,
-    parse_llm_response, parse_cluster_response,
+    LLMProvider, ProcessedResult, ClusterResult, NewsletterResult,
+    SYSTEM_PROMPT, SOCIAL_SYSTEM_PROMPT, CLUSTER_SYSTEM_PROMPT, NEWSLETTER_SYSTEM_PROMPT,
+    parse_llm_response, parse_cluster_response, parse_newsletter_response,
 )
 
 
@@ -26,21 +26,23 @@ class OllamaProvider(LLMProvider):
         resp.raise_for_status()
         return resp.json()["response"]
 
-    def process_item(self, title, content, categories, max_content_chars=4000) -> ProcessedResult:
+    def process_item(self, title, content, categories, max_content_chars=4000, social_post=False) -> ProcessedResult:
         truncated = (content or title)[:max_content_chars]
         known = [c["name"] for c in categories]
-        system = SYSTEM_PROMPT.format(categories_json=json.dumps(categories))
+        prompt_template = SOCIAL_SYSTEM_PROMPT if social_post else SYSTEM_PROMPT
+        system = prompt_template.format(categories_json=json.dumps(categories))
+        user = f"Post: {truncated}" if social_post else f"Title: {title}\n\nContent: {truncated}"
 
         payload = {
             "model": self.model,
             "stream": False,
             "format": "json",
             "system": system,
-            "prompt": f"Title: {title}\n\nContent: {truncated}",
+            "prompt": user,
         }
         resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
         resp.raise_for_status()
-        return parse_llm_response(resp.json()["response"], known)
+        return parse_llm_response(resp.json()["response"], known, social_post=social_post)
 
     def process_cluster(self, items, categories, max_content_chars=2000) -> ClusterResult:
         known = [c["name"] for c in categories]
@@ -61,6 +63,25 @@ class OllamaProvider(LLMProvider):
         resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
         resp.raise_for_status()
         return parse_cluster_response(resp.json()["response"], len(items), known)
+
+    def extract_newsletter_items(self, content: str, categories: list[dict]) -> NewsletterResult:
+        known = [c["name"] for c in categories]
+        system = NEWSLETTER_SYSTEM_PROMPT.format(categories_json=json.dumps(categories, ensure_ascii=False))
+        payload = {
+            "model": self.model,
+            "stream": False,
+            "format": "json",
+            "system": system,
+            "prompt": f"Newsletter content:\n\n{content[:8000]}",
+            "options": {"num_predict": 4096},
+        }
+        resp = self.client.post(
+            f"{self.base_url}/api/generate",
+            json=payload,
+            timeout=600.0,
+        )
+        resp.raise_for_status()
+        return parse_newsletter_response(resp.json()["response"], known)
 
     def health_check(self) -> bool:
         try:

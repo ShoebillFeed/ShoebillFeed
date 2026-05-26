@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { sourcesApi } from "../api/sources";
 import type { SourceCreate, SourceUpdate } from "../types/source";
 
+
 export function useSources() {
   return useQuery({ queryKey: ["sources"], queryFn: sourcesApi.list });
 }
@@ -35,5 +36,22 @@ export function useFetchSource() {
   return useMutation({
     mutationFn: sourcesApi.fetch,
     onSuccess: () => setTimeout(() => qc.invalidateQueries({ queryKey: ["news"] }), 3000),
+  });
+}
+
+export function useImportSources() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: SourceCreate[]) => sourcesApi.import(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sources"] }),
+  });
+}
+
+export function useToggleSourceActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      sourcesApi.update(id, { is_active }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sources"] }),
   });
 }

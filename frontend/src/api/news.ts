@@ -1,8 +1,10 @@
 import client from "./client";
-import type { NewsPage, FeedTab } from "../types/news";
+import type { NewsPage } from "../types/news";
+
+export type ApiTab = "newest" | "relevant" | "impact";
 
 export interface NewsParams {
-  tab: FeedTab;
+  tab: ApiTab;
   category_id?: string;
   source_id?: string;
   is_read?: boolean;

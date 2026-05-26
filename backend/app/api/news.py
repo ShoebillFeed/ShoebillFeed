@@ -12,6 +12,7 @@ from app.models import NewsItem, Category, CategoryWeight, KeywordWeight, NewsCl
 from app.models.news_item import news_item_categories
 from app.models.news_cluster import news_cluster_categories
 from app.models.user import User
+from app.models.user_settings import UserSettings
 from app.schemas.news_item import NewsItemOut, NewsClusterOut, FeedEntry
 from app.schemas.pagination import Page
 from app.services.scoring import update_category_weight, update_keyword_weights
@@ -99,17 +100,28 @@ def _build_feed(
             kw.keyword: kw.weight
             for kw in db.scalars(select(KeywordWeight).where(KeywordWeight.user_id == user_id)).all()
         }
+        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == user_id))
+        llm_w = user_settings.relevance_llm_weight if user_settings else 1.0
+        learn_w = user_settings.relevance_learning_weight if user_settings else 1.0
+        cluster_w = user_settings.relevance_cluster_weight if user_settings else 0.5
+
         def _rel_key(e):
             cat_ids = [c.id for c in e.categories]
-            cat_w = max((cat_weights.get(cid, 1.0) for cid in cat_ids), default=1.0)
+            raw_cat = max((cat_weights.get(cid, 1.0) for cid in cat_ids), default=1.0)
+            # Blend category influence: 0 = flat (1.0), 1 = raw, 2 = amplified
+            cat_w = 1.0 + (raw_cat - 1.0) * learn_w
+
             n = len(e.items) if isinstance(e, NewsCluster) else 1
-            source_bonus = 1.0 + math.log1p(n - 1) * 0.5
+            source_bonus = 1.0 + math.log1p(n - 1) * cluster_w
+
             keywords = e.extracted_keywords or []
-            kw_factor = (
+            raw_kw = (
                 sum(kw_weights.get(k, 1.0) for k in keywords) / len(keywords)
                 if keywords else 1.0
             )
-            return (e.relevance_score or 5) * cat_w * source_bonus * kw_factor
+            kw_factor = 1.0 + (raw_kw - 1.0) * learn_w
+
+            return (e.relevance_score or 5) * llm_w * cat_w * source_bonus * kw_factor
         all_entries.sort(key=_rel_key, reverse=True)
     elif tab == "impact":
         all_entries.sort(key=lambda e: e.impact_score or 0, reverse=True)
@@ -183,8 +195,11 @@ def toggle_relevant(item_id: uuid.UUID, db: Session = Depends(get_db), current_u
     item.is_relevant = not item.is_relevant
     db.commit()
     if item.is_relevant:
+        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
+        base = user_settings.weight_base if user_settings else 1.0
+        multiplier = user_settings.weight_log_multiplier if user_settings else 0.5
         for cat in item.categories:
-            update_category_weight(db, cat.id)
+            update_category_weight(db, cat.id, base=base, multiplier=multiplier)
         if item.extracted_keywords:
             update_keyword_weights(db, item.extracted_keywords, current_user.id)
     db.refresh(item)

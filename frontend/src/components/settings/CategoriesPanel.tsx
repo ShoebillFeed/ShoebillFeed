@@ -1,21 +1,68 @@
 import { useState, useRef } from "react";
-import { Plus, Trash2, Pencil, RotateCcw } from "lucide-react";
-import { useCategories, useDeleteCategory, useResetWeights, useSetManualWeight } from "../../hooks/useCategories";
+import { Plus, Trash2, Pencil, RotateCcw, Download, Upload } from "lucide-react";
+import { useCategories, useDeleteCategory, useResetWeights, useSetManualWeight, useImportCategories, useUpdateCategory } from "../../hooks/useCategories";
+import { categoriesApi } from "../../api/categories";
 import CategoryForm from "./CategoryForm";
 import type { Category } from "../../types/category";
+
+function downloadJson(data: unknown, filename: string) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function CategoriesPanel() {
   const { data: categories, isLoading } = useCategories();
   const deleteCategory = useDeleteCategory();
   const resetWeights = useResetWeights();
+  const importCategories = useImportCategories();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
+
+  const handleExport = async () => {
+    const data = await categoriesApi.export();
+    downloadJson(data, "categories.json");
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        importCategories.mutate(data);
+      } catch {
+        alert("Invalid JSON file");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold text-gray-900 dark:text-gray-100">Categories</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={handleExport}
+            title="Export categories as JSON"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+          >
+            <Download size={14} /> Export
+          </button>
+          <label
+            title="Import categories from JSON"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 cursor-pointer"
+          >
+            <Upload size={14} /> Import
+            <input type="file" accept=".json" className="hidden" onChange={handleImport} />
+          </label>
           <button
             onClick={() => {
               if (confirm("Reset all category weights to 1.0? This will re-start relevance learning."))
@@ -80,6 +127,7 @@ function CategoryRow({
   onDelete: () => void;
 }) {
   const setManualWeight = useSetManualWeight();
+  const updateCategory = useUpdateCategory();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [localWeight, setLocalWeight] = useState(cat.weight?.manual_weight ?? 1.0);
 
@@ -91,18 +139,23 @@ function CategoryRow({
     }, 400);
   };
 
+  const handleToggleActive = () => {
+    updateCategory.mutate({ id: cat.id, data: { is_active: !cat.is_active } });
+  };
+
   const learnedWeight = cat.weight?.weight ?? 1.0;
   const effectiveWeight = learnedWeight * localWeight;
+  const inactive = !cat.is_active;
 
   return (
-    <div className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+    <div className={`p-3 bg-white dark:bg-gray-900 border rounded-lg transition-opacity ${inactive ? "opacity-50 border-gray-100 dark:border-gray-800" : "border-gray-200 dark:border-gray-700"}`}>
       <div className="flex items-center gap-3">
         <div
           className="w-4 h-4 rounded-full shrink-0"
-          style={{ backgroundColor: cat.color }}
+          style={{ backgroundColor: inactive ? "#9ca3af" : cat.color }}
         />
         <div className="flex-1 min-w-0">
-          <span className="text-sm font-medium">{cat.name}</span>
+          <span className={`text-sm font-medium ${inactive ? "text-gray-400 dark:text-gray-500" : ""}`}>{cat.name}</span>
           <p className="text-xs text-gray-400">
             {cat.item_count} articles
             {cat.weight?.total_marked ? ` · ${cat.weight.total_marked} ★ marks` : ""}
@@ -112,7 +165,19 @@ function CategoryRow({
           )}
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Active toggle */}
+          <button
+            role="switch"
+            aria-checked={cat.is_active}
+            title={cat.is_active ? "Disable category" : "Enable category"}
+            onClick={handleToggleActive}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${cat.is_active ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"}`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${cat.is_active ? "translate-x-4" : "translate-x-0"}`}
+            />
+          </button>
           <button
             title="Edit"
             onClick={onEdit}
@@ -130,26 +195,30 @@ function CategoryRow({
         </div>
       </div>
 
-      {/* Weight slider */}
-      <div className="mt-2.5 flex items-center gap-3">
-        <span className="text-xs text-gray-400 w-12 shrink-0">Weight</span>
-        <input
-          type="range"
-          min={0}
-          max={5}
-          step={0.1}
-          value={localWeight}
-          onChange={(e) => handleSliderChange(parseFloat(e.target.value))}
-          className="flex-1 h-1.5 accent-indigo-600 cursor-pointer"
-        />
-        <span className="text-xs font-mono text-gray-500 dark:text-gray-400 w-20 shrink-0 text-right">
-          ×{localWeight.toFixed(1)}
-          <span className="text-gray-400 dark:text-gray-600"> = {effectiveWeight.toFixed(2)}</span>
-        </span>
-      </div>
-      <p className="text-xs text-gray-400 mt-0.5 pl-[3.25rem]">
-        manual × learned {learnedWeight.toFixed(2)}
-      </p>
+      {/* Weight slider — only shown when active */}
+      {cat.is_active && (
+        <>
+          <div className="mt-2.5 flex items-center gap-3">
+            <span className="text-xs text-gray-400 w-12 shrink-0">Weight</span>
+            <input
+              type="range"
+              min={0}
+              max={5}
+              step={0.1}
+              value={localWeight}
+              onChange={(e) => handleSliderChange(parseFloat(e.target.value))}
+              className="flex-1 h-1.5 accent-indigo-600 cursor-pointer"
+            />
+            <span className="text-xs font-mono text-gray-500 dark:text-gray-400 w-20 shrink-0 text-right">
+              ×{localWeight.toFixed(1)}
+              <span className="text-gray-400 dark:text-gray-600"> = {effectiveWeight.toFixed(2)}</span>
+            </span>
+          </div>
+          <p className="text-xs text-gray-400 mt-0.5 pl-[3.25rem]">
+            manual × learned {learnedWeight.toFixed(2)}
+          </p>
+        </>
+      )}
     </div>
   );
 }

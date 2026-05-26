@@ -34,7 +34,7 @@ There is no test suite currently.
 
 ## Architecture Overview
 
-**Harmonic Phoenix** is a self-hosted news aggregator with LLM-powered categorization. The system follows a fetch → deduplicate → LLM-process → score pipeline.
+**Shoebill Feed** is a self-hosted news aggregator with LLM-powered categorization. The system follows a fetch → deduplicate → LLM-process → score pipeline.
 
 ### Services (docker-compose)
 

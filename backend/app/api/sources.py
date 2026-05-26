@@ -1,5 +1,6 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
@@ -33,6 +34,39 @@ def create_source(payload: SourceCreate, db: Session = Depends(get_db), current_
     db.commit()
     db.refresh(source)
     return _with_count(db, source)
+
+
+@router.get("/export")
+def export_sources(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    sources = db.scalars(
+        select(Source).where(Source.user_id == current_user.id).order_by(Source.created_at)
+    ).all()
+    data = [
+        {"name": s.name, "source_type": s.source_type, "config": s.config, "is_active": s.is_active, "fetch_interval": s.fetch_interval}
+        for s in sources
+    ]
+    return JSONResponse(content=data, headers={"Content-Disposition": "attachment; filename=sources.json"})
+
+
+@router.post("/import", response_model=list[SourceOut], status_code=201)
+def import_sources(
+    payload: list[SourceCreate],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    created = []
+    for item in payload:
+        existing = db.scalar(
+            select(Source).where(Source.user_id == current_user.id, Source.name == item.name)
+        )
+        if existing:
+            continue
+        source = Source(**item.model_dump(), user_id=current_user.id)
+        db.add(source)
+        db.flush()
+        created.append(source)
+    db.commit()
+    return [_with_count(db, s) for s in created]
 
 
 @router.get("/{source_id}", response_model=SourceOut)

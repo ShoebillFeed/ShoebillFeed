@@ -5,7 +5,7 @@ from app.config import get_settings
 settings = get_settings()
 
 celery_app = Celery(
-    "harmonic_phoenix",
+    "shoebill_feed",
     broker=settings.redis_url,
     backend=settings.redis_url.replace("/0", "/1"),
     include=[

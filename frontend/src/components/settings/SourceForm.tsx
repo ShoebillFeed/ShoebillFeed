@@ -8,6 +8,8 @@ const SOURCE_TYPES: { id: SourceType; label: string }[] = [
   { id: "reddit", label: "Reddit" },
   { id: "youtube", label: "YouTube" },
   { id: "email", label: "Email (IMAP)" },
+  { id: "mastodon", label: "Mastodon" },
+  { id: "arxiv", label: "arXiv" },
 ];
 
 const DEFAULT_INTERVALS = [
@@ -160,6 +162,42 @@ function ConfigFields({
       <Field label="Password" field="password" config={config} onChange={onChange} placeholder="app password" type="password" required />
       <Field label="Folder" field="folder" config={config} onChange={onChange} placeholder="INBOX" />
       <Field label="Subject filter (optional)" field="subject_filter" config={config} onChange={onChange} placeholder="" />
+    </>
+  );
+  if (type === "mastodon") return (
+    <>
+      <Field label="Instance URL" field="instance_url" config={config} onChange={onChange} placeholder="mastodon.social" required />
+      <div>
+        <label className="block text-sm font-medium mb-1">Feed type</label>
+        <select
+          className={inputClass}
+          value={config["feed_type"] ?? "hashtag"}
+          onChange={(e) => onChange("feed_type", e.target.value)}
+        >
+          <option value="hashtag">Hashtag</option>
+          <option value="user">User timeline</option>
+          <option value="local">Local timeline</option>
+        </select>
+      </div>
+      {(config["feed_type"] ?? "hashtag") !== "local" && (
+        <Field
+          label={(config["feed_type"] ?? "hashtag") === "user" ? "Username (without @)" : "Hashtag (without #)"}
+          field="name"
+          config={config}
+          onChange={onChange}
+          placeholder={(config["feed_type"] ?? "hashtag") === "user" ? "username" : "technology"}
+          required
+        />
+      )}
+    </>
+  );
+  if (type === "arxiv" || type === "scholar") return (
+    <>
+      <Field label="Search query" field="query" config={config} onChange={onChange} placeholder="e.g. transformer architecture" required />
+      <p className="text-xs text-gray-400 dark:text-gray-500 -mt-2">
+        Examples: <span className="font-mono">large language models</span> · <span className="font-mono">quantum computing error correction</span> · <span className="font-mono">CRISPR gene editing</span> · <span className="font-mono">reinforcement learning robotics</span>
+        <br />Tip: combine terms with spaces for AND, use <span className="font-mono">OR</span> for alternatives.
+      </p>
     </>
   );
   return null;

@@ -1,11 +1,14 @@
 import redis as redis_lib
 from fastapi import APIRouter, Depends
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_user
 from app.config import get_settings
+from app.models.user import User
+from app.models.user_settings import UserSettings
 from app.schemas.news_item import HealthOut, LLMConfigOut, LLMConfigUpdate
+from app.schemas.user_settings import UserSettingsOut, UserSettingsUpdate
 from app.services.llm.factory import get_llm_provider
 
 router = APIRouter()
@@ -63,3 +66,32 @@ def update_llm_config(payload: LLMConfigUpdate):
         ollama_base_url=payload.ollama_base_url or settings.ollama_base_url,
         ollama_model=payload.ollama_model or settings.ollama_model,
     )
+
+
+def _get_or_create_settings(db: Session, user_id) -> UserSettings:
+    settings = db.scalar(select(UserSettings).where(UserSettings.user_id == user_id))
+    if not settings:
+        settings = UserSettings(user_id=user_id)
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    return settings
+
+
+@router.get("/advanced", response_model=UserSettingsOut)
+def get_advanced_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return _get_or_create_settings(db, current_user.id)
+
+
+@router.patch("/advanced", response_model=UserSettingsOut)
+def update_advanced_settings(
+    payload: UserSettingsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    s = _get_or_create_settings(db, current_user.id)
+    for field, value in payload.model_dump(exclude_none=True).items():
+        setattr(s, field, value)
+    db.commit()
+    db.refresh(s)
+    return s

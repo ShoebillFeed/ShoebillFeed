@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     reddit_client_id: str = ""
     reddit_client_secret: str = ""
-    reddit_user_agent: str = "HarmonicPhoenix/1.0"
+    reddit_user_agent: str = "ShoebillFeed/1.0"
     reddit_username: str = ""
     reddit_password: str = ""
 

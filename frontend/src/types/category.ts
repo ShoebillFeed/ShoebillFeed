@@ -10,6 +10,7 @@ export interface Category {
   color: string;
   keywords: string[];
   prompt: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
   weight: CategoryWeight | null;
@@ -28,4 +29,5 @@ export interface CategoryUpdate {
   color?: string;
   keywords?: string[];
   prompt?: string | null;
+  is_active?: boolean;
 }

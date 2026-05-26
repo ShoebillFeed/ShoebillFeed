@@ -9,4 +9,6 @@ export const sourcesApi = {
   delete: (id: string) => client.delete(`/sources/${id}`),
   fetch: (id: string) => client.post(`/sources/${id}/fetch`).then((r) => r.data),
   fetchAll: () => client.post("/sources/fetch-all").then((r) => r.data),
+  export: () => client.get<SourceCreate[]>("/sources/export").then((r) => r.data),
+  import: (data: SourceCreate[]) => client.post<Source[]>("/sources/import", data).then((r) => r.data),
 };

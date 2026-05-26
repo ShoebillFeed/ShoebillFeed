@@ -4,12 +4,16 @@ import SourcesPanel from "../components/settings/SourcesPanel";
 import CategoriesPanel from "../components/settings/CategoriesPanel";
 import LLMConfigPanel from "../components/settings/LLMConfigPanel";
 import UsersPanel from "../components/settings/UsersPanel";
+import AdvancedPanel from "../components/settings/AdvancedPanel";
+import StatsPanel from "../components/settings/StatsPanel";
 import { useMe } from "../hooks/useAuth";
 
 const BASE_TABS = [
   { id: "sources", label: "Sources" },
   { id: "categories", label: "Categories" },
   { id: "llm", label: "LLM" },
+  { id: "advanced", label: "Advanced" },
+  { id: "stats", label: "Statistics" },
 ] as const;
 
 const ADMIN_TAB = { id: "users", label: "Users" } as const;
@@ -48,6 +52,8 @@ export default function SettingsPage() {
         {activeTab === "sources" && <SourcesPanel />}
         {activeTab === "categories" && <CategoriesPanel />}
         {activeTab === "llm" && <LLMConfigPanel />}
+        {activeTab === "advanced" && <AdvancedPanel />}
+        {activeTab === "stats" && <StatsPanel />}
         {activeTab === "users" && me?.is_admin && <UsersPanel />}
       </div>
     </div>

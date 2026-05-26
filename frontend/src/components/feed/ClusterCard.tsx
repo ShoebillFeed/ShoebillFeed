@@ -11,6 +11,11 @@ import {
 } from "../../hooks/useNews";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 
+function uniqueSources(items: NewsCluster["items"]) {
+  const seen = new Set<string>();
+  return items.flatMap((i) => i.source ? (seen.has(i.source.id) ? [] : (seen.add(i.source.id), [i.source])) : []);
+}
+
 export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
   const [expanded, setExpanded] = useState(false);
   const [localRelevant, setLocalRelevant] = useState(cluster.is_relevant);
@@ -54,9 +59,11 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
-          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 shrink-0">
-            🗞 {cluster.items.length} sources
-          </span>
+          {uniqueSources(cluster.items).map((source) => (
+            <span key={source.id} className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 shrink-0">
+              {sourceTypeIcon(source.source_type)} {source.name}
+            </span>
+          ))}
           {cluster.categories.map((cat) => (
             <span
               key={cat.id}
@@ -228,6 +235,9 @@ function sourceTypeIcon(type: string) {
     reddit: "🔴",
     youtube: "▶️",
     email: "✉️",
+    mastodon: "🐘",
+    arxiv: "🎓",
+    scholar: "🎓",
   };
   return icons[type] ?? "📄";
 }
