@@ -10,6 +10,7 @@ import {
   useDeleteNewsItem,
 } from "../../hooks/useNews";
 import { usePreferencesStore } from "../../stores/preferencesStore";
+import { sourceTypeIcon } from "../../lib/sourceTypeIcon";
 
 export default function NewsCard({ item }: { item: NewsItem }) {
   const [hasImage, setHasImage] = useState(!!item.image_url);
@@ -247,15 +248,3 @@ function ActionButton({
   );
 }
 
-function sourceTypeIcon(type: string) {
-  const icons: Record<string, string> = {
-    rss: "📰",
-    reddit: "🔴",
-    youtube: "▶️",
-    email: "✉️",
-    mastodon: "🐘",
-    arxiv: "🎓",
-    scholar: "🎓",
-  };
-  return icons[type] ?? "📄";
-}

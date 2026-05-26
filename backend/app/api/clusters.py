@@ -16,7 +16,6 @@ router = APIRouter()
 def _load(cluster_id: uuid.UUID, db: Session, user_id: uuid.UUID | None = None) -> NewsCluster:
     q = select(NewsCluster).options(
         joinedload(NewsCluster.items).joinedload(NewsItem.source),
-        joinedload(NewsCluster.category),
     ).where(NewsCluster.id == cluster_id)
     if user_id:
         q = q.where(NewsCluster.user_id == user_id)
@@ -27,8 +26,7 @@ def _load(cluster_id: uuid.UUID, db: Session, user_id: uuid.UUID | None = None) 
 
 
 def _get_cluster(cluster_id: uuid.UUID, db: Session, user_id: uuid.UUID) -> NewsCluster:
-    from sqlalchemy import select as sa_select
-    cluster = db.scalar(sa_select(NewsCluster).where(NewsCluster.id == cluster_id, NewsCluster.user_id == user_id))
+    cluster = db.scalar(select(NewsCluster).where(NewsCluster.id == cluster_id, NewsCluster.user_id == user_id))
     if not cluster:
         raise HTTPException(status_code=404, detail="Cluster not found")
     return cluster
@@ -48,8 +46,8 @@ def toggle_relevant(cluster_id: uuid.UUID, db: Session = Depends(get_db), curren
     cluster.is_relevant = not cluster.is_relevant
     db.commit()
     if cluster.is_relevant:
-        if cluster.category_id:
-            update_category_weight(db, cluster.category_id)
+        for cat in cluster.categories:
+            update_category_weight(db, cat.id)
         if cluster.extracted_keywords:
             update_keyword_weights(db, cluster.extracted_keywords, current_user.id)
     return _load(cluster_id, db, current_user.id)

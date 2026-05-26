@@ -10,6 +10,7 @@ import {
   useDeleteCluster,
 } from "../../hooks/useNews";
 import { usePreferencesStore } from "../../stores/preferencesStore";
+import { sourceTypeIcon } from "../../lib/sourceTypeIcon";
 
 function uniqueSources(items: NewsCluster["items"]) {
   const seen = new Set<string>();
@@ -229,15 +230,3 @@ function ActionButton({
   );
 }
 
-function sourceTypeIcon(type: string) {
-  const icons: Record<string, string> = {
-    rss: "📰",
-    reddit: "🔴",
-    youtube: "▶️",
-    email: "✉️",
-    mastodon: "🐘",
-    arxiv: "🎓",
-    scholar: "🎓",
-  };
-  return icons[type] ?? "📄";
-}

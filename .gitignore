@@ -11,6 +11,7 @@ node_modules/
 frontend/dist/
 *.log
 .DS_Store
+data/
 /tmp/celerybeat-schedule
 .claude/
 claude.md
