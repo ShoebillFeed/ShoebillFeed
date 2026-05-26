@@ -266,7 +266,7 @@ function WeightHistoryChart({ days }: { days: number }) {
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} />
         <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
         <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-        <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [v.toFixed(3), ""]} />
+        <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [typeof v === "number" ? v.toFixed(3) : "", ""]} />
         <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
         {data.map((cat) => (
           <Line key={cat.id} type="monotone" dataKey={cat.name} stroke={cat.color} strokeWidth={2} dot={false} connectNulls />
