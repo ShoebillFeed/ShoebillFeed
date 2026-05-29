@@ -46,6 +46,7 @@ class ClusterItemOut(BaseModel):
     id: uuid.UUID
     title: str
     url: str
+    image_url: str | None = None
     source_summary: str | None
     source: SourceSummary | None = None
 

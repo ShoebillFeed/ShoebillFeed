@@ -34,6 +34,7 @@ export interface ClusterItem {
   id: string;
   title: string;
   url: string;
+  image_url: string | null;
   source_summary: string | null;
   source: SourceSummary | null;
 }
