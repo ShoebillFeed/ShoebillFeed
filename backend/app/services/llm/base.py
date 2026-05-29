@@ -1,5 +1,6 @@
 import json
 from abc import ABC, abstractmethod
+from json_repair import repair_json
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -110,10 +111,7 @@ def parse_llm_response(text: str, known_categories: list[str], social_post: bool
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
-        repaired = text.rstrip().rstrip(",")
-        depth = repaired.count("{") - repaired.count("}")
-        repaired += "}" * max(depth, 0)
-        data = json.loads(repaired)
+        data = json.loads(repair_json(text))
 
     abstract = str(data.get("abstract", "")).strip() or "No abstract available."
     raw_cats = data.get("categories", data.get("category"))
@@ -139,11 +137,7 @@ def parse_cluster_response(text: str, item_count: int, known_categories: list[st
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
-        # Response was truncated mid-token; close open structures and retry once
-        repaired = text.rstrip().rstrip(",")
-        depth = repaired.count("{") - repaired.count("}")
-        repaired += "}" * max(depth, 0)
-        data = json.loads(repaired)
+        data = json.loads(repair_json(text))
 
     abstract = str(data.get("unified_abstract", "")).strip() or "No summary available."
     raw_cats = data.get("categories", data.get("category"))
