@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { FeedEntry } from "../../types/news";
 import NewsCard from "./NewsCard";
@@ -8,9 +8,15 @@ import NewsCardSkeleton from "./NewsCardSkeleton";
 export default function NewsFeed({
   items,
   isLoading,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
 }: {
   items: FeedEntry[];
   isLoading: boolean;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -21,6 +27,16 @@ export default function NewsFeed({
     overscan: 5,
     getItemKey: (index) => items[index].id,
   });
+
+  const virtualItems = virtualizer.getVirtualItems();
+  const lastVirtualItem = virtualItems[virtualItems.length - 1];
+
+  useEffect(() => {
+    if (!lastVirtualItem || !hasMore || isLoadingMore) return;
+    if (lastVirtualItem.index >= items.length - 1) {
+      onLoadMore?.();
+    }
+  }, [lastVirtualItem?.index, items.length, hasMore, isLoadingMore, onLoadMore]);
 
   if (isLoading) {
     return (
@@ -75,6 +91,11 @@ export default function NewsFeed({
           );
         })}
       </div>
+      {isLoadingMore && (
+        <div className="flex justify-center py-4">
+          <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+        </div>
+      )}
     </div>
   );
 }

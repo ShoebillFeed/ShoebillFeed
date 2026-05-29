@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { newsApi } from "../api/news";
 import { clustersApi } from "../api/clusters";
 import type { ApiTab } from "../api/news";
@@ -14,6 +14,23 @@ export function useNews(params: {
   return useQuery({
     queryKey: ["news", params],
     queryFn: () => newsApi.list({ page_size: 50, ...params }),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useInfiniteNews(params: {
+  tab: ApiTab;
+  category_id?: string;
+  source_id?: string;
+  is_read?: boolean;
+  read_later?: boolean;
+}) {
+  return useInfiniteQuery({
+    queryKey: ["news", "infinite", params],
+    queryFn: ({ pageParam }) => newsApi.list({ page_size: 50, ...params, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.pages ? lastPage.page + 1 : undefined,
     refetchInterval: 60_000,
   });
 }

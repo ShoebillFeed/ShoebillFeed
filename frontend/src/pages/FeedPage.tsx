@@ -1,5 +1,5 @@
 import { useFilterStore } from "../stores/filterStore";
-import { useNews, useMarkAllRead } from "../hooks/useNews";
+import { useInfiniteNews, useMarkAllRead } from "../hooks/useNews";
 import FeedTabs from "../components/feed/FeedTabs";
 import CategoryFilter from "../components/feed/CategoryFilter";
 import SourceFilter from "../components/feed/SourceFilter";
@@ -7,6 +7,8 @@ import NewsFeed from "../components/feed/NewsFeed";
 import { CheckCheck, RefreshCw } from "lucide-react";
 import { sourcesApi } from "../api/sources";
 import { useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import type { FeedEntry } from "../types/news";
 
 export default function FeedPage() {
   const { activeTab, setTab, selectedCategoryIds, selectedSourceIds, showUnreadOnly, setShowUnreadOnly } =
@@ -18,13 +20,19 @@ export default function FeedPage() {
   const sourceId = selectedSourceIds.length === 1 ? selectedSourceIds[0] : undefined;
 
   const isReadLater = activeTab === "read_later";
-  const { data, isLoading } = useNews({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteNews({
     tab: isReadLater ? "newest" : activeTab,
     category_id: categoryId,
     source_id: sourceId,
     is_read: showUnreadOnly ? false : undefined,
     read_later: isReadLater ? true : undefined,
   });
+
+  const items = useMemo<FeedEntry[]>(
+    () => data?.pages.flatMap((p) => p.items) ?? [],
+    [data]
+  );
+  const total = data?.pages[0]?.total ?? 0;
 
   const handleFetchAll = async () => {
     await sourcesApi.fetchAll();
@@ -69,11 +77,17 @@ export default function FeedPage() {
 
       {data && (
         <p className="text-xs text-gray-400 mb-3">
-          {data.total} articles
+          {items.length} / {total} articles
         </p>
       )}
 
-      <NewsFeed items={data?.items ?? []} isLoading={isLoading} />
+      <NewsFeed
+        items={items}
+        isLoading={isLoading}
+        hasMore={!!hasNextPage}
+        isLoadingMore={isFetchingNextPage}
+        onLoadMore={fetchNextPage}
+      />
     </div>
   );
 }
