@@ -1,6 +1,7 @@
 import logging
 import uuid
 
+import anthropic as anthropic_sdk
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
@@ -158,6 +159,12 @@ def process_news_item(self, news_item_id: str) -> None:
         db.commit()
         logger.info("Processed news item %s", news_item_id)
 
+    except anthropic_sdk.RateLimitError as exc:
+        db.rollback()
+        retry_after = int(exc.response.headers.get("retry-after", 60))
+        countdown = max(retry_after, 30) + self.request.retries * 15
+        logger.warning("Rate limited processing item %s, retrying in %ds", news_item_id, countdown)
+        raise self.retry(exc=exc, max_retries=10, countdown=countdown)
     except Exception as exc:
         db.rollback()
         logger.exception("Error processing news item %s", news_item_id)
@@ -232,6 +239,12 @@ def process_cluster(self, cluster_id: str) -> None:
         db.commit()
         logger.info("Processed cluster %s (%d items)", cluster_id, len(items))
 
+    except anthropic_sdk.RateLimitError as exc:
+        db.rollback()
+        retry_after = int(exc.response.headers.get("retry-after", 60))
+        countdown = max(retry_after, 30) + self.request.retries * 15
+        logger.warning("Rate limited processing cluster %s, retrying in %ds", cluster_id, countdown)
+        raise self.retry(exc=exc, max_retries=10, countdown=countdown)
     except Exception as exc:
         db.rollback()
         logger.exception("Error processing cluster %s", cluster_id)
@@ -250,15 +263,16 @@ def batch_process_unprocessed(limit: int = 50) -> int:
             .where(NewsItem.llm_processed == False, NewsItem.cluster_id == None)  # noqa: E711,E712
             .limit(limit)
         ).all()
-        for item_id in item_ids:
-            process_news_item.apply_async(args=[str(item_id)], queue="process")
+        for i, item_id in enumerate(item_ids):
+            process_news_item.apply_async(args=[str(item_id)], queue="process", countdown=i * 2)
 
         # Unprocessed clusters
         cluster_ids = db.scalars(
             select(NewsCluster.id).where(NewsCluster.llm_processed == False).limit(limit)  # noqa: E712
         ).all()
-        for cid in cluster_ids:
-            process_cluster.apply_async(args=[str(cid)], queue="process")
+        offset = len(item_ids)
+        for i, cid in enumerate(cluster_ids):
+            process_cluster.apply_async(args=[str(cid)], queue="process", countdown=(offset + i) * 2)
 
         return len(item_ids) + len(cluster_ids)
     finally:
