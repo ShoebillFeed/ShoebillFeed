@@ -130,7 +130,14 @@ def parse_cluster_response(text: str, item_count: int, known_categories: list[st
         text = text.split("```")[1]
         if text.startswith("json"):
             text = text[4:]
-    data = json.loads(text)
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        # Response was truncated mid-token; close open structures and retry once
+        repaired = text.rstrip().rstrip(",")
+        depth = repaired.count("{") - repaired.count("}")
+        repaired += "}" * max(depth, 0)
+        data = json.loads(repaired)
 
     abstract = str(data.get("unified_abstract", "")).strip() or "No summary available."
     raw_cats = data.get("categories", data.get("category"))

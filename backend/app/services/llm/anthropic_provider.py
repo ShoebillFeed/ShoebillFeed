@@ -48,7 +48,7 @@ class AnthropicProvider(LLMProvider):
 
         message = self.client.messages.create(
             model=self.model,
-            max_tokens=1024,
+            max_tokens=2048,
             system=system,
             messages=[{"role": "user", "content": "\n\n".join(parts)}],
         )
