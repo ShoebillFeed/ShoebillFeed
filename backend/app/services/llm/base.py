@@ -107,7 +107,13 @@ def parse_llm_response(text: str, known_categories: list[str], social_post: bool
         text = text.split("```")[1]
         if text.startswith("json"):
             text = text[4:]
-    data = json.loads(text)
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        repaired = text.rstrip().rstrip(",")
+        depth = repaired.count("{") - repaired.count("}")
+        repaired += "}" * max(depth, 0)
+        data = json.loads(repaired)
 
     abstract = str(data.get("abstract", "")).strip() or "No abstract available."
     raw_cats = data.get("categories", data.get("category"))
