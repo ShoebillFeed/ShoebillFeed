@@ -82,12 +82,11 @@ export default function CategoriesPanel() {
         </div>
       </div>
 
-      {(showForm || editing) && (
+      {showForm && (
         <div className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-          <h3 className="font-medium text-sm mb-3">{editing ? "Edit Category" : "Add New Category"}</h3>
+          <h3 className="font-medium text-sm mb-3">Add New Category</h3>
           <CategoryForm
-            category={editing ?? undefined}
-            onClose={() => { setShowForm(false); setEditing(null); }}
+            onClose={() => setShowForm(false)}
           />
         </div>
       )}
@@ -96,15 +95,25 @@ export default function CategoriesPanel() {
 
       <div className="flex flex-col gap-2">
         {categories?.map((cat) => (
-          <CategoryRow
-            key={cat.id}
-            cat={cat}
-            onEdit={() => { setEditing(cat); setShowForm(false); }}
-            onDelete={() => {
-              if (confirm(`Delete category "${cat.name}"? Articles will be uncategorized.`))
-                deleteCategory.mutate(cat.id);
-            }}
-          />
+          editing?.id === cat.id ? (
+            <div key={cat.id} className="p-4 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+              <h3 className="font-medium text-sm mb-3 text-indigo-600 dark:text-indigo-400">Editing: {cat.name}</h3>
+              <CategoryForm
+                category={cat}
+                onClose={() => setEditing(null)}
+              />
+            </div>
+          ) : (
+            <CategoryRow
+              key={cat.id}
+              cat={cat}
+              onEdit={() => { setEditing(cat); setShowForm(false); }}
+              onDelete={() => {
+                if (confirm(`Delete category "${cat.name}"? Articles will be uncategorized.`))
+                  deleteCategory.mutate(cat.id);
+              }}
+            />
+          )
         ))}
 
         {categories?.length === 0 && !isLoading && (

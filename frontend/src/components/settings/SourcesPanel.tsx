@@ -74,12 +74,11 @@ export default function SourcesPanel() {
         </div>
       </div>
 
-      {(showForm || editing) && (
+      {showForm && (
         <div className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-          <h3 className="font-medium text-sm mb-3">{editing ? "Edit Source" : "Add New Source"}</h3>
+          <h3 className="font-medium text-sm mb-3">Add New Source</h3>
           <SourceForm
-            source={editing ?? undefined}
-            onClose={() => { setShowForm(false); setEditing(null); }}
+            onClose={() => setShowForm(false)}
           />
         </div>
       )}
@@ -88,62 +87,72 @@ export default function SourcesPanel() {
 
       <div className="flex flex-col gap-2">
         {sources?.map((source) => (
-          <div
-            key={source.id}
-            className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => toggleActive.mutate({ id: source.id, is_active: !source.is_active })}
-                  title={source.is_active ? "Deactivate source" : "Activate source"}
-                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                    source.is_active ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"
-                  }`}
-                >
-                  <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${
-                    source.is_active ? "translate-x-4" : "translate-x-0"
-                  }`} />
-                </button>
-                <span className={`text-sm font-medium truncate ${!source.is_active ? "text-gray-400 dark:text-gray-500" : ""}`}>
-                  {source.name}
-                </span>
-                <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500">
-                  {source.source_type}
-                </span>
+          editing?.id === source.id ? (
+            <div key={source.id} className="p-4 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+              <h3 className="font-medium text-sm mb-3 text-indigo-600 dark:text-indigo-400">Editing: {source.name}</h3>
+              <SourceForm
+                source={source}
+                onClose={() => setEditing(null)}
+              />
+            </div>
+          ) : (
+            <div
+              key={source.id}
+              className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleActive.mutate({ id: source.id, is_active: !source.is_active })}
+                    title={source.is_active ? "Deactivate source" : "Activate source"}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                      source.is_active ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${
+                      source.is_active ? "translate-x-4" : "translate-x-0"
+                    }`} />
+                  </button>
+                  <span className={`text-sm font-medium truncate ${!source.is_active ? "text-gray-400 dark:text-gray-500" : ""}`}>
+                    {source.name}
+                  </span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500">
+                    {source.source_type}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {source.item_count} items ·{" "}
+                  {source.last_fetched_at
+                    ? `fetched ${formatDistanceToNow(new Date(source.last_fetched_at), { addSuffix: true })}`
+                    : "never fetched"}
+                </p>
               </div>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {source.item_count} items ·{" "}
-                {source.last_fetched_at
-                  ? `fetched ${formatDistanceToNow(new Date(source.last_fetched_at), { addSuffix: true })}`
-                  : "never fetched"}
-              </p>
-            </div>
 
-            <div className="flex items-center gap-1">
-              <IconButton
-                title="Fetch now"
-                onClick={() => fetchSource.mutate(source.id)}
-                disabled={fetchSource.isPending}
-              >
-                {fetchSource.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Play size={14} />}
-              </IconButton>
-              <IconButton title="Edit" onClick={() => { setEditing(source); setShowForm(false); }}>
-                <Pencil size={14} />
-              </IconButton>
-              <IconButton
-                title="Delete"
-                onClick={() => {
-                  if (confirm(`Delete source "${source.name}" and all its articles?`)) {
-                    deleteSource.mutate(source.id);
-                  }
-                }}
-                className="hover:text-red-500"
-              >
-                <Trash2 size={14} />
-              </IconButton>
+              <div className="flex items-center gap-1">
+                <IconButton
+                  title="Fetch now"
+                  onClick={() => fetchSource.mutate(source.id)}
+                  disabled={fetchSource.isPending}
+                >
+                  {fetchSource.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Play size={14} />}
+                </IconButton>
+                <IconButton title="Edit" onClick={() => { setEditing(source); setShowForm(false); }}>
+                  <Pencil size={14} />
+                </IconButton>
+                <IconButton
+                  title="Delete"
+                  onClick={() => {
+                    if (confirm(`Delete source "${source.name}" and all its articles?`)) {
+                      deleteSource.mutate(source.id);
+                    }
+                  }}
+                  className="hover:text-red-500"
+                >
+                  <Trash2 size={14} />
+                </IconButton>
+              </div>
             </div>
-          </div>
+          )
         ))}
 
         {sources?.length === 0 && !isLoading && (
