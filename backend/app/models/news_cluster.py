@@ -27,6 +27,7 @@ class NewsCluster(Base):
     relevance_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     impact_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    last_read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_relevant: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     read_later: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     llm_processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

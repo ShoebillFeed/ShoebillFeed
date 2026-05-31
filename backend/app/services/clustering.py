@@ -113,6 +113,8 @@ def cluster_new_items(db: Session, new_item_ids: list[uuid.UUID]) -> dict[uuid.U
             # Reset so the cluster gets reprocessed with the new member
             cluster.llm_processed = False
             cluster.unified_abstract = None
+            cluster.title = None
+            cluster.is_read = False
             for item in new_in_group:
                 item.cluster_id = target_id
                 result[item.id] = target_id
@@ -188,6 +190,7 @@ def recluster_processed_item(db: Session, item: NewsItem) -> uuid.UUID | None:
         cluster.llm_processed = False
         cluster.unified_abstract = None
         cluster.title = None
+        cluster.is_read = False
         item.cluster_id = cluster.id
         return cluster.id
     else:

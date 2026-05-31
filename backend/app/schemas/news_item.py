@@ -48,6 +48,7 @@ class ClusterItemOut(BaseModel):
     url: str
     image_url: str | None = None
     source_summary: str | None
+    fetched_at: datetime
     source: SourceSummary | None = None
 
     model_config = {"from_attributes": True}
@@ -62,6 +63,7 @@ class NewsClusterOut(BaseModel):
     relevance_score: int | None
     impact_score: int | None
     is_read: bool
+    last_read_at: datetime | None = None
     is_relevant: bool
     read_later: bool
     llm_processed: bool

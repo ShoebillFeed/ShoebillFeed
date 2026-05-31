@@ -28,3 +28,10 @@ export function useWeightHistory(days: number) {
     queryFn: () => statsApi.weightHistory(days),
   });
 }
+
+export function useSourceClusters(days: number) {
+  return useQuery({
+    queryKey: ["stats", "source-clusters", days],
+    queryFn: () => statsApi.sourceClusters(days),
+  });
+}

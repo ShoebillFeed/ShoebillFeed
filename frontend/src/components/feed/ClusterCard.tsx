@@ -146,61 +146,87 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
       {/* Per-source list (expandable) */}
       {cluster.items.length > 0 && (
         <div className="mt-3">
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className={cn(
-              "flex items-center gap-1 text-xs transition-colors",
-              hasImage
-                ? "text-white/50 hover:text-white"
-                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-            )}
-          >
-            {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            {expanded ? "Hide sources" : "Show sources"}
-          </button>
+          {(() => {
+            const newCount = cluster.last_read_at
+              ? cluster.items.filter((i) => new Date(i.fetched_at) > new Date(cluster.last_read_at!)).length
+              : 0;
+            return (
+              <button
+                onClick={() => setExpanded((v) => !v)}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs transition-colors",
+                  hasImage
+                    ? "text-white/50 hover:text-white"
+                    : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                )}
+              >
+                {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                {expanded ? "Hide sources" : "Show sources"}
+                {!expanded && newCount > 0 && (
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400">
+                    +{newCount} new
+                  </span>
+                )}
+              </button>
+            );
+          })()}
 
           {expanded && (
             <ul className="mt-2 space-y-2">
-              {cluster.items.map((item) => (
-                <li key={item.id} className={cn(
-                  "border-l-2 pl-3",
-                  hasImage ? "border-white/30" : "border-gray-200 dark:border-gray-700"
-                )}>
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group inline-flex items-start gap-1"
-                    onClick={() => !cluster.is_read && markRead()}
-                  >
-                    <span className={cn(
-                      "text-xs font-medium transition-colors leading-snug",
-                      hasImage
-                        ? "text-white/80 group-hover:text-indigo-300"
-                        : "text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                    )}>
-                      {item.source && (
-                        <span className={cn(
-                          "mr-1",
-                          hasImage ? "text-white/40" : "text-gray-400 dark:text-gray-500"
-                        )}>
-                          {sourceTypeIcon(item.source.source_type)} {item.source.name} —
-                        </span>
+              {cluster.items.map((item) => {
+                const isNew = !!cluster.last_read_at &&
+                  new Date(item.fetched_at) > new Date(cluster.last_read_at);
+                return (
+                  <li key={item.id} className={cn(
+                    "border-l-2 pl-3",
+                    hasImage ? "border-white/30" : "border-gray-200 dark:border-gray-700"
+                  )}>
+                    <div className="flex items-start gap-1.5">
+                      {isNew && (
+                        <span
+                          className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"
+                          title="Added since you last read this cluster"
+                        />
                       )}
-                      {item.title}
-                    </span>
-                    <ExternalLink size={10} className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-60 transition-opacity text-indigo-400" />
-                  </a>
-                  {item.source_summary && (
-                    <p className={cn(
-                      "text-xs mt-0.5 leading-relaxed",
-                      hasImage ? "text-white/50" : "text-gray-500 dark:text-gray-400"
-                    )}>
-                      {item.source_summary}
-                    </p>
-                  )}
-                </li>
-              ))}
+                      <div className="min-w-0">
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group inline-flex items-start gap-1"
+                          onClick={() => !cluster.is_read && markRead()}
+                        >
+                          <span className={cn(
+                            "text-xs font-medium transition-colors leading-snug",
+                            hasImage
+                              ? "text-white/80 group-hover:text-indigo-300"
+                              : "text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                          )}>
+                            {item.source && (
+                              <span className={cn(
+                                "mr-1",
+                                hasImage ? "text-white/40" : "text-gray-400 dark:text-gray-500"
+                              )}>
+                                {sourceTypeIcon(item.source.source_type)} {item.source.name} —
+                              </span>
+                            )}
+                            {item.title}
+                          </span>
+                          <ExternalLink size={10} className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-60 transition-opacity text-indigo-400" />
+                        </a>
+                        {item.source_summary && (
+                          <p className={cn(
+                            "text-xs mt-0.5 leading-relaxed",
+                            hasImage ? "text-white/50" : "text-gray-500 dark:text-gray-400"
+                          )}>
+                            {item.source_summary}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

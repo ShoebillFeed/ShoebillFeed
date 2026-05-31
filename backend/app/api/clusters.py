@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -36,6 +37,8 @@ def _get_cluster(cluster_id: uuid.UUID, db: Session, user_id: uuid.UUID) -> News
 def toggle_read(cluster_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     cluster = _get_cluster(cluster_id, db, current_user.id)
     cluster.is_read = not cluster.is_read
+    if cluster.is_read:
+        cluster.last_read_at = datetime.now(timezone.utc)
     db.commit()
     return _load(cluster_id, db, current_user.id)
 

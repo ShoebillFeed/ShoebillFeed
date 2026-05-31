@@ -42,6 +42,25 @@ export interface CategoryWeightHistory {
   snapshots: WeightSnapshot[];
 }
 
+export interface SourceClusterCategory {
+  name: string;
+  count: number;
+  color: string;
+}
+
+export interface SourceMeta {
+  id: string;
+  name: string;
+  source_type: string;
+}
+
+export interface SourceClusterPair {
+  source_a: SourceMeta;
+  source_b: SourceMeta;
+  total: number;
+  categories: SourceClusterCategory[];
+}
+
 export const statsApi = {
   activity: (days: number) =>
     client.get<ActivityPoint[]>("/stats/activity", { params: { days } }).then((r) => r.data),
@@ -51,4 +70,6 @@ export const statsApi = {
     client.get<SourceCount[]>("/stats/by-source", { params: { days } }).then((r) => r.data),
   weightHistory: (days: number) =>
     client.get<CategoryWeightHistory[]>("/stats/weight-history", { params: { days } }).then((r) => r.data),
+  sourceClusters: (days: number) =>
+    client.get<SourceClusterPair[]>("/stats/source-clusters", { params: { days } }).then((r) => r.data),
 };

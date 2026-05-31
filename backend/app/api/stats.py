@@ -4,10 +4,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import Integer, select, func, cast, Date
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload, joinedload
 
 from app.api.deps import get_db, get_current_user
-from app.models import NewsItem, Category, Source
+from app.models import NewsItem, Category, Source, NewsCluster
 from app.models.category_weight_snapshot import CategoryWeightSnapshot
 from app.models.news_item import news_item_categories
 from app.models.user import User
@@ -223,5 +223,75 @@ def weight_history(
         key = str(cid)
         if key in by_cat:
             result.append({**meta, "snapshots": by_cat[key]})
+
+    return result
+
+
+@router.get("/source-clusters")
+def source_clusters(
+    days: Annotated[int, Query(ge=1, le=365)] = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Which source pairs appear together in clusters most often, grouped by category."""
+    since = _since(days)
+
+    clusters = db.scalars(
+        select(NewsCluster)
+        .where(NewsCluster.user_id == current_user.id, NewsCluster.created_at >= since)
+        .options(
+            selectinload(NewsCluster.items).joinedload(NewsItem.source),
+            selectinload(NewsCluster.categories),
+        )
+    ).unique().all()
+
+    pair_totals: dict[tuple[str, str], int] = {}
+    pair_cats: dict[tuple[str, str], dict[str, int]] = {}
+    source_meta: dict[str, dict] = {}
+    cat_colors: dict[str, str] = {}
+
+    for cluster in clusters:
+        sources: dict[str, object] = {}
+        for item in cluster.items:
+            if item.source_id and item.source:
+                sid = str(item.source_id)
+                sources[sid] = item.source
+                source_meta[sid] = {
+                    "id": sid,
+                    "name": item.source.name,
+                    "source_type": item.source.source_type,
+                }
+        sids = sorted(sources)
+        if len(sids) < 2:
+            continue
+
+        for cat in cluster.categories:
+            cat_colors[cat.name] = cat.color
+
+        for i in range(len(sids)):
+            for j in range(i + 1, len(sids)):
+                key = (sids[i], sids[j])
+                pair_totals[key] = pair_totals.get(key, 0) + 1
+                cats = pair_cats.setdefault(key, {})
+                for cat in cluster.categories:
+                    cats[cat.name] = cats.get(cat.name, 0) + 1
+                if not cluster.categories:
+                    cats["Uncategorized"] = cats.get("Uncategorized", 0) + 1
+
+    result = []
+    for key in sorted(pair_totals, key=pair_totals.__getitem__, reverse=True)[:15]:
+        sid_a, sid_b = key
+        if sid_a not in source_meta or sid_b not in source_meta:
+            continue
+        cats = pair_cats.get(key, {})
+        result.append({
+            "source_a": source_meta[sid_a],
+            "source_b": source_meta[sid_b],
+            "total": pair_totals[key],
+            "categories": [
+                {"name": n, "count": c, "color": cat_colors.get(n, "#9ca3af")}
+                for n, c in sorted(cats.items(), key=lambda x: -x[1])
+            ],
+        })
 
     return result

@@ -36,6 +36,7 @@ export interface ClusterItem {
   url: string;
   image_url: string | null;
   source_summary: string | null;
+  fetched_at: string;
   source: SourceSummary | null;
 }
 
@@ -48,6 +49,7 @@ export interface NewsCluster {
   relevance_score: number | null;
   impact_score: number | null;
   is_read: boolean;
+  last_read_at: string | null;
   is_relevant: boolean;
   read_later: boolean;
   llm_processed: boolean;
