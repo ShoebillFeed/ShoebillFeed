@@ -55,8 +55,8 @@ function removeInfiniteItem(qc: ReturnType<typeof useQueryClient>, id: string) {
 
 export function useNews(params: {
   tab: ApiTab;
-  category_id?: string;
-  source_id?: string;
+  category_ids?: string[];
+  source_ids?: string[];
   is_read?: boolean;
   read_later?: boolean;
   page?: number;
@@ -70,8 +70,8 @@ export function useNews(params: {
 
 export function useInfiniteNews(params: {
   tab: ApiTab;
-  category_id?: string;
-  source_id?: string;
+  category_ids?: string[];
+  source_ids?: string[];
   is_read?: boolean;
   read_later?: boolean;
 }) {

@@ -7,5 +7,6 @@ from app.models.keyword_weight import KeywordWeight
 from app.models.source import Source
 from app.models.news_cluster import NewsCluster
 from app.models.news_item import NewsItem
+from app.models.user_tab import UserTab
 
-__all__ = ["User", "UserSettings", "Category", "CategoryWeight", "CategoryWeightSnapshot", "KeywordWeight", "Source", "NewsCluster", "NewsItem"]
+__all__ = ["User", "UserSettings", "Category", "CategoryWeight", "CategoryWeightSnapshot", "KeywordWeight", "Source", "NewsCluster", "NewsItem", "UserTab"]

@@ -53,8 +53,8 @@ def _build_feed(
     db: Session,
     tab: str,
     user_id: uuid.UUID,
-    category_id: uuid.UUID | None,
-    source_id: uuid.UUID | None,
+    category_ids: list[uuid.UUID],
+    source_ids: list[uuid.UUID],
     is_read: bool | None,
     read_later: bool | None,
 ) -> list:
@@ -75,12 +75,12 @@ def _build_feed(
         )
     )
 
-    if category_id:
+    if category_ids:
         item_q = item_q.where(
             select(news_item_categories.c.news_item_id)
             .where(
                 news_item_categories.c.news_item_id == NewsItem.id,
-                news_item_categories.c.category_id == category_id,
+                news_item_categories.c.category_id.in_(category_ids),
             )
             .exists()
         )
@@ -88,15 +88,15 @@ def _build_feed(
             select(news_cluster_categories.c.news_cluster_id)
             .where(
                 news_cluster_categories.c.news_cluster_id == NewsCluster.id,
-                news_cluster_categories.c.category_id == category_id,
+                news_cluster_categories.c.category_id.in_(category_ids),
             )
             .exists()
         )
-    if source_id:
-        item_q = item_q.where(NewsItem.source_id == source_id)
+    if source_ids:
+        item_q = item_q.where(NewsItem.source_id.in_(source_ids))
         cluster_q = cluster_q.where(
             select(NewsItem.id)
-            .where(NewsItem.cluster_id == NewsCluster.id, NewsItem.source_id == source_id)
+            .where(NewsItem.cluster_id == NewsCluster.id, NewsItem.source_id.in_(source_ids))
             .exists()
         )
     if is_read is not None:
@@ -155,8 +155,8 @@ def _build_feed(
 @router.get("", response_model=Page[FeedEntry])
 def list_news(
     tab: Literal["newest", "relevant", "impact"] = "newest",
-    category_id: uuid.UUID | None = None,
-    source_id: uuid.UUID | None = None,
+    category_ids: list[uuid.UUID] = Query(default=[]),
+    source_ids: list[uuid.UUID] = Query(default=[]),
     is_read: bool | None = None,
     read_later: bool | None = None,
     page: int = Query(1, ge=1),
@@ -164,7 +164,7 @@ def list_news(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    all_entries = _build_feed(db, tab, current_user.id, category_id, source_id, is_read, read_later)
+    all_entries = _build_feed(db, tab, current_user.id, category_ids, source_ids, is_read, read_later)
     total = len(all_entries)
     page_entries = all_entries[(page - 1) * page_size: page * page_size]
 

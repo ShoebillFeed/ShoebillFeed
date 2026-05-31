@@ -5,8 +5,8 @@ export type ApiTab = "newest" | "relevant" | "impact";
 
 export interface NewsParams {
   tab: ApiTab;
-  category_id?: string;
-  source_id?: string;
+  category_ids?: string[];
+  source_ids?: string[];
   is_read?: boolean;
   read_later?: boolean;
   page?: number;

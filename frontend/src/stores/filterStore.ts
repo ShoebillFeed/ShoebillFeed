@@ -3,10 +3,12 @@ import type { FeedTab } from "../types/news";
 
 interface FilterState {
   activeTab: FeedTab;
+  activeCustomTabId: string | null;
   selectedCategoryIds: string[];
   selectedSourceIds: string[];
   showUnreadOnly: boolean;
   setTab: (tab: FeedTab) => void;
+  setCustomTab: (id: string | null) => void;
   toggleCategory: (id: string) => void;
   clearCategories: () => void;
   toggleSource: (id: string) => void;
@@ -16,10 +18,12 @@ interface FilterState {
 
 export const useFilterStore = create<FilterState>((set) => ({
   activeTab: "newest",
+  activeCustomTabId: null,
   selectedCategoryIds: [],
   selectedSourceIds: [],
   showUnreadOnly: false,
-  setTab: (tab) => set({ activeTab: tab }),
+  setTab: (tab) => set({ activeTab: tab, activeCustomTabId: null }),
+  setCustomTab: (id) => set({ activeCustomTabId: id }),
   toggleCategory: (id) =>
     set((s) => ({
       selectedCategoryIds: s.selectedCategoryIds.includes(id)
