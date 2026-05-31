@@ -180,6 +180,7 @@ function fmtDate(iso: string, days: number) {
 }
 
 const CURSOR_STYLE = { fill: "rgba(99,102,241,0.06)" };
+const WRAPPER_STYLE = { background: "none", border: "none", boxShadow: "none", zIndex: 50 } as const;
 
 // ── Reading activity ──────────────────────────────────────────────────────────
 
@@ -206,6 +207,7 @@ function ActivityChart({ days }: { days: number }) {
         <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
         <Tooltip
           cursor={CURSOR_STYLE}
+          wrapperStyle={WRAPPER_STYLE}
           content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null;
             return (
@@ -240,7 +242,8 @@ function ByCategoryChart({ days }: { days: number }) {
         <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
         <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={90} />
         <Tooltip
-          cursor={CURSOR_STYLE}
+          cursor={false}
+          wrapperStyle={WRAPPER_STYLE}
           content={({ active, payload }) => {
             if (!active || !payload?.[0]) return null;
             const d = payload[0].payload;
@@ -314,7 +317,8 @@ function BySourceChart({ days }: { days: number }) {
           }}
         />
         <Tooltip
-          cursor={CURSOR_STYLE}
+          cursor={false}
+          wrapperStyle={WRAPPER_STYLE}
           content={({ active, payload }) => {
             if (!active || !payload?.[0]) return null;
             const row = payload[0].payload as Record<string, string | number>;
@@ -386,6 +390,7 @@ function WeightHistoryChart({ days }: { days: number }) {
         <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
         <Tooltip
           cursor={{ stroke: "rgba(99,102,241,0.2)", strokeWidth: 1 }}
+          wrapperStyle={WRAPPER_STYLE}
           content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null;
             return (
@@ -460,7 +465,8 @@ function SourceClustersChart({ days }: { days: number }) {
           width={170}
         />
         <Tooltip
-          cursor={CURSOR_STYLE}
+          cursor={false}
+          wrapperStyle={WRAPPER_STYLE}
           content={({ active, payload }) => {
             if (!active || !payload?.[0]) return null;
             const row = payload[0].payload as Record<string, string | number>;
