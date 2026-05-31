@@ -213,7 +213,7 @@ function ActivityChart({ days }: { days: number }) {
             return (
               <TooltipBox label={label as string}>
                 {payload.map((p) => (
-                  <TooltipRow key={p.name} color={p.color} name={p.name ?? ""} value={p.value as number} />
+                  <TooltipRow key={String(p.name)} color={p.color} name={String(p.name ?? "")} value={p.value as number} />
                 ))}
               </TooltipBox>
             );
@@ -400,9 +400,9 @@ function WeightHistoryChart({ days }: { days: number }) {
                   .sort((a, b) => (b.value as number) - (a.value as number))
                   .map((p) => (
                     <TooltipRow
-                      key={p.name}
+                      key={String(p.name)}
                       color={p.color}
-                      name={p.name ?? ""}
+                      name={String(p.name ?? "")}
                       value={typeof p.value === "number" ? p.value.toFixed(3) : ""}
                     />
                   ))}
