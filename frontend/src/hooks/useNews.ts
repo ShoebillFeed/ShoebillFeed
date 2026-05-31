@@ -1,7 +1,57 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { InfiniteData, QueryKey } from "@tanstack/react-query";
 import { newsApi } from "../api/news";
 import { clustersApi } from "../api/clusters";
 import type { ApiTab } from "../api/news";
+import type { FeedEntry, NewsPage } from "../types/news";
+
+type SnapCtx = { snapshots: [QueryKey, InfiniteData<NewsPage> | undefined][] };
+
+function snapshotInfinite(qc: ReturnType<typeof useQueryClient>): SnapCtx {
+  return {
+    snapshots: qc.getQueriesData<InfiniteData<NewsPage>>({ queryKey: ["news", "infinite"] }),
+  };
+}
+
+function restoreSnapshots(qc: ReturnType<typeof useQueryClient>, ctx: SnapCtx | undefined) {
+  ctx?.snapshots.forEach(([key, data]) => qc.setQueryData(key, data));
+}
+
+function patchInfiniteItem(
+  qc: ReturnType<typeof useQueryClient>,
+  id: string,
+  patcher: (item: FeedEntry) => FeedEntry,
+) {
+  qc.setQueriesData<InfiniteData<NewsPage>>(
+    { queryKey: ["news", "infinite"] },
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          items: page.items.map((item) => (item.id === id ? patcher(item) : item)),
+        })),
+      };
+    },
+  );
+}
+
+function removeInfiniteItem(qc: ReturnType<typeof useQueryClient>, id: string) {
+  qc.setQueriesData<InfiniteData<NewsPage>>(
+    { queryKey: ["news", "infinite"] },
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          items: page.items.filter((item) => item.id !== id),
+        })),
+      };
+    },
+  );
+}
 
 export function useNews(params: {
   tab: ApiTab;
@@ -39,7 +89,13 @@ export function useToggleRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: newsApi.toggleRead,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      patchInfiniteItem(qc, id, (item) => ({ ...item, is_read: !item.is_read }));
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
   });
 }
 
@@ -47,7 +103,13 @@ export function useToggleRelevant() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: newsApi.toggleRelevant,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      patchInfiniteItem(qc, id, (item) => ({ ...item, is_relevant: !item.is_relevant }));
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
   });
 }
 
@@ -55,7 +117,13 @@ export function useToggleReadLater() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: newsApi.toggleReadLater,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      patchInfiniteItem(qc, id, (item) => ({ ...item, read_later: !item.read_later }));
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
   });
 }
 
@@ -71,7 +139,13 @@ export function useDeleteNewsItem() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: newsApi.delete,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      removeInfiniteItem(qc, id);
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
   });
 }
 
@@ -79,7 +153,13 @@ export function useToggleClusterRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: clustersApi.toggleRead,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      patchInfiniteItem(qc, id, (item) => ({ ...item, is_read: !item.is_read }));
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
   });
 }
 
@@ -87,7 +167,13 @@ export function useToggleClusterRelevant() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: clustersApi.toggleRelevant,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      patchInfiniteItem(qc, id, (item) => ({ ...item, is_relevant: !item.is_relevant }));
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
   });
 }
 
@@ -95,7 +181,13 @@ export function useToggleClusterReadLater() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: clustersApi.toggleReadLater,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      patchInfiniteItem(qc, id, (item) => ({ ...item, read_later: !item.read_later }));
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
   });
 }
 
@@ -103,6 +195,12 @@ export function useDeleteCluster() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: clustersApi.delete,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      removeInfiniteItem(qc, id);
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
   });
 }

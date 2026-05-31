@@ -7,7 +7,7 @@ import NewsFeed from "../components/feed/NewsFeed";
 import { CheckCheck, RefreshCw } from "lucide-react";
 import { sourcesApi } from "../api/sources";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import type { FeedEntry } from "../types/news";
 
 export default function FeedPage() {
@@ -38,6 +38,10 @@ export default function FeedPage() {
     await sourcesApi.fetchAll();
     setTimeout(() => qc.invalidateQueries({ queryKey: ["news"] }), 2000);
   };
+
+  const handleRefresh = useCallback(() => {
+    qc.invalidateQueries({ queryKey: ["news"] });
+  }, [qc]);
 
   return (
     <div>
@@ -87,6 +91,7 @@ export default function FeedPage() {
         hasMore={!!hasNextPage}
         isLoadingMore={isFetchingNextPage}
         onLoadMore={fetchNextPage}
+        onRefresh={handleRefresh}
       />
     </div>
   );
