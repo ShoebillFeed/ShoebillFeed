@@ -22,6 +22,27 @@ router = APIRouter()
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
+def _age_days(entry) -> float:
+    """Return the age of an entry in fractional days (0 = just published)."""
+    now = datetime.now(timezone.utc)
+    if isinstance(entry, NewsItem):
+        dt = entry.published_at or entry.fetched_at
+    else:
+        dt = entry.published_at or entry.created_at
+    if not dt:
+        return 0.0
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return max(0.0, (now - dt).total_seconds() / 86400.0)
+
+
+def _time_decay(entry, param: float) -> float:
+    """1 / (0.5 * (age_days * param + 2))  — equals 1.0 when age=0."""
+    if param <= 0:
+        return 1.0
+    return 1.0 / (0.5 * (_age_days(entry) * param + 2.0))
+
+
 def _sort_key_newest(entry):
     dt = entry.published_at if isinstance(entry, NewsItem) else (entry.published_at or entry.created_at)
     fallback = entry.fetched_at if isinstance(entry, NewsItem) else entry.created_at
@@ -89,6 +110,9 @@ def _build_feed(
     clusters = list(db.scalars(cluster_q).unique().all())
     all_entries = standalone + clusters
 
+    user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == user_id))
+    decay_param = user_settings.time_decay_param if user_settings else 2.0
+
     if tab == "newest":
         all_entries.sort(key=_sort_key_newest, reverse=True)
     elif tab == "relevant":
@@ -100,7 +124,6 @@ def _build_feed(
             kw.keyword: kw.weight
             for kw in db.scalars(select(KeywordWeight).where(KeywordWeight.user_id == user_id)).all()
         }
-        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == user_id))
         llm_w = user_settings.relevance_llm_weight if user_settings else 1.0
         learn_w = user_settings.relevance_learning_weight if user_settings else 1.0
         cluster_w = user_settings.relevance_cluster_weight if user_settings else 0.5
@@ -121,10 +144,10 @@ def _build_feed(
             )
             kw_factor = 1.0 + (raw_kw - 1.0) * learn_w
 
-            return (e.relevance_score or 5) * llm_w * cat_w * source_bonus * kw_factor
+            return (e.relevance_score or 5) * llm_w * cat_w * source_bonus * kw_factor * _time_decay(e, decay_param)
         all_entries.sort(key=_rel_key, reverse=True)
     elif tab == "impact":
-        all_entries.sort(key=lambda e: e.impact_score or 0, reverse=True)
+        all_entries.sort(key=lambda e: (e.impact_score or 0) * _time_decay(e, decay_param), reverse=True)
 
     return all_entries
 

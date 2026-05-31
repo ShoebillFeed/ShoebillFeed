@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, Component } from "react";
+import type { ReactNode } from "react";
 import {
   AreaChart, Area,
   BarChart, Bar,
@@ -9,6 +10,21 @@ import { format, parseISO } from "date-fns";
 import { PauseCircle } from "lucide-react";
 import { useActivityStats, useCategoryStats, useSourceStats, useWeightHistory } from "../../hooks/useStats";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
+
+class ChartErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
+  state = { crashed: false };
+  static getDerivedStateFromError() { return { crashed: true }; }
+  render() {
+    if (this.state.crashed) {
+      return (
+        <div className="flex items-center justify-center h-40 text-sm text-red-400 dark:text-red-500">
+          Chart failed to render.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const SOURCE_TYPE_LABEL: Record<string, string> = {
   rss: "RSS",
@@ -65,7 +81,7 @@ function ChartCard({
         {action}
       </div>
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">{description}</p>
-      {children}
+      <ChartErrorBoundary>{children}</ChartErrorBoundary>
     </div>
   );
 }
@@ -204,8 +220,8 @@ function BySourceChart({ days }: { days: number }) {
           tickLine={false}
           axisLine={false}
           width={120}
-          tickFormatter={(name: string, i: number) => {
-            const entry = data[i];
+          tickFormatter={(name: string) => {
+            const entry = data.find((d) => d.name === name);
             const type = entry ? (SOURCE_TYPE_LABEL[entry.source_type] ?? entry.source_type) : "";
             return type ? `${name} (${type})` : name;
           }}
@@ -330,7 +346,7 @@ export default function StatsPanel() {
           description="Daily count of articles fetched, read, and starred. The gap between Fetched and Read shows your backlog; the Starred line reflects how often you find content worth keeping."
           action={<RangePicker value={activityDays} onChange={setActivityDays} />}
         >
-          <ActivityChart days={activityDays} />
+          <ActivityChart key={activityDays} days={activityDays} />
         </ChartCard>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -339,7 +355,7 @@ export default function StatsPanel() {
             description="How many articles were assigned to each category in the selected period. Longer bars mean that category's topics are being covered more heavily by your sources."
             action={<RangePicker value={categoryDays} onChange={setCategoryDays} />}
           >
-            <ByCategoryChart days={categoryDays} />
+            <ByCategoryChart key={categoryDays} days={categoryDays} />
           </ChartCard>
 
           <ChartCard
@@ -347,7 +363,7 @@ export default function StatsPanel() {
             description="Volume of articles per source. Use this to spot sources that are too noisy (very high count) or not contributing much (low count) and adjust them in Sources settings."
             action={<RangePicker value={sourceDays} onChange={setSourceDays} />}
           >
-            <BySourceChart days={sourceDays} />
+            <BySourceChart key={sourceDays} days={sourceDays} />
           </ChartCard>
         </div>
 
@@ -356,7 +372,7 @@ export default function StatsPanel() {
           description="How each category's learned relevance score has grown over time. A score is recorded each time you star an article. Steeper curves mean you're consistently finding that category relevant; flat lines mean little recent activity. Requires recording to be enabled."
           action={<RangePicker value={weightDays} onChange={setWeightDays} />}
         >
-          <WeightHistoryChart days={weightDays} />
+          <WeightHistoryChart key={weightDays} days={weightDays} />
         </ChartCard>
       </div>
     </div>

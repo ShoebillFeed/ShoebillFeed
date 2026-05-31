@@ -42,6 +42,7 @@ export interface ClusterItem {
 export interface NewsCluster {
   kind: "cluster";
   id: string;
+  title: string | null;
   unified_abstract: string | null;
   extracted_keywords: string[] | null;
   relevance_score: number | null;

@@ -101,6 +101,18 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
         <span className={cn("text-xs shrink-0 mt-0.5", hasImage ? "text-white/60" : "text-gray-400")}>{timeAgo}</span>
       </div>
 
+      {/* Title */}
+      {cluster.title && (
+        <h3 className={cn(
+          "text-sm font-semibold leading-snug mb-1",
+          hasImage
+            ? "text-white"
+            : cluster.is_read ? "text-gray-500 dark:text-gray-400" : "text-gray-900 dark:text-gray-100"
+        )}>
+          {cluster.title}
+        </h3>
+      )}
+
       {/* Unified abstract */}
       {cluster.unified_abstract ? (
         <p className={cn(

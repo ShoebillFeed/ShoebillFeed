@@ -32,6 +32,7 @@ Respond ONLY with valid JSON. No markdown fences, no extra text."""
 
 
 CLUSTER_SYSTEM_PROMPT = """You are a news analyst. Multiple sources have covered the same event. Return a JSON object with exactly these fields:
+- "title": string, a short headline (max 10 words) that captures the core event. Write in the same language as the source articles.
 - "unified_abstract": string, 2-4 sentence summary that synthesises all sources into one coherent account. Write in the same language as the source articles.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent this event (e.g. ["trade war", "tariffs", "eu"])
 - "categories": array of category names from the provided list that fit this event (can be empty [], can have multiple matches)
@@ -43,6 +44,43 @@ Available categories: {categories_json}
 Each category has a name and keywords. If a description field is present, use it to judge whether the article fits that category. Include all categories that genuinely apply.
 
 Respond ONLY with valid JSON. No markdown fences, no extra text."""
+
+
+LANGUAGE_NAMES: dict[str, str] = {
+    "en": "English",
+    "de": "German",
+    "fr": "French",
+    "es": "Spanish",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "nl": "Dutch",
+    "pl": "Polish",
+    "ru": "Russian",
+    "zh": "Chinese",
+    "ja": "Japanese",
+    "ar": "Arabic",
+    "ko": "Korean",
+    "tr": "Turkish",
+    "sv": "Swedish",
+    "da": "Danish",
+    "fi": "Finnish",
+    "nb": "Norwegian",
+    "cs": "Czech",
+    "hu": "Hungarian",
+    "ro": "Romanian",
+}
+
+
+def language_suffix(output_language: str | None) -> str:
+    """Return a prompt suffix that forces a specific output language, or empty string."""
+    if not output_language:
+        return ""
+    name = LANGUAGE_NAMES.get(output_language, output_language)
+    return (
+        f"\n\nIMPORTANT: All generated text fields "
+        f"(abstract, unified_abstract, headline, summary, source_summaries) "
+        f"MUST be written in {name}, regardless of the article's original language."
+    )
 
 
 @dataclass
@@ -62,6 +100,7 @@ class ClusterResult:
     category_names: list[str]
     relevance_score: int
     impact_score: int
+    title: str | None = None
     source_summaries: dict[str, str] = field(default_factory=dict)
 
 
@@ -139,6 +178,7 @@ def parse_cluster_response(text: str, item_count: int, known_categories: list[st
     except json.JSONDecodeError:
         data = json.loads(repair_json(text))
 
+    title = str(data.get("title", "")).strip() or None
     abstract = str(data.get("unified_abstract", "")).strip() or "No summary available."
     raw_cats = data.get("categories", data.get("category"))
     category_names = _parse_categories(raw_cats, known_categories)
@@ -150,6 +190,7 @@ def parse_cluster_response(text: str, item_count: int, known_categories: list[st
     }
 
     return ClusterResult(
+        title=title,
         unified_abstract=abstract,
         keywords=_parse_keywords(data.get("keywords")),
         category_names=category_names,
@@ -249,6 +290,7 @@ class LLMProvider(ABC):
         categories: list[dict],
         max_content_chars: int = 4000,
         social_post: bool = False,
+        output_language: str | None = None,
     ) -> ProcessedResult: ...
 
     @abstractmethod
@@ -257,6 +299,7 @@ class LLMProvider(ABC):
         items: list[dict],
         categories: list[dict],
         max_content_chars: int = 2000,
+        output_language: str | None = None,
     ) -> ClusterResult: ...
 
     @abstractmethod
@@ -264,6 +307,7 @@ class LLMProvider(ABC):
         self,
         content: str,
         categories: list[dict],
+        output_language: str | None = None,
     ) -> NewsletterResult: ...
 
     @abstractmethod

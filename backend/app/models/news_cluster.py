@@ -21,6 +21,7 @@ class NewsCluster(Base):
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
     )
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
     unified_abstract: Mapped[str | None] = mapped_column(Text, nullable=True)
     extracted_keywords: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
     relevance_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)

@@ -5,6 +5,7 @@ from app.services.llm.base import (
     LLMProvider, ProcessedResult, ClusterResult, NewsletterResult,
     SYSTEM_PROMPT, SOCIAL_SYSTEM_PROMPT, CLUSTER_SYSTEM_PROMPT, NEWSLETTER_SYSTEM_PROMPT,
     parse_llm_response, parse_cluster_response, parse_newsletter_response,
+    language_suffix,
 )
 
 
@@ -26,11 +27,11 @@ class OllamaProvider(LLMProvider):
         resp.raise_for_status()
         return resp.json()["response"]
 
-    def process_item(self, title, content, categories, max_content_chars=4000, social_post=False) -> ProcessedResult:
+    def process_item(self, title, content, categories, max_content_chars=4000, social_post=False, output_language=None) -> ProcessedResult:
         truncated = (content or title)[:max_content_chars]
         known = [c["name"] for c in categories]
         prompt_template = SOCIAL_SYSTEM_PROMPT if social_post else SYSTEM_PROMPT
-        system = prompt_template.format(categories_json=json.dumps(categories))
+        system = prompt_template.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
         user = f"Post: {truncated}" if social_post else f"Title: {title}\n\nContent: {truncated}"
 
         payload = {
@@ -44,9 +45,9 @@ class OllamaProvider(LLMProvider):
         resp.raise_for_status()
         return parse_llm_response(resp.json()["response"], known, social_post=social_post)
 
-    def process_cluster(self, items, categories, max_content_chars=2000) -> ClusterResult:
+    def process_cluster(self, items, categories, max_content_chars=2000, output_language=None) -> ClusterResult:
         known = [c["name"] for c in categories]
-        system = CLUSTER_SYSTEM_PROMPT.format(categories_json=json.dumps(categories))
+        system = CLUSTER_SYSTEM_PROMPT.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
 
         parts = []
         for i, item in enumerate(items):
@@ -64,9 +65,9 @@ class OllamaProvider(LLMProvider):
         resp.raise_for_status()
         return parse_cluster_response(resp.json()["response"], len(items), known)
 
-    def extract_newsletter_items(self, content: str, categories: list[dict]) -> NewsletterResult:
+    def extract_newsletter_items(self, content: str, categories: list[dict], output_language=None) -> NewsletterResult:
         known = [c["name"] for c in categories]
-        system = NEWSLETTER_SYSTEM_PROMPT.format(categories_json=json.dumps(categories, ensure_ascii=False))
+        system = NEWSLETTER_SYSTEM_PROMPT.format(categories_json=json.dumps(categories, ensure_ascii=False)) + language_suffix(output_language)
         payload = {
             "model": self.model,
             "stream": False,

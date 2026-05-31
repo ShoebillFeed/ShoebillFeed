@@ -2,6 +2,30 @@ import { useState, useEffect } from "react";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 
+const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "de", label: "German" },
+  { code: "fr", label: "French" },
+  { code: "es", label: "Spanish" },
+  { code: "it", label: "Italian" },
+  { code: "pt", label: "Portuguese" },
+  { code: "nl", label: "Dutch" },
+  { code: "pl", label: "Polish" },
+  { code: "ru", label: "Russian" },
+  { code: "zh", label: "Chinese" },
+  { code: "ja", label: "Japanese" },
+  { code: "ar", label: "Arabic" },
+  { code: "ko", label: "Korean" },
+  { code: "tr", label: "Turkish" },
+  { code: "sv", label: "Swedish" },
+  { code: "da", label: "Danish" },
+  { code: "fi", label: "Finnish" },
+  { code: "nb", label: "Norwegian" },
+  { code: "cs", label: "Czech" },
+  { code: "hu", label: "Hungarian" },
+  { code: "ro", label: "Romanian" },
+];
+
 const inputClass =
   "w-24 px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500";
 
@@ -99,6 +123,31 @@ export default function AdvancedPanel() {
     <div>
       <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-6">Advanced</h2>
 
+      <Section
+        title="Content Language"
+        description="Controls the language the AI uses when writing abstracts, summaries, and headlines."
+      >
+        <Field
+          label="Output language"
+          description="Keep original uses the article's own language. Selecting a language forces all generated text into that language regardless of the source."
+        >
+          <select
+            value={settings.output_language ?? ""}
+            onChange={(e) =>
+              update.mutate({ output_language: e.target.value || null })
+            }
+            className="px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Keep original</option>
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </Section>
+
       <Section title="Reading">
         <Field
           label="Auto-star on read"
@@ -140,7 +189,7 @@ export default function AdvancedPanel() {
 
       <Section
         title="Relevant Tab Ranking"
-        description="The Relevant tab score combines the AI's rating, your reading history, and a bonus for widely-covered stories. Each factor can be scaled or disabled independently."
+        description="The Relevant tab score combines the AI's rating, your reading history, a bonus for widely-covered stories, and a time decay factor. Each factor can be scaled or disabled independently."
       >
         <NumericField
           label="AI rating influence"
@@ -168,6 +217,15 @@ export default function AdvancedPanel() {
           max={5}
           step={0.05}
           onChange={(v) => update.mutate({ relevance_cluster_weight: v })}
+        />
+        <NumericField
+          label="Time decay rate"
+          description={`Multiplier applied to Relevant and Impact scores based on article age: 1 / (0.5 × (days × rate + 2)). A fresh article always scores at 1.0. 0 = no decay. With current setting: ${[1, 7, 30].map((d) => `${d}d → ${(1 / (0.5 * (d * (settings.time_decay_param ?? 0.5) + 2))).toFixed(2)}`).join(", ")}. Default: 2`}
+          value={settings.time_decay_param ?? 2.0}
+          min={0}
+          max={20}
+          step={0.1}
+          onChange={(v) => update.mutate({ time_decay_param: v })}
         />
       </Section>
 

@@ -42,13 +42,15 @@ export default function NewsFeed({
     setTimeout(() => setIsRefreshing(false), 900);
   }, []);
 
+  // Attach pull-to-refresh listeners once; parentRef is always mounted.
   useEffect(() => {
     const el = parentRef.current;
     if (!el) return;
 
-    // --- Touch pull-to-refresh ---
+    // Use local vars instead of reading React state in event callbacks (avoids stale closures).
     let touchStartY = 0;
     let pulling = false;
+    let currentPull = 0;
 
     const onTouchStart = (e: TouchEvent) => {
       if (el.scrollTop === 0) {
@@ -61,10 +63,12 @@ export default function NewsFeed({
       if (!pulling) return;
       const dy = e.touches[0].clientY - touchStartY;
       if (dy > 0) {
-        setPullY(Math.min(dy * 0.55, PULL_THRESHOLD * 1.4));
+        currentPull = Math.min(dy * 0.55, PULL_THRESHOLD * 1.4);
+        setPullY(currentPull);
         if (dy > 8) e.preventDefault();
       } else {
         pulling = false;
+        currentPull = 0;
         setPullY(0);
       }
     };
@@ -72,16 +76,14 @@ export default function NewsFeed({
     const onTouchEnd = () => {
       if (!pulling) return;
       pulling = false;
-      setPullY((prev) => {
-        if (prev >= PULL_THRESHOLD) triggerRefresh();
-        else setPullY(0);
-        return prev;
-      });
-      // Ensure reset if not refreshing
-      setTimeout(() => setPullY(0), 50);
+      if (currentPull >= PULL_THRESHOLD) {
+        triggerRefresh();
+      } else {
+        setPullY(0);
+      }
+      currentPull = 0;
     };
 
-    // --- Wheel pull-to-refresh (desktop) ---
     let wheelAcc = 0;
     let wheelTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -138,25 +140,6 @@ export default function NewsFeed({
     }
   }, [lastVirtualItem?.index, items.length, hasMore, isLoadingMore, onLoadMore]);
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <NewsCardSkeleton key={i} />
-        ))}
-      </div>
-    );
-  }
-
-  if (items.length === 0) {
-    return (
-      <div className="text-center py-20 text-gray-400 dark:text-gray-600">
-        <p className="text-lg font-medium">No articles yet</p>
-        <p className="text-sm mt-1">Add sources in Settings to get started</p>
-      </div>
-    );
-  }
-
   const progress = Math.min(pullY / PULL_THRESHOLD, 1);
   const atThreshold = pullY >= PULL_THRESHOLD;
   const indicatorH = isRefreshing
@@ -165,16 +148,15 @@ export default function NewsFeed({
 
   return (
     <div className="relative">
-      {/* Pull-to-refresh indicator */}
+      {/* Pull-to-refresh indicator — overlays the top of the feed while pulling */}
       <div
         className="absolute inset-x-0 top-0 z-10 overflow-hidden bg-gray-50/95 dark:bg-gray-950/95 backdrop-blur-sm"
         style={{
           height: indicatorH,
           transition: !isRefreshing && pullY === 0 ? "height 0.2s ease" : undefined,
-          borderBottom: indicatorH > 0 ? "1px solid rgb(var(--border) / 0.4)" : undefined,
+          borderBottom: indicatorH > 0 ? "1px solid rgba(128,128,128,0.2)" : undefined,
         }}
       >
-        {/* Progress bar */}
         <div
           className={cn(
             "h-0.5 transition-colors",
@@ -185,8 +167,6 @@ export default function NewsFeed({
             transition: isRefreshing ? "width 0.4s ease" : undefined,
           }}
         />
-
-        {/* Label row */}
         <div
           className={cn(
             "flex items-center justify-center gap-1.5 text-xs font-medium select-none",
@@ -208,53 +188,67 @@ export default function NewsFeed({
             />
           )}
           <span>
-            {isRefreshing
-              ? "Refreshing…"
-              : atThreshold
-                ? "Release to refresh"
-                : "Pull to refresh"}
+            {isRefreshing ? "Refreshing…" : atThreshold ? "Release to refresh" : "Pull to refresh"}
           </span>
         </div>
       </div>
 
-      {/* Scroll container */}
+      {/*
+        Scroll container is always in the DOM so parentRef stays stable across
+        tab switches and loading states. Event listeners never need re-attaching.
+      */}
       <div ref={parentRef} className="overflow-auto" style={{ height: "calc(100vh - 200px)" }}>
-        <div
-          style={{
-            height: `${virtualizer.getTotalSize()}px`,
-            width: "100%",
-            position: "relative",
-          }}
-        >
-          {virtualizer.getVirtualItems().map((virtualItem) => {
-            const entry = items[virtualItem.index];
-            return (
-              <div
-                key={virtualItem.key}
-                data-index={virtualItem.index}
-                ref={virtualizer.measureElement}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  transform: `translateY(${virtualItem.start}px)`,
-                  paddingBottom: "12px",
-                }}
-              >
-                {entry.kind === "cluster" ? (
-                  <ClusterCard cluster={entry} />
-                ) : (
-                  <NewsCard item={entry} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {isLoadingMore && (
-          <div className="flex justify-center py-4">
-            <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+        {isLoading ? (
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <NewsCardSkeleton key={i} />
+            ))}
           </div>
+        ) : items.length === 0 ? (
+          <div className="text-center py-20 text-gray-400 dark:text-gray-600">
+            <p className="text-lg font-medium">No articles yet</p>
+            <p className="text-sm mt-1">Add sources in Settings to get started</p>
+          </div>
+        ) : (
+          <>
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const entry = items[virtualItem.index];
+                return (
+                  <div
+                    key={virtualItem.key}
+                    data-index={virtualItem.index}
+                    ref={virtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualItem.start}px)`,
+                      paddingBottom: "12px",
+                    }}
+                  >
+                    {entry.kind === "cluster" ? (
+                      <ClusterCard cluster={entry} />
+                    ) : (
+                      <NewsCard item={entry} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {isLoadingMore && (
+              <div className="flex justify-center py-4">
+                <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

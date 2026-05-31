@@ -56,6 +56,7 @@ class ClusterItemOut(BaseModel):
 class NewsClusterOut(BaseModel):
     kind: Literal["cluster"] = "cluster"
     id: uuid.UUID
+    title: str | None = None
     unified_abstract: str | None
     extracted_keywords: list[str] | None = None
     relevance_score: int | None

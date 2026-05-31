@@ -90,7 +90,7 @@ def update_advanced_settings(
     current_user: User = Depends(get_current_user),
 ):
     s = _get_or_create_settings(db, current_user.id)
-    for field, value in payload.model_dump(exclude_none=True).items():
+    for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(s, field, value)
     db.commit()
     db.refresh(s)

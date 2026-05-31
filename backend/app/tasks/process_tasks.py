@@ -7,11 +7,17 @@ from sqlalchemy.orm import joinedload
 
 from app.database import SessionLocal
 from app.models import NewsItem, Category, NewsCluster, Source
+from app.models.user_settings import UserSettings
 from app.services.deduplication import url_hash
 from app.services.llm.factory import get_llm_provider
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+
+def _get_output_language(db, user_id) -> str | None:
+    s = db.scalar(select(UserSettings).where(UserSettings.user_id == user_id))
+    return s.output_language if s else None
 
 
 def _get_categories_payload(db, user_id) -> list[dict]:
@@ -25,12 +31,13 @@ def _get_categories_payload(db, user_id) -> list[dict]:
     return payload
 
 
-def _expand_newsletter(db, email_item: "NewsItem", source: "Source", categories_payload, provider) -> None:
+def _expand_newsletter(db, email_item: "NewsItem", source: "Source", categories_payload, provider, output_language=None) -> None:
     """Replace a newsletter email item with individual extracted news items."""
     try:
         result = provider.extract_newsletter_items(
             content=email_item.raw_content or email_item.title,
             categories=categories_payload,
+            output_language=output_language,
         )
     except Exception:
         logger.exception("Newsletter extraction failed for item %s, falling back to normal processing", email_item.id)
@@ -117,13 +124,14 @@ def process_news_item(self, news_item_id: str) -> None:
             return
 
         categories_payload = _get_categories_payload(db, item.user_id)
+        output_language = _get_output_language(db, item.user_id)
         provider = get_llm_provider()
 
         source = db.get(Source, item.source_id) if item.source_id else None
 
         # Newsletter emails: extract individual articles via LLM, then replace this item
         if source is not None and source.source_type == "email":
-            _expand_newsletter(db, item, source, categories_payload, provider)
+            _expand_newsletter(db, item, source, categories_payload, provider, output_language)
             db.commit()
             logger.info("Expanded newsletter email %s into individual items", news_item_id)
             return
@@ -135,6 +143,7 @@ def process_news_item(self, news_item_id: str) -> None:
             content=item.raw_content or "",
             categories=categories_payload,
             social_post=is_social,
+            output_language=output_language,
         )
 
         if is_social and result.generated_title:
@@ -204,6 +213,7 @@ def process_cluster(self, cluster_id: str) -> None:
             return
 
         categories_payload = _get_categories_payload(db, cluster.user_id)
+        output_language = _get_output_language(db, cluster.user_id)
         provider = get_llm_provider()
 
         items_payload = [
@@ -215,8 +225,9 @@ def process_cluster(self, cluster_id: str) -> None:
             for item in items
         ]
 
-        result = provider.process_cluster(items=items_payload, categories=categories_payload)
+        result = provider.process_cluster(items=items_payload, categories=categories_payload, output_language=output_language)
 
+        cluster.title = result.title
         cluster.unified_abstract = result.unified_abstract
         cluster.extracted_keywords = result.keywords or None
         cluster.relevance_score = result.relevance_score

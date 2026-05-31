@@ -7,6 +7,8 @@ export interface UserSettings {
   relevance_learning_weight: number;
   relevance_cluster_weight: number;
   stats_enabled: boolean;
+  output_language: string | null;
+  time_decay_param: number;
 }
 
 export interface UserSettingsUpdate {
@@ -16,6 +18,8 @@ export interface UserSettingsUpdate {
   relevance_learning_weight?: number;
   relevance_cluster_weight?: number;
   stats_enabled?: boolean;
+  output_language?: string | null;
+  time_decay_param?: number;
 }
 
 export const settingsApi = {
