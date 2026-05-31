@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload
 from app.database import SessionLocal
 from app.models import NewsItem, Category, NewsCluster, Source
 from app.models.user_settings import UserSettings
+from app.services.clustering import recluster_processed_item
 from app.services.deduplication import url_hash
 from app.services.llm.factory import get_llm_provider
 from app.tasks.celery_app import celery_app
@@ -167,6 +168,14 @@ def process_news_item(self, news_item_id: str) -> None:
 
         db.commit()
         logger.info("Processed news item %s", news_item_id)
+
+        # Second-pass keyword clustering for standalone items
+        if item.cluster_id is None:
+            cluster_id = recluster_processed_item(db, item)
+            if cluster_id:
+                db.commit()
+                logger.info("Keyword-clustered item %s into cluster %s", news_item_id, cluster_id)
+                process_cluster.apply_async(args=[str(cluster_id)], queue="process")
 
     except anthropic_sdk.RateLimitError as exc:
         db.rollback()

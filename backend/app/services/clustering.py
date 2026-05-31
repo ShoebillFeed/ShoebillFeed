@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 from app.models.news_cluster import NewsCluster
 from app.models.news_item import NewsItem
 
+KEYWORD_SIMILARITY_THRESHOLD = 0.25
+
 STOP_WORDS = frozenset({
     "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
     "of", "with", "is", "are", "was", "were", "be", "been", "has", "have",
@@ -17,6 +19,12 @@ STOP_WORDS = frozenset({
 })
 SIMILARITY_THRESHOLD = 0.3
 LOOKBACK_HOURS = 48
+
+
+def _keyword_set(item: "NewsItem") -> frozenset[str]:
+    if not item.extracted_keywords:
+        return frozenset()
+    return frozenset(kw.lower().strip() for kw in item.extracted_keywords if kw.strip())
 
 
 def _title_words(title: str) -> frozenset[str]:
@@ -126,3 +134,70 @@ def cluster_new_items(db: Session, new_item_ids: list[uuid.UUID]) -> dict[uuid.U
             result[item.id] = None
 
     return result
+
+
+def recluster_processed_item(db: Session, item: NewsItem) -> uuid.UUID | None:
+    """
+    Second-pass clustering using LLM-extracted keywords. Called after an item
+    has been individually processed and is still standalone (cluster_id is None).
+
+    Searches recently-processed items (same user, last LOOKBACK_HOURS) for a
+    keyword-Jaccard match >= KEYWORD_SIMILARITY_THRESHOLD. On a match the item
+    is added to the matching item's cluster (if one exists) or a new two-item
+    cluster is created.
+
+    Does NOT commit — caller must commit and dispatch process_cluster.
+    Returns the cluster_id assigned, or None.
+    """
+    if item.cluster_id is not None or not item.extracted_keywords:
+        return None
+
+    item_kws = _keyword_set(item)
+    if not item_kws:
+        return None
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=LOOKBACK_HOURS)
+    candidates = db.scalars(
+        select(NewsItem).where(
+            NewsItem.id != item.id,
+            NewsItem.user_id == item.user_id,
+            NewsItem.llm_processed == True,  # noqa: E712
+            NewsItem.fetched_at >= cutoff,
+            NewsItem.extracted_keywords.isnot(None),
+        )
+    ).all()
+
+    best: NewsItem | None = None
+    best_score = 0.0
+    for candidate in candidates:
+        score = _jaccard(item_kws, _keyword_set(candidate))
+        if score >= KEYWORD_SIMILARITY_THRESHOLD and score > best_score:
+            best_score = score
+            best = candidate
+
+    if best is None:
+        return None
+
+    # Re-read best match in case a concurrent task just assigned it to a cluster
+    db.refresh(best)
+
+    if best.cluster_id is not None:
+        cluster = db.get(NewsCluster, best.cluster_id)
+        if cluster is None:
+            return None
+        cluster.llm_processed = False
+        cluster.unified_abstract = None
+        cluster.title = None
+        item.cluster_id = cluster.id
+        return cluster.id
+    else:
+        all_dates = [i.published_at for i in (item, best) if i.published_at]
+        cluster = NewsCluster(
+            published_at=min(all_dates) if all_dates else None,
+            user_id=item.user_id,
+        )
+        db.add(cluster)
+        db.flush()
+        item.cluster_id = cluster.id
+        best.cluster_id = cluster.id
+        return cluster.id
