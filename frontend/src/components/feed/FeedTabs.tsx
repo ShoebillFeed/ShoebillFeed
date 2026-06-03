@@ -61,7 +61,8 @@ export default function FeedTabs({
 
   return (
     <div className="mb-4">
-      <div className="flex items-end gap-0 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+      <div className="border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-end gap-0 overflow-x-auto scrollbar-none">
         {/* Built-in tabs */}
         {BUILT_IN_TAB_IDS.map(({ id, icon: Icon }) => (
           <button
@@ -131,6 +132,7 @@ export default function FeedTabs({
         >
           <Plus size={15} />
         </button>
+      </div>
       </div>
 
       {/* Inline create/edit form */}
