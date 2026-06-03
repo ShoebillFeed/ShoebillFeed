@@ -67,9 +67,12 @@ def _expand_newsletter(db, email_item: "NewsItem", source: "Source", categories_
         # Use email URL as fallback so the item is still identifiable
         item_url = ni.url or email_item.url
         h = url_hash(item_url)
-        if db.scalar(select(NewsItem.id).where(NewsItem.url_hash == h)):
+        if db.scalar(select(NewsItem.id).where(
+            NewsItem.url_hash == h,
+            NewsItem.user_id == email_item.user_id,
+        )):
             skipped_dupes += 1
-            continue  # already exists
+            continue  # already exists for this user
 
         new_item = NewsItem(
             source_id=source.id,

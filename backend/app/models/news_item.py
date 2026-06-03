@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Text, Boolean, SmallInteger, DateTime, ForeignKey, Index, func, ARRAY, Table, Column  # noqa: F401
+from sqlalchemy import String, Text, Boolean, SmallInteger, DateTime, ForeignKey, Index, func, ARRAY, Table, Column, UniqueConstraint  # noqa: F401
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
@@ -29,7 +29,7 @@ class NewsItem(Base):
     )
     title: Mapped[str] = mapped_column(Text, nullable=False)
     url: Mapped[str] = mapped_column(Text, nullable=False)
-    url_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    url_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     raw_content: Mapped[str | None] = mapped_column(Text, nullable=True)
     abstract: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -52,6 +52,8 @@ class NewsItem(Base):
     cluster: Mapped["NewsCluster | None"] = relationship("NewsCluster", back_populates="items")
 
     __table_args__ = (
+        UniqueConstraint("user_id", "url_hash", name="uq_news_items_user_url"),
+        Index("idx_news_items_url_hash", "url_hash"),  # cross-user lookup
         Index("idx_news_items_source_id", "source_id"),
         Index("idx_news_items_published_at", "published_at"),
         Index(

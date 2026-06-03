@@ -6,6 +6,7 @@ from sqlalchemy import select, func, update, exists
 
 from app.database import SessionLocal
 from app.models import NewsItem, NewsCluster, Source
+from app.models.category import Category
 from app.services.deduplication import url_hash, content_hash
 from app.services.fetchers.base import get_fetcher
 from app.services.clustering import cluster_new_items
@@ -39,10 +40,16 @@ def fetch_source(self, source_id: str) -> dict:
         new_item_ids: list[uuid.UUID] = []
         for raw in raw_items:
             h = url_hash(raw.url)
-            if db.scalar(select(NewsItem.id).where(NewsItem.url_hash == h)):
+
+            # Skip if this user already has this URL
+            if db.scalar(select(NewsItem.id).where(
+                NewsItem.url_hash == h,
+                NewsItem.user_id == source.user_id,
+            )):
                 skipped += 1
                 continue
 
+            # Skip same content re-published by the same source
             ch = content_hash(raw.raw_content) if raw.raw_content else None
             if ch and db.scalar(
                 select(NewsItem.id).where(
@@ -53,6 +60,15 @@ def fetch_source(self, source_id: str) -> dict:
                 skipped += 1
                 continue
 
+            # Check if another user already has a processed copy of this URL
+            donor = db.scalar(
+                select(NewsItem).where(
+                    NewsItem.url_hash == h,
+                    NewsItem.llm_processed == True,  # noqa: E712
+                    NewsItem.user_id != source.user_id,
+                )
+            ) if source.user_id else None
+
             item = NewsItem(
                 source_id=source.id,
                 user_id=source.user_id,
@@ -62,8 +78,29 @@ def fetch_source(self, source_id: str) -> dict:
                 content_hash=ch,
                 raw_content=raw.raw_content,
                 published_at=raw.published_at,
-                image_url=raw.image_url,
+                image_url=donor.image_url if donor and donor.image_url else raw.image_url,
             )
+
+            if donor and donor.abstract:
+                # Reuse LLM output — no token cost for this user
+                item.abstract = donor.abstract
+                item.extracted_keywords = donor.extracted_keywords
+                item.impact_score = donor.impact_score
+                item.llm_processed = True
+                # Assign categories via keyword overlap (free, no LLM needed)
+                if donor.extracted_keywords and source.user_id:
+                    kw_lower = {k.lower() for k in donor.extracted_keywords}
+                    user_cats = db.scalars(
+                        select(Category).where(
+                            Category.user_id == source.user_id,
+                            Category.is_active == True,  # noqa: E712
+                        )
+                    ).all()
+                    item.categories = [
+                        cat for cat in user_cats
+                        if any(k.lower() in kw_lower for k in cat.keywords)
+                    ]
+                logger.debug("Reused LLM results from donor item %s for user %s", donor.id, source.user_id)
             db.add(item)
             db.flush()
             new_item_ids.append(item.id)
