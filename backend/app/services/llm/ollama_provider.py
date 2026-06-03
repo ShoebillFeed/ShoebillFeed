@@ -27,7 +27,7 @@ class OllamaProvider(LLMProvider):
         resp.raise_for_status()
         return resp.json()["response"]
 
-    def process_item(self, title, content, categories, max_content_chars=4000, social_post=False, output_language=None) -> ProcessedResult:
+    def process_item(self, title, content, categories, max_content_chars=1500, social_post=False, output_language=None) -> ProcessedResult:
         truncated = (content or title)[:max_content_chars]
         known = [c["name"] for c in categories]
         prompt_template = SOCIAL_SYSTEM_PROMPT if social_post else SYSTEM_PROMPT
@@ -45,7 +45,7 @@ class OllamaProvider(LLMProvider):
         resp.raise_for_status()
         return parse_llm_response(resp.json()["response"], known, social_post=social_post)
 
-    def process_cluster(self, items, categories, max_content_chars=2000, output_language=None) -> ClusterResult:
+    def process_cluster(self, items, categories, max_content_chars=800, output_language=None) -> ClusterResult:
         known = [c["name"] for c in categories]
         system = CLUSTER_SYSTEM_PROMPT.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
 

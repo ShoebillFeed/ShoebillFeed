@@ -6,6 +6,8 @@ import { useCreateCategory, useUpdateCategory } from "../../hooks/useCategories"
 import { categoriesApi } from "../../api/categories";
 import { cn } from "../../lib/utils";
 
+const PROMPT_MAX_CHARS = 500;
+
 const PRESET_COLORS = [
   "#6366f1", "#ec4899", "#f59e0b", "#10b981", "#3b82f6",
   "#8b5cf6", "#ef4444", "#14b8a6", "#f97316", "#06b6d4",
@@ -64,7 +66,7 @@ export default function CategoryForm({ category, onClose }: Props) {
     promptManuallyEdited.current = false;
 
     try {
-      const generated = await categoriesApi.generatePrompt(trimmedName, keywordList);
+      const generated = await categoriesApi.generatePrompt(trimmedName, keywordList, PROMPT_MAX_CHARS);
       setPrompt(generated);
     } catch {
       setGenerateError(t("categoryForm.generationFailed"));
@@ -156,15 +158,30 @@ export default function CategoryForm({ category, onClose }: Props) {
         <textarea
           className={cn(inputClass, "resize-none", generating && "opacity-50")}
           rows={3}
+          maxLength={PROMPT_MAX_CHARS}
           value={generating ? t("categoryForm.generatingText") : prompt}
           onChange={(e) => handlePromptChange(e.target.value)}
           readOnly={generating}
           placeholder={t("categoryForm.promptPlaceholder")}
         />
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-xs text-gray-400">{t("categoryForm.promptHint")}</p>
+          {!generating && (
+            <span className={cn(
+              "text-xs tabular-nums shrink-0 ml-2",
+              prompt.length >= PROMPT_MAX_CHARS
+                ? "text-red-500"
+                : prompt.length >= PROMPT_MAX_CHARS * 0.9
+                ? "text-amber-500"
+                : "text-gray-400"
+            )}>
+              {prompt.length}/{PROMPT_MAX_CHARS}
+            </span>
+          )}
+        </div>
         {generateError && (
           <p className="text-xs text-amber-500 mt-1">{generateError}</p>
         )}
-        <p className="text-xs text-gray-400 mt-1">{t("categoryForm.promptHint")}</p>
       </div>
 
       <div className="flex gap-2 mt-2">

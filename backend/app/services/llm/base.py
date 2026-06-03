@@ -276,7 +276,8 @@ Category name: "{name}"
 Topics and keywords that belong in this category:
 {topics}
 
-Write a 2-4 sentence classification prompt that tells an LLM when to assign a news article to this category. It should describe what kinds of articles belong here and what signals (topics, terms, contexts) indicate a match.
+Write a classification prompt that tells an LLM when to assign a news article to this category. It should describe what kinds of articles belong here and what signals (topics, terms, contexts) indicate a match.
+Keep it under {max_chars} characters. Be concise — 2-3 sentences maximum.
 
 Return ONLY the classification prompt — no labels, no reasoning, no extra text."""
 
@@ -313,7 +314,7 @@ class LLMProvider(ABC):
     @abstractmethod
     def _complete(self, system: str, user: str, max_tokens: int = 512) -> str: ...
 
-    def generate_category_prompt(self, name: str, keywords: list[str]) -> str:
+    def generate_category_prompt(self, name: str, keywords: list[str], max_chars: int = 500) -> str:
         keywords_hint = (
             f"\nThe user has provided these seed keywords as hints: {', '.join(keywords)}."
             if keywords else ""
@@ -322,10 +323,11 @@ class LLMProvider(ABC):
             system="You are a concise knowledge assistant.",
             user=CATEGORY_TOPICS_PROMPT.format(name=name, keywords_hint=keywords_hint),
         )
-        return self._complete(
+        result = self._complete(
             system="You are a precise prompt engineer for news categorization systems.",
-            user=CATEGORY_PROMPT_GENERATION.format(name=name, topics=topics.strip()),
+            user=CATEGORY_PROMPT_GENERATION.format(name=name, topics=topics.strip(), max_chars=max_chars),
         )
+        return result[:max_chars]
 
     @abstractmethod
     def health_check(self) -> bool: ...

@@ -102,9 +102,12 @@ def set_manual_weight(category_id: uuid.UUID, payload: SetManualWeightRequest, d
     return _build_out(db, category)
 
 
+CATEGORY_PROMPT_MAX_CHARS = 500
+
 class GeneratePromptRequest(BaseModel):
     name: str
     keywords: list[str] = []
+    max_chars: int = CATEGORY_PROMPT_MAX_CHARS
 
 
 @router.post("/generate-prompt")
@@ -113,7 +116,11 @@ def generate_prompt(payload: GeneratePromptRequest, _: User = Depends(get_curren
         raise HTTPException(status_code=422, detail="Category name is required")
     try:
         provider = get_llm_provider()
-        prompt = provider.generate_category_prompt(name=payload.name.strip(), keywords=payload.keywords)
+        prompt = provider.generate_category_prompt(
+            name=payload.name.strip(),
+            keywords=payload.keywords,
+            max_chars=payload.max_chars,
+        )
         return {"prompt": prompt.strip()}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"LLM error: {exc}") from exc

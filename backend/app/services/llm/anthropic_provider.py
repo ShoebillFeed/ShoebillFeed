@@ -23,7 +23,7 @@ class AnthropicProvider(LLMProvider):
         )
         return message.content[0].text
 
-    def process_item(self, title, content, categories, max_content_chars=4000, social_post=False, output_language=None) -> ProcessedResult:
+    def process_item(self, title, content, categories, max_content_chars=1500, social_post=False, output_language=None) -> ProcessedResult:
         truncated = (content or title)[:max_content_chars]
         known = [c["name"] for c in categories]
         prompt_template = SOCIAL_SYSTEM_PROMPT if social_post else SYSTEM_PROMPT
@@ -38,7 +38,7 @@ class AnthropicProvider(LLMProvider):
         )
         return parse_llm_response(message.content[0].text, known, social_post=social_post)
 
-    def process_cluster(self, items, categories, max_content_chars=2000, output_language=None) -> ClusterResult:
+    def process_cluster(self, items, categories, max_content_chars=800, output_language=None) -> ClusterResult:
         known = [c["name"] for c in categories]
         system = CLUSTER_SYSTEM_PROMPT.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
 
@@ -62,7 +62,7 @@ class AnthropicProvider(LLMProvider):
             model=self.model,
             max_tokens=4096,
             system=system,
-            messages=[{"role": "user", "content": f"Newsletter content:\n\n{content[:8000]}"}],
+            messages=[{"role": "user", "content": f"Newsletter content:\n\n{content[:4000]}"}],
         )
         return parse_newsletter_response(message.content[0].text, known)
 

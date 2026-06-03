@@ -11,7 +11,7 @@ class UserSettings(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
-    llm_min_word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    llm_min_word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
     weight_base: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     weight_log_multiplier: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
     relevance_llm_weight: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
