@@ -127,15 +127,6 @@ def process_news_item(self, news_item_id: str) -> None:
         if not item or item.llm_processed:
             return
 
-        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == item.user_id))
-        min_words = user_settings.llm_min_word_count if user_settings else 50
-        word_count = len((item.raw_content or "").split())
-        if word_count < min_words:
-            item.llm_processed = True
-            db.commit()
-            logger.debug("Skipped LLM for item %s (%d words < %d threshold)", news_item_id, word_count, min_words)
-            return
-
         categories_payload = _get_categories_payload(db, item.user_id)
         output_language = _get_output_language(db, item.user_id)
         provider = get_llm_provider()
