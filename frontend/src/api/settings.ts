@@ -9,6 +9,7 @@ export interface UserSettings {
   stats_enabled: boolean;
   output_language: string | null;
   time_decay_param: number;
+  show_decay_param: number;
 }
 
 export interface UserSettingsUpdate {
@@ -20,6 +21,7 @@ export interface UserSettingsUpdate {
   stats_enabled?: boolean;
   output_language?: string | null;
   time_decay_param?: number;
+  show_decay_param?: number;
 }
 
 export const settingsApi = {
