@@ -66,6 +66,8 @@ const pt = {
     removeReadLater: "Remover de «Ler mais tarde»",
     markRead: "Marcar como lido",
     markUnread: "Marcar como não lido",
+    share: "Partilhar",
+    copied: "Copiado!",
     impactScore: "Pontuação de impacto",
     delete: "Eliminar",
   },

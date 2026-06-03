@@ -67,6 +67,8 @@ const de = {
     markRead: "Als gelesen markieren",
     markUnread: "Als ungelesen markieren",
     impactScore: "Wirkungsbewertung",
+    share: "Teilen",
+    copied: "Kopiert!",
     delete: "Löschen",
   },
   cluster: {

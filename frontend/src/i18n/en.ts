@@ -67,6 +67,8 @@ const en = {
     markRead: "Mark read",
     markUnread: "Mark unread",
     impactScore: "Impact score",
+    share: "Share",
+    copied: "Copied!",
     delete: "Delete",
   },
   cluster: {

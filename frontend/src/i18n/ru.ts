@@ -66,6 +66,8 @@ const ru = {
     removeReadLater: "Убрать из «Читать позже»",
     markRead: "Отметить как прочитанное",
     markUnread: "Отметить как непрочитанное",
+    share: "Поделиться",
+    copied: "Скопировано!",
     impactScore: "Оценка влияния",
     delete: "Удалить",
   },

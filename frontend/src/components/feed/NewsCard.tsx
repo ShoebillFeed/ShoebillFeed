@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Star, Bookmark, Check, ExternalLink, Trash2, TrendingUp } from "lucide-react";
+import { Star, Bookmark, Check, ExternalLink, Trash2, TrendingUp, Share2, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
@@ -17,6 +17,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
   const { t } = useTranslation();
   const [hasImage, setHasImage] = useState(!!item.image_url);
   const [localRelevant, setLocalRelevant] = useState(item.is_relevant);
+  const [copied, setCopied] = useState(false);
   const toggleRead = useToggleRead();
   const toggleRelevant = useToggleRelevant();
   const toggleReadLater = useToggleReadLater();
@@ -39,6 +40,19 @@ export default function NewsCard({ item }: { item: NewsItem }) {
   const handleToggleRelevant = () => {
     toggleRelevant.mutate(item.id);
     setLocalRelevant(!localRelevant);
+  };
+
+  const handleShare = async () => {
+    const parts = [item.title, item.abstract].filter(Boolean);
+    const sourceLine = item.source ? `${item.source.name}: ${item.url}` : item.url;
+    const text = [...parts, sourceLine].join("\n\n");
+    if (navigator.share) {
+      try { await navigator.share({ title: item.title, text: parts.join("\n\n"), url: item.url }); } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const date = item.published_at || item.fetched_at;
@@ -187,6 +201,16 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             title={item.is_read ? t("card.markUnread") : t("card.markRead")}
           >
             <Check size={14} />
+          </ActionButton>
+
+          <ActionButton
+            active={copied}
+            activeColor="text-green-400"
+            inactiveColor={hasImage ? "text-white/50 hover:text-white" : undefined}
+            onClick={handleShare}
+            title={copied ? t("card.copied") : t("card.share")}
+          >
+            {copied ? <CheckCheck size={14} /> : <Share2 size={14} />}
           </ActionButton>
 
           <div className="flex-1" />

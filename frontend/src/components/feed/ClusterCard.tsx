@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Star, Bookmark, Check, ExternalLink, Trash2, ChevronDown, ChevronUp, TrendingUp } from "lucide-react";
+import { Star, Bookmark, Check, ExternalLink, Trash2, ChevronDown, ChevronUp, TrendingUp, Share2, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
@@ -22,6 +22,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [localRelevant, setLocalRelevant] = useState(cluster.is_relevant);
+  const [copied, setCopied] = useState(false);
   const coverImageUrl = cluster.items.find((i) => i.image_url)?.image_url ?? null;
   const [hasImage, setHasImage] = useState(!!coverImageUrl);
   const toggleRead = useToggleClusterRead();
@@ -46,6 +47,22 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
   const handleToggleRelevant = () => {
     toggleRelevant.mutate(cluster.id);
     setLocalRelevant(!localRelevant);
+  };
+
+  const handleShare = async () => {
+    const heading = [cluster.title, cluster.unified_abstract].filter(Boolean).join("\n\n");
+    const sourceLines = cluster.items
+      .map((i) => i.source ? `${i.source.name}: ${i.url}` : i.url)
+      .join("\n");
+    const text = [heading, sourceLines].filter(Boolean).join("\n\n");
+    const firstUrl = cluster.items[0]?.url;
+    if (navigator.share) {
+      try { await navigator.share({ title: cluster.title || "", text: heading, url: firstUrl }); } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const timeAgo = cluster.published_at
@@ -264,6 +281,16 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
           title={cluster.is_read ? t("card.markUnread") : t("card.markRead")}
         >
           <Check size={14} />
+        </ActionButton>
+
+        <ActionButton
+          active={copied}
+          activeColor="text-green-400"
+          inactiveColor={hasImage ? "text-white/50 hover:text-white" : undefined}
+          onClick={handleShare}
+          title={copied ? t("card.copied") : t("card.share")}
+        >
+          {copied ? <CheckCheck size={14} /> : <Share2 size={14} />}
         </ActionButton>
 
         <div className="flex-1" />

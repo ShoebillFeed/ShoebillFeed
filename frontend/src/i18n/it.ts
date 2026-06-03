@@ -66,6 +66,8 @@ const it = {
     removeReadLater: "Rimuovi da «Leggi dopo»",
     markRead: "Segna come letto",
     markUnread: "Segna come non letto",
+    share: "Condividi",
+    copied: "Copiato!",
     impactScore: "Punteggio impatto",
     delete: "Elimina",
   },

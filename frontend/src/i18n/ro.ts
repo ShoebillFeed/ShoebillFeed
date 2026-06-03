@@ -66,6 +66,8 @@ const ro = {
     removeReadLater: "Eliminați din „Citit mai târziu"",
     markRead: "Marcați ca citit",
     markUnread: "Marcați ca necitit",
+    share: "Distribuie",
+    copied: "Copiat!",
     impactScore: "Scor de impact",
     delete: "Ștergere",
   },

@@ -66,6 +66,8 @@ const uk = {
     removeReadLater: "Прибрати з «Читати пізніше»",
     markRead: "Позначити як прочитане",
     markUnread: "Позначити як непрочитане",
+    share: "Поділитись",
+    copied: "Скопійовано!",
     impactScore: "Оцінка впливу",
     delete: "Видалити",
   },

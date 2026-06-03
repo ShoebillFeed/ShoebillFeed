@@ -66,6 +66,8 @@ const pl = {
     removeReadLater: "Usuń z „Przeczytaj później"",
     markRead: "Oznacz jako przeczytane",
     markUnread: "Oznacz jako nieprzeczytane",
+    share: "Udostępnij",
+    copied: "Skopiowano!",
     impactScore: "Ocena wpływu",
     delete: "Usuń",
   },

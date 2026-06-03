@@ -66,6 +66,8 @@ const nl = {
     removeReadLater: "Verwijderen uit «Later lezen»",
     markRead: "Markeren als gelezen",
     markUnread: "Markeren als ongelezen",
+    share: "Delen",
+    copied: "Gekopieerd!",
     impactScore: "Impactscore",
     delete: "Verwijderen",
   },
