@@ -39,8 +39,17 @@ def fetch_source(self, source_id: str) -> dict:
         new_item_ids: list[uuid.UUID] = []
         for raw in raw_items:
             h = url_hash(raw.url)
-            existing = db.scalar(select(NewsItem.id).where(NewsItem.url_hash == h))
-            if existing:
+            if db.scalar(select(NewsItem.id).where(NewsItem.url_hash == h)):
+                skipped += 1
+                continue
+
+            ch = content_hash(raw.raw_content) if raw.raw_content else None
+            if ch and db.scalar(
+                select(NewsItem.id).where(
+                    NewsItem.content_hash == ch,
+                    NewsItem.source_id == source.id,
+                )
+            ):
                 skipped += 1
                 continue
 
@@ -50,7 +59,7 @@ def fetch_source(self, source_id: str) -> dict:
                 title=raw.title,
                 url=raw.url,
                 url_hash=h,
-                content_hash=content_hash(raw.raw_content) if raw.raw_content else None,
+                content_hash=ch,
                 raw_content=raw.raw_content,
                 published_at=raw.published_at,
                 image_url=raw.image_url,
