@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel as PydanticBaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
@@ -41,6 +42,27 @@ def _time_decay(entry, param: float) -> float:
     if param <= 0:
         return 1.0
     return 1.0 / (0.5 * (_age_days(entry) * param + 2.0))
+
+
+def _show_again_decay(entry, param: float) -> float:
+    """Cumulative penalty per showing: 1 / (1 + show_count * param).
+    param=0 → disabled. Clusters with new items since last shown reset to 1.0."""
+    if param <= 0:
+        return 1.0
+    count = getattr(entry, 'show_count', 0) or 0
+    if count == 0:
+        return 1.0
+    if isinstance(entry, NewsCluster) and entry.last_shown_at is not None:
+        lst = entry.last_shown_at
+        if lst.tzinfo is None:
+            lst = lst.replace(tzinfo=timezone.utc)
+        for item in entry.items:
+            ft = item.fetched_at
+            if ft.tzinfo is None:
+                ft = ft.replace(tzinfo=timezone.utc)
+            if ft > lst:
+                return 1.0  # new items arrived — treat as never shown
+    return 1.0 / (1.0 + count * param)
 
 
 def _sort_key_newest(entry):
@@ -112,6 +134,7 @@ def _build_feed(
 
     user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == user_id))
     decay_param = user_settings.time_decay_param if user_settings else 2.0
+    show_decay = user_settings.show_decay_param if user_settings else 0.0
 
     if tab == "newest":
         all_entries.sort(key=_sort_key_newest, reverse=True)
@@ -144,10 +167,10 @@ def _build_feed(
             )
             kw_factor = 1.0 + (raw_kw - 1.0) * learn_w
 
-            return (e.relevance_score or 5) * llm_w * cat_w * source_bonus * kw_factor * _time_decay(e, decay_param)
+            return (e.relevance_score or 5) * llm_w * cat_w * source_bonus * kw_factor * _time_decay(e, decay_param) * _show_again_decay(e, show_decay)
         all_entries.sort(key=_rel_key, reverse=True)
     elif tab == "impact":
-        all_entries.sort(key=lambda e: (e.impact_score or 0) * _time_decay(e, decay_param), reverse=True)
+        all_entries.sort(key=lambda e: (e.impact_score or 0) * _time_decay(e, decay_param) * _show_again_decay(e, show_decay), reverse=True)
 
     return all_entries
 
@@ -285,6 +308,34 @@ def mark_all_read(
         count += 1
     db.commit()
     return {"updated": count}
+
+
+class MarkShownPayload(PydanticBaseModel):
+    item_ids: list[uuid.UUID] = []
+    cluster_ids: list[uuid.UUID] = []
+
+
+@router.post("/mark-shown")
+def mark_shown(
+    payload: MarkShownPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    now = datetime.now(timezone.utc)
+    if payload.item_ids:
+        for item in db.scalars(
+            select(NewsItem).where(NewsItem.id.in_(payload.item_ids), NewsItem.user_id == current_user.id)
+        ).all():
+            item.show_count = (item.show_count or 0) + 1
+            item.last_shown_at = now
+    if payload.cluster_ids:
+        for cluster in db.scalars(
+            select(NewsCluster).where(NewsCluster.id.in_(payload.cluster_ids), NewsCluster.user_id == current_user.id)
+        ).all():
+            cluster.show_count = (cluster.show_count or 0) + 1
+            cluster.last_shown_at = now
+    db.commit()
+    return {"updated": len(payload.item_ids) + len(payload.cluster_ids)}
 
 
 @router.delete("/{item_id}", status_code=204)

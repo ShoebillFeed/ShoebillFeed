@@ -246,6 +246,8 @@ const en = {
     multiSourceBonusDesc: "Extra score for stories covered by several sources simultaneously. 0 = disabled. Default: 0.5",
     timeDecayRate: "Time decay rate",
     timeDecayRateDesc: "Multiplier applied to Relevant and Impact scores based on article age: 1 / (0.5 × (days × rate + 2)). A fresh article always scores at 1.0. 0 = no decay. With current setting: {{examples}}. Default: 2",
+    showDecayRate: "Show-again decay",
+    showDecayRateDesc: "Each time a card is seen in the feed its score is multiplied by 1/(1 + times_shown × rate). Cumulative — seen cards rank progressively lower so fresh content rises. 0 = disabled. With current setting: seen 1× → {{ex1}}, 3× → {{ex3}}, 10× → {{ex10}}.",
     settingsSaved: "Settings saved.",
     settingsFailed: "Failed to save settings.",
   },

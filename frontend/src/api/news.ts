@@ -29,6 +29,9 @@ export const newsApi = {
   markAllRead: (category_id?: string) =>
     client.post("/news/mark-all-read", null, { params: { category_id } }).then((r) => r.data),
 
+  markShown: (payload: { item_ids: string[]; cluster_ids: string[] }) =>
+    client.post("/news/mark-shown", payload).then((r) => r.data),
+
   reprocess: (id: string) =>
     client.post(`/news/${id}/reprocess`).then((r) => r.data),
 

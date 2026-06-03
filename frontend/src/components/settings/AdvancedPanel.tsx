@@ -254,6 +254,19 @@ export default function AdvancedPanel() {
           step={0.1}
           onChange={(v) => update.mutate({ time_decay_param: v })}
         />
+        <NumericField
+          label={t("advanced.showDecayRate")}
+          description={t("advanced.showDecayRateDesc", {
+            ex1:  (1 / (1 + 1  * (settings.show_decay_param ?? 0))).toFixed(2),
+            ex3:  (1 / (1 + 3  * (settings.show_decay_param ?? 0))).toFixed(2),
+            ex10: (1 / (1 + 10 * (settings.show_decay_param ?? 0))).toFixed(2),
+          })}
+          value={settings.show_decay_param ?? 0}
+          min={0}
+          max={10}
+          step={0.1}
+          onChange={(v) => update.mutate({ show_decay_param: v })}
+        />
       </Section>
 
       {update.isSuccess && (

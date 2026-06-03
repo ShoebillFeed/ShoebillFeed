@@ -20,3 +20,4 @@ class UserSettings(Base):
     stats_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     output_language: Mapped[str | None] = mapped_column(String(10), nullable=True, default=None)
     time_decay_param: Mapped[float] = mapped_column(Float, nullable=False, default=2.0)
+    show_decay_param: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)

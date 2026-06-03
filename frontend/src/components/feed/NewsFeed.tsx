@@ -7,6 +7,7 @@ import NewsCard from "./NewsCard";
 import ClusterCard from "./ClusterCard";
 import NewsCardSkeleton from "./NewsCardSkeleton";
 import { cn } from "../../lib/utils";
+import { useMarkShown } from "../../hooks/useNews";
 
 const PULL_THRESHOLD = 80;
 const INDICATOR_MAX_H = 48;
@@ -35,6 +36,11 @@ export default function NewsFeed({
   onRefreshRef.current = onRefresh;
   const isRefreshingRef = useRef(isRefreshing);
   isRefreshingRef.current = isRefreshing;
+
+  const markShown = useMarkShown();
+  const reportedRef = useRef(new Set<string>());
+  const pendingRef = useRef(new Set<string>());
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerRefresh = useCallback(() => {
     if (isRefreshingRef.current) return;
@@ -141,6 +147,41 @@ export default function NewsFeed({
       onLoadMore?.();
     }
   }, [lastVirtualItem?.index, items.length, hasMore, isLoadingMore, onLoadMore]);
+
+  useEffect(() => {
+    for (const virtualItem of virtualItems) {
+      const entry = items[virtualItem.index];
+      if (!entry) continue;
+      if (!reportedRef.current.has(entry.id)) {
+        pendingRef.current.add(entry.id);
+      }
+    }
+    if (pendingRef.current.size === 0) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (pendingRef.current.size === 0) return;
+      const pending = new Set(pendingRef.current);
+      const item_ids: string[] = [];
+      const cluster_ids: string[] = [];
+      for (const id of pending) {
+        const entry = items.find((e) => e.id === id);
+        if (!entry) continue;
+        if (entry.kind === "cluster") {
+          cluster_ids.push(id);
+        } else {
+          item_ids.push(id);
+        }
+      }
+      markShown.mutate({ item_ids, cluster_ids });
+      for (const id of pending) {
+        reportedRef.current.add(id);
+      }
+      pendingRef.current.clear();
+    }, 2000);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [virtualItems, items]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const progress = Math.min(pullY / PULL_THRESHOLD, 1);
   const atThreshold = pullY >= PULL_THRESHOLD;

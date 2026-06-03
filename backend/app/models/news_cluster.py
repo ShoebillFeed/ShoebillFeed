@@ -33,6 +33,8 @@ class NewsCluster(Base):
     llm_processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_shown_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    show_count: Mapped[int] = mapped_column(nullable=False, default=0)
 
     items: Mapped[list["NewsItem"]] = relationship("NewsItem", back_populates="cluster")
     categories: Mapped[list["Category"]] = relationship("Category", secondary=news_cluster_categories, lazy="selectin")

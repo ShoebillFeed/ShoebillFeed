@@ -26,6 +26,7 @@ export interface NewsItem {
   read_later: boolean;
   published_at: string | null;
   fetched_at: string;
+  last_shown_at: string | null;
   source: SourceSummary | null;
   categories: CategorySummary[];
 }
@@ -54,6 +55,7 @@ export interface NewsCluster {
   read_later: boolean;
   llm_processed: boolean;
   published_at: string | null;
+  last_shown_at: string | null;
   categories: CategorySummary[];
   items: ClusterItem[];
 }

@@ -204,3 +204,7 @@ export function useDeleteCluster() {
     onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
   });
 }
+
+export function useMarkShown() {
+  return useMutation({ mutationFn: newsApi.markShown });
+}

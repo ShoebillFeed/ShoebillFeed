@@ -10,6 +10,7 @@ class UserSettingsOut(BaseModel):
     stats_enabled: bool = True
     output_language: str | None = None
     time_decay_param: float = 2.0
+    show_decay_param: float = 0.0
 
     model_config = {"from_attributes": True}
 
@@ -23,3 +24,4 @@ class UserSettingsUpdate(BaseModel):
     stats_enabled: bool | None = None
     output_language: str | None = Field(None, max_length=10)
     time_decay_param: float | None = Field(None, ge=0.0, le=20.0)
+    show_decay_param: float | None = Field(None, ge=0.0, le=10.0)
