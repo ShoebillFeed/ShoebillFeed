@@ -85,6 +85,9 @@ export function useInfiniteNews(params: {
   });
 }
 
+const invalidateFeeds = (qc: ReturnType<typeof useQueryClient>) =>
+  qc.invalidateQueries({ queryKey: ["news", "infinite"], refetchType: "none" });
+
 export function useToggleRead() {
   const qc = useQueryClient();
   return useMutation({
@@ -96,6 +99,7 @@ export function useToggleRead() {
       return ctx;
     },
     onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
+    onSettled: () => invalidateFeeds(qc),
   });
 }
 
@@ -110,6 +114,7 @@ export function useToggleRelevant() {
       return ctx;
     },
     onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
+    onSettled: () => invalidateFeeds(qc),
   });
 }
 
@@ -124,6 +129,7 @@ export function useToggleReadLater() {
       return ctx;
     },
     onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
+    onSettled: () => invalidateFeeds(qc),
   });
 }
 
@@ -160,6 +166,7 @@ export function useToggleClusterRead() {
       return ctx;
     },
     onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
+    onSettled: () => invalidateFeeds(qc),
   });
 }
 
@@ -174,6 +181,7 @@ export function useToggleClusterRelevant() {
       return ctx;
     },
     onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
+    onSettled: () => invalidateFeeds(qc),
   });
 }
 
@@ -188,6 +196,7 @@ export function useToggleClusterReadLater() {
       return ctx;
     },
     onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
+    onSettled: () => invalidateFeeds(qc),
   });
 }
 
