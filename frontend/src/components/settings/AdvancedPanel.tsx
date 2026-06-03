@@ -30,6 +30,15 @@ const CONTENT_LANGUAGES = [
 const UI_LANGUAGES = [
   { code: "en", label: "English" },
   { code: "de", label: "Deutsch" },
+  { code: "fr", label: "Français" },
+  { code: "es", label: "Español" },
+  { code: "it", label: "Italiano" },
+  { code: "nl", label: "Nederlands" },
+  { code: "pl", label: "Polski" },
+  { code: "pt", label: "Português" },
+  { code: "ro", label: "Română" },
+  { code: "ru", label: "Русский" },
+  { code: "uk", label: "Українська" },
 ];
 
 const inputClass =
