@@ -126,7 +126,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
 
         {item.abstract && (
           <p className={cn(
-            "mt-1.5 text-sm leading-relaxed line-clamp-3",
+            "mt-1.5 text-sm leading-relaxed",
             hasImage ? "text-white/75" : "text-gray-600 dark:text-gray-400"
           )}>
             {item.abstract}
