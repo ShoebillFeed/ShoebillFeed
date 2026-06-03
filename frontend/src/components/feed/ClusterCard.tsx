@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Star, Bookmark, Check, ExternalLink, Trash2, ChevronDown, ChevronUp, TrendingUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 import type { NewsCluster } from "../../types/news";
 import {
@@ -18,6 +19,7 @@ function uniqueSources(items: NewsCluster["items"]) {
 }
 
 export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [localRelevant, setLocalRelevant] = useState(cluster.is_relevant);
   const coverImageUrl = cluster.items.find((i) => i.image_url)?.image_url ?? null;
@@ -122,7 +124,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
           {cluster.unified_abstract}
         </p>
       ) : !cluster.llm_processed ? (
-        <p className="text-xs text-amber-400 italic">Processing…</p>
+        <p className="text-xs text-amber-400 italic">{t("cluster.processing")}</p>
       ) : null}
 
       {cluster.extracted_keywords && cluster.extracted_keywords.length > 0 && (
@@ -161,10 +163,10 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
                 )}
               >
                 {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                {expanded ? "Hide sources" : "Show sources"}
+                {expanded ? t("cluster.hideSources") : t("cluster.showSources")}
                 {!expanded && newCount > 0 && (
                   <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400">
-                    +{newCount} new
+                    {t("cluster.newItems", { count: newCount })}
                   </span>
                 )}
               </button>
@@ -239,7 +241,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
           activeColor="text-yellow-400"
           inactiveColor={hasImage ? "text-white/50 hover:text-white" : undefined}
           onClick={handleToggleRelevant}
-          title={localRelevant ? "Unmark relevant" : "Mark relevant"}
+          title={localRelevant ? t("card.unmarkRelevant") : t("card.markRelevant")}
         >
           <Star size={14} fill={localRelevant ? "currentColor" : "none"} />
         </ActionButton>
@@ -249,7 +251,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
           activeColor="text-indigo-400"
           inactiveColor={hasImage ? "text-white/50 hover:text-white" : undefined}
           onClick={() => toggleReadLater.mutate(cluster.id)}
-          title={cluster.read_later ? "Remove from read later" : "Read later"}
+          title={cluster.read_later ? t("card.removeReadLater") : t("card.readLater")}
         >
           <Bookmark size={14} fill={cluster.read_later ? "currentColor" : "none"} />
         </ActionButton>
@@ -259,7 +261,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
           activeColor="text-green-400"
           inactiveColor={hasImage ? "text-white/50 hover:text-white" : undefined}
           onClick={markRead}
-          title={cluster.is_read ? "Mark unread" : "Mark read"}
+          title={cluster.is_read ? t("card.markUnread") : t("card.markRead")}
         >
           <Check size={14} />
         </ActionButton>
@@ -270,7 +272,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
           <span className={cn(
             "inline-flex items-center gap-0.5 text-xs",
             hasImage ? "text-white/60" : "text-gray-400"
-          )} title="Impact score">
+          )} title={t("card.impactScore")}>
             <TrendingUp size={12} /> {cluster.impact_score}/10
           </span>
         )}
@@ -280,7 +282,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
           activeColor="text-red-400"
           inactiveColor={hasImage ? "text-white/50 hover:text-red-400" : "hover:text-red-400"}
           onClick={() => deleteCluster.mutate(cluster.id)}
-          title="Delete cluster"
+          title={t("cluster.delete")}
           className="ml-1"
         >
           <Trash2 size={14} />

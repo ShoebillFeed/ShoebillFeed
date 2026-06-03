@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Source, SourceCreate, SourceType } from "../../types/source";
 import { useCreateSource, useUpdateSource } from "../../hooks/useSources";
 import { cn } from "../../lib/utils";
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export default function SourceForm({ source, onClose }: Props) {
+  const { t } = useTranslation();
   const isEdit = Boolean(source);
   const create = useCreateSource();
   const update = useUpdateSource();
@@ -59,19 +61,19 @@ export default function SourceForm({ source, onClose }: Props) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <label className="block text-sm font-medium mb-1">Name</label>
+        <label className="block text-sm font-medium mb-1">{t("sourceForm.name")}</label>
         <input
           className={inputClass}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          placeholder="Name of Source"
+          placeholder={t("sourceForm.namePlaceholder")}
         />
       </div>
 
       {!isEdit && (
         <div>
-          <label className="block text-sm font-medium mb-1">Type</label>
+          <label className="block text-sm font-medium mb-1">{t("sourceForm.type")}</label>
           <div className="grid grid-cols-2 gap-2">
             {SOURCE_TYPES.map(({ id, label }) => (
               <button
@@ -95,7 +97,7 @@ export default function SourceForm({ source, onClose }: Props) {
       <ConfigFields type={type} config={config} onChange={setConfigField} />
 
       <div>
-        <label className="block text-sm font-medium mb-1">Fetch interval</label>
+        <label className="block text-sm font-medium mb-1">{t("sourceForm.fetchInterval")}</label>
         <select
           className={inputClass}
           value={interval}
@@ -114,15 +116,15 @@ export default function SourceForm({ source, onClose }: Props) {
           onChange={(e) => setIsActive(e.target.checked)}
           className="rounded"
         />
-        Active
+        {t("sourceForm.active")}
       </label>
 
       <div className="flex gap-2 mt-2">
         <button type="button" onClick={onClose} className={cn(btnClass, "flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300")}>
-          Cancel
+          {t("common.cancel")}
         </button>
         <button type="submit" className={cn(btnClass, "flex-1 bg-indigo-600 text-white hover:bg-indigo-700")}>
-          {isEdit ? "Save" : "Add Source"}
+          {isEdit ? t("common.save") : t("sourceForm.addSource")}
         </button>
       </div>
     </form>
@@ -138,50 +140,51 @@ function ConfigFields({
   config: Record<string, string>;
   onChange: (k: string, v: string) => void;
 }) {
+  const { t } = useTranslation();
   if (type === "rss") return (
-    <Field label="Feed URL" field="url" config={config} onChange={onChange} placeholder="https://example.com/feed.xml" required />
+    <Field label={t("sourceForm.feedUrl")} field="url" config={config} onChange={onChange} placeholder="https://example.com/feed.xml" required />
   );
   if (type === "reddit") return (
     <>
-      <Field label="Subreddit" field="subreddit" config={config} onChange={onChange} placeholder="MachineLearning" required />
-      <Field label="Sort (hot/new/top)" field="sort" config={config} onChange={onChange} placeholder="hot" />
-      <Field label="Limit" field="limit" config={config} onChange={onChange} placeholder="25" />
+      <Field label={t("sourceForm.subreddit")} field="subreddit" config={config} onChange={onChange} placeholder="MachineLearning" required />
+      <Field label={t("sourceForm.redditSort")} field="sort" config={config} onChange={onChange} placeholder="hot" />
+      <Field label={t("sourceForm.limit")} field="limit" config={config} onChange={onChange} placeholder="25" />
     </>
   );
   if (type === "youtube") return (
     <>
-      <Field label="Channel ID" field="channel_id" config={config} onChange={onChange} placeholder="UCxxxxxxxxxxxxx" required />
-      <Field label="Max results" field="max_results" config={config} onChange={onChange} placeholder="10" />
+      <Field label={t("sourceForm.channelId")} field="channel_id" config={config} onChange={onChange} placeholder="UCxxxxxxxxxxxxx" required />
+      <Field label={t("sourceForm.maxResults")} field="max_results" config={config} onChange={onChange} placeholder="10" />
     </>
   );
   if (type === "email") return (
     <>
-      <Field label="IMAP Host" field="imap_host" config={config} onChange={onChange} placeholder="imap.gmail.com" required />
-      <Field label="IMAP Port" field="imap_port" config={config} onChange={onChange} placeholder="993" />
-      <Field label="Username" field="username" config={config} onChange={onChange} placeholder="you@example.com" required />
-      <Field label="Password" field="password" config={config} onChange={onChange} placeholder="app password" type="password" required />
-      <Field label="Folder" field="folder" config={config} onChange={onChange} placeholder="INBOX" />
-      <Field label="Subject filter (optional)" field="subject_filter" config={config} onChange={onChange} placeholder="" />
+      <Field label={t("sourceForm.imapHost")} field="imap_host" config={config} onChange={onChange} placeholder="imap.gmail.com" required />
+      <Field label={t("sourceForm.imapPort")} field="imap_port" config={config} onChange={onChange} placeholder="993" />
+      <Field label={t("sourceForm.username")} field="username" config={config} onChange={onChange} placeholder="you@example.com" required />
+      <Field label={t("sourceForm.password")} field="password" config={config} onChange={onChange} placeholder="app password" type="password" required />
+      <Field label={t("sourceForm.folder")} field="folder" config={config} onChange={onChange} placeholder="INBOX" />
+      <Field label={t("sourceForm.subjectFilter")} field="subject_filter" config={config} onChange={onChange} placeholder="" />
     </>
   );
   if (type === "mastodon") return (
     <>
-      <Field label="Instance URL" field="instance_url" config={config} onChange={onChange} placeholder="mastodon.social" required />
+      <Field label={t("sourceForm.instanceUrl")} field="instance_url" config={config} onChange={onChange} placeholder="mastodon.social" required />
       <div>
-        <label className="block text-sm font-medium mb-1">Feed type</label>
+        <label className="block text-sm font-medium mb-1">{t("sourceForm.feedType")}</label>
         <select
           className={inputClass}
           value={config["feed_type"] ?? "hashtag"}
           onChange={(e) => onChange("feed_type", e.target.value)}
         >
-          <option value="hashtag">Hashtag</option>
-          <option value="user">User timeline</option>
-          <option value="local">Local timeline</option>
+          <option value="hashtag">{t("sourceForm.hashtag")}</option>
+          <option value="user">{t("sourceForm.userTimeline")}</option>
+          <option value="local">{t("sourceForm.localTimeline")}</option>
         </select>
       </div>
       {(config["feed_type"] ?? "hashtag") !== "local" && (
         <Field
-          label={(config["feed_type"] ?? "hashtag") === "user" ? "Username (without @)" : "Hashtag (without #)"}
+          label={(config["feed_type"] ?? "hashtag") === "user" ? t("sourceForm.usernameWithout") : t("sourceForm.hashtagWithout")}
           field="name"
           config={config}
           onChange={onChange}
@@ -193,10 +196,10 @@ function ConfigFields({
   );
   if (type === "arxiv" || type === "scholar") return (
     <>
-      <Field label="Search query" field="query" config={config} onChange={onChange} placeholder="e.g. transformer architecture" required />
+      <Field label={t("sourceForm.searchQuery")} field="query" config={config} onChange={onChange} placeholder="e.g. transformer architecture" required />
       <p className="text-xs text-gray-400 dark:text-gray-500 -mt-2">
-        Examples: <span className="font-mono">large language models</span> · <span className="font-mono">quantum computing error correction</span> · <span className="font-mono">CRISPR gene editing</span> · <span className="font-mono">reinforcement learning robotics</span>
-        <br />Tip: combine terms with spaces for AND, use <span className="font-mono">OR</span> for alternatives.
+        {t("sourceForm.arxivExamples")} <span className="font-mono">large language models</span> · <span className="font-mono">quantum computing error correction</span> · <span className="font-mono">CRISPR gene editing</span> · <span className="font-mono">reinforcement learning robotics</span>
+        <br />{t("sourceForm.arxivTip")}
       </p>
     </>
   );

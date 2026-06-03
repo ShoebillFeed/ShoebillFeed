@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Plus, Trash2, Pencil, RotateCcw, Download, Upload } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useCategories, useDeleteCategory, useResetWeights, useSetManualWeight, useImportCategories, useUpdateCategory } from "../../hooks/useCategories";
 import { categoriesApi } from "../../api/categories";
 import CategoryForm from "./CategoryForm";
@@ -16,6 +17,7 @@ function downloadJson(data: unknown, filename: string) {
 }
 
 export default function CategoriesPanel() {
+  const { t } = useTranslation();
   const { data: categories, isLoading } = useCategories();
   const deleteCategory = useDeleteCategory();
   const resetWeights = useResetWeights();
@@ -37,7 +39,7 @@ export default function CategoriesPanel() {
         const data = JSON.parse(ev.target?.result as string);
         importCategories.mutate(data);
       } catch {
-        alert("Invalid JSON file");
+        alert(t("categories.invalidJson"));
       }
     };
     reader.readAsText(file);
@@ -47,57 +49,57 @@ export default function CategoriesPanel() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100">Categories</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-gray-100">{t("categories.title")}</h2>
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={handleExport}
-            title="Export categories as JSON"
+            title={t("categories.exportTitle")}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
           >
-            <Download size={14} /> Export
+            <Download size={14} /> {t("common.export")}
           </button>
           <label
-            title="Import categories from JSON"
+            title={t("categories.importTitle")}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 cursor-pointer"
           >
-            <Upload size={14} /> Import
+            <Upload size={14} /> {t("common.import")}
             <input type="file" accept=".json" className="hidden" onChange={handleImport} />
           </label>
           <button
             onClick={() => {
-              if (confirm("Reset all category weights to 1.0? This will re-start relevance learning."))
+              if (confirm(t("categories.resetWeightsConfirm")))
                 resetWeights.mutate();
             }}
-            title="Reset relevance weights"
+            title={t("categories.resetWeights")}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
           >
-            <RotateCcw size={14} /> Reset weights
+            <RotateCcw size={14} /> {t("categories.resetWeights")}
           </button>
           <button
             onClick={() => { setEditing(null); setShowForm(true); }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
           >
-            <Plus size={14} /> Add Category
+            <Plus size={14} /> {t("categories.addCategory")}
           </button>
         </div>
       </div>
 
       {showForm && (
         <div className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-          <h3 className="font-medium text-sm mb-3">Add New Category</h3>
+          <h3 className="font-medium text-sm mb-3">{t("categories.addNewCategory")}</h3>
           <CategoryForm
             onClose={() => setShowForm(false)}
           />
         </div>
       )}
 
-      {isLoading && <p className="text-sm text-gray-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-gray-400">{t("common.loading")}</p>}
 
       <div className="flex flex-col gap-2">
         {categories?.map((cat) => (
           editing?.id === cat.id ? (
             <div key={cat.id} className="p-4 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-              <h3 className="font-medium text-sm mb-3 text-indigo-600 dark:text-indigo-400">Editing: {cat.name}</h3>
+              <h3 className="font-medium text-sm mb-3 text-indigo-600 dark:text-indigo-400">{t("categories.editingCategory", { name: cat.name })}</h3>
               <CategoryForm
                 category={cat}
                 onClose={() => setEditing(null)}
@@ -109,7 +111,7 @@ export default function CategoriesPanel() {
               cat={cat}
               onEdit={() => { setEditing(cat); setShowForm(false); }}
               onDelete={() => {
-                if (confirm(`Delete category "${cat.name}"? Articles will be uncategorized.`))
+                if (confirm(t("categories.deleteConfirm", { name: cat.name })))
                   deleteCategory.mutate(cat.id);
               }}
             />
@@ -117,9 +119,7 @@ export default function CategoriesPanel() {
         ))}
 
         {categories?.length === 0 && !isLoading && (
-          <p className="text-sm text-gray-400 text-center py-8">
-            No categories yet. Add some to auto-classify your articles.
-          </p>
+          <p className="text-sm text-gray-400 text-center py-8">{t("categories.empty")}</p>
         )}
       </div>
     </div>
@@ -135,6 +135,7 @@ function CategoryRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const setManualWeight = useSetManualWeight();
   const updateCategory = useUpdateCategory();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -166,8 +167,8 @@ function CategoryRow({
         <div className="flex-1 min-w-0">
           <span className={`text-sm font-medium ${inactive ? "text-gray-400 dark:text-gray-500" : ""}`}>{cat.name}</span>
           <p className="text-xs text-gray-400">
-            {cat.item_count} articles
-            {cat.weight?.total_marked ? ` · ${cat.weight.total_marked} ★ marks` : ""}
+            {t("categories.articles", { count: cat.item_count })}
+            {cat.weight?.total_marked ? ` · ${t("categories.starMarks", { count: cat.weight.total_marked })}` : ""}
           </p>
           {cat.keywords.length > 0 && (
             <p className="text-xs text-gray-400 truncate">{cat.keywords.join(", ")}</p>
@@ -179,7 +180,7 @@ function CategoryRow({
           <button
             role="switch"
             aria-checked={cat.is_active}
-            title={cat.is_active ? "Disable category" : "Enable category"}
+            title={cat.is_active ? t("categories.disable") : t("categories.enable")}
             onClick={handleToggleActive}
             className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${cat.is_active ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"}`}
           >
@@ -188,14 +189,14 @@ function CategoryRow({
             />
           </button>
           <button
-            title="Edit"
+            title={t("common.edit")}
             onClick={onEdit}
             className="p-1.5 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <Pencil size={14} />
           </button>
           <button
-            title="Delete"
+            title={t("common.delete")}
             onClick={onDelete}
             className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
@@ -208,7 +209,7 @@ function CategoryRow({
       {cat.is_active && (
         <>
           <div className="mt-2.5 flex items-center gap-3">
-            <span className="text-xs text-gray-400 w-12 shrink-0">Weight</span>
+            <span className="text-xs text-gray-400 w-12 shrink-0">{t("categories.weight")}</span>
             <input
               type="range"
               min={0}
@@ -224,7 +225,7 @@ function CategoryRow({
             </span>
           </div>
           <p className="text-xs text-gray-400 mt-0.5 pl-[3.25rem]">
-            manual × learned {learnedWeight.toFixed(2)}
+            {t("categories.manualLearned", { weight: learnedWeight.toFixed(2) })}
           </p>
         </>
       )}

@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useFilterStore } from "../stores/filterStore";
 import { useInfiniteNews, useMarkAllRead } from "../hooks/useNews";
 import { useUserTabs } from "../hooks/useTabs";
@@ -13,6 +14,7 @@ import type { FeedEntry } from "../types/news";
 import type { ApiTab } from "../api/news";
 
 export default function FeedPage() {
+  const { t } = useTranslation();
   const {
     activeTab, activeCustomTabId,
     setTab, setCustomTab,
@@ -60,7 +62,7 @@ export default function FeedPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">News Feed</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t("feed.title")}</h1>
         <div className="flex items-center gap-2">
           {!activeCustomTab && (
             <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
@@ -70,20 +72,20 @@ export default function FeedPage() {
                 onChange={(e) => setShowUnreadOnly(e.target.checked)}
                 className="rounded"
               />
-              Unread only
+              {t("feed.unreadOnly")}
             </label>
           )}
 
           <button
             onClick={handleFetchAll}
-            title="Fetch all sources now"
+            title={t("feed.fetchAll")}
             className="p-1.5 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <RefreshCw size={15} />
           </button>
           <button
             onClick={() => markAllRead.mutate(undefined)}
-            title="Mark all as read"
+            title={t("feed.markAllRead")}
             className="p-1.5 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <CheckCheck size={15} />
@@ -110,21 +112,21 @@ export default function FeedPage() {
       {activeCustomTab && (
         <div className="flex flex-wrap gap-1.5 mb-3 text-xs text-gray-400 dark:text-gray-500">
           {activeCustomTab.category_ids.length === 0 && activeCustomTab.source_ids.length === 0 && !activeCustomTab.unread_only && (
-            <span>All articles · sorted by {activeCustomTab.sort}</span>
+            <span>{t("feed.allArticles", { sort: activeCustomTab.sort })}</span>
           )}
           {activeCustomTab.category_ids.length > 0 && (
-            <span>{activeCustomTab.category_ids.length} categor{activeCustomTab.category_ids.length === 1 ? "y" : "ies"}</span>
+            <span>{t("feed.categoriesCount", { count: activeCustomTab.category_ids.length })}</span>
           )}
           {activeCustomTab.source_ids.length > 0 && (
-            <span>{activeCustomTab.source_ids.length} source{activeCustomTab.source_ids.length === 1 ? "" : "s"}</span>
+            <span>{t("feed.sourcesCount", { count: activeCustomTab.source_ids.length })}</span>
           )}
-          {activeCustomTab.unread_only && <span>unread only</span>}
+          {activeCustomTab.unread_only && <span>{t("feed.unreadOnlyFilter")}</span>}
         </div>
       )}
 
       {data && (
         <p className="text-xs text-gray-400 mb-3">
-          {items.length} / {total} articles
+          {t("feed.articleCount", { loaded: items.length, total })}
         </p>
       )}
 

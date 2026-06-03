@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Star, Bookmark, Check, ExternalLink, Trash2, TrendingUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 import type { NewsItem } from "../../types/news";
 import {
@@ -13,6 +14,7 @@ import { usePreferencesStore } from "../../stores/preferencesStore";
 import { sourceTypeIcon } from "../../lib/sourceTypeIcon";
 
 export default function NewsCard({ item }: { item: NewsItem }) {
+  const { t } = useTranslation();
   const [hasImage, setHasImage] = useState(!!item.image_url);
   const [localRelevant, setLocalRelevant] = useState(item.is_relevant);
   const toggleRead = useToggleRead();
@@ -152,7 +154,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
         )}
 
         {!item.llm_processed && (
-          <p className="mt-1.5 text-xs text-amber-400 italic">Processing…</p>
+          <p className="mt-1.5 text-xs text-amber-400 italic">{t("card.processing")}</p>
         )}
 
         {/* Actions */}
@@ -162,7 +164,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             activeColor="text-yellow-400"
             inactiveColor={hasImage ? "text-white/50 hover:text-white" : undefined}
             onClick={handleToggleRelevant}
-            title={localRelevant ? "Unmark relevant" : "Mark relevant"}
+            title={localRelevant ? t("card.unmarkRelevant") : t("card.markRelevant")}
           >
             <Star size={14} fill={localRelevant ? "currentColor" : "none"} />
           </ActionButton>
@@ -172,7 +174,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             activeColor="text-indigo-400"
             inactiveColor={hasImage ? "text-white/50 hover:text-white" : undefined}
             onClick={() => toggleReadLater.mutate(item.id)}
-            title={item.read_later ? "Remove from read later" : "Read later"}
+            title={item.read_later ? t("card.removeReadLater") : t("card.readLater")}
           >
             <Bookmark size={14} fill={item.read_later ? "currentColor" : "none"} />
           </ActionButton>
@@ -182,7 +184,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             activeColor="text-green-400"
             inactiveColor={hasImage ? "text-white/50 hover:text-white" : undefined}
             onClick={markRead}
-            title={item.is_read ? "Mark unread" : "Mark read"}
+            title={item.is_read ? t("card.markUnread") : t("card.markRead")}
           >
             <Check size={14} />
           </ActionButton>
@@ -193,7 +195,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             <span className={cn(
               "inline-flex items-center gap-0.5 text-xs",
               hasImage ? "text-white/60" : "text-gray-400"
-            )} title="Impact score">
+            )} title={t("card.impactScore")}>
               <TrendingUp size={12} /> {item.impact_score}/10
             </span>
           )}
@@ -203,7 +205,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             activeColor="text-red-400"
             inactiveColor={hasImage ? "text-white/50 hover:text-red-400" : "hover:text-red-400"}
             onClick={() => deleteItem.mutate(item.id)}
-            title="Delete"
+            title={t("card.delete")}
             className="ml-1"
           >
             <Trash2 size={14} />

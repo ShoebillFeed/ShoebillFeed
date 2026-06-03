@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { RefreshCw } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Category, CategoryCreate } from "../../types/category";
 import { useCreateCategory, useUpdateCategory } from "../../hooks/useCategories";
 import { categoriesApi } from "../../api/categories";
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export default function CategoryForm({ category, onClose }: Props) {
+  const { t } = useTranslation();
   const isEdit = Boolean(category);
   const create = useCreateCategory();
   const update = useUpdateCategory();
@@ -65,7 +67,7 @@ export default function CategoryForm({ category, onClose }: Props) {
       const generated = await categoriesApi.generatePrompt(trimmedName, keywordList);
       setPrompt(generated);
     } catch {
-      setGenerateError("LLM generation failed — using template instead.");
+      setGenerateError(t("categoryForm.generationFailed"));
       setPrompt(buildFallbackPrompt(trimmedName, keywords));
     } finally {
       setGenerating(false);
@@ -87,18 +89,18 @@ export default function CategoryForm({ category, onClose }: Props) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <label className="block text-sm font-medium mb-1">Name</label>
+        <label className="block text-sm font-medium mb-1">{t("categoryForm.name")}</label>
         <input
           className={inputClass}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          placeholder="e.g. AI, Politics, Logistics"
+          placeholder={t("categoryForm.namePlaceholder")}
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Color</label>
+        <label className="block text-sm font-medium mb-2">{t("categoryForm.color")}</label>
         <div className="flex flex-wrap gap-2 mb-2">
           {PRESET_COLORS.map((c) => (
             <button
@@ -122,21 +124,19 @@ export default function CategoryForm({ category, onClose }: Props) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Keywords (comma-separated)</label>
+        <label className="block text-sm font-medium mb-1">{t("categoryForm.keywords")}</label>
         <input
           className={inputClass}
           value={keywords}
           onChange={(e) => setKeywords(e.target.value)}
-          placeholder="LLM, GPT, AI, machine learning"
+          placeholder={t("categoryForm.keywordsPlaceholder")}
         />
-        <p className="text-xs text-gray-400 mt-1">
-          Keywords help the LLM classify articles into this category.
-        </p>
+        <p className="text-xs text-gray-400 mt-1">{t("categoryForm.keywordsHint")}</p>
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="block text-sm font-medium">Classification prompt</label>
+          <label className="block text-sm font-medium">{t("categoryForm.prompt")}</label>
           <button
             type="button"
             onClick={regeneratePrompt}
@@ -147,26 +147,24 @@ export default function CategoryForm({ category, onClose }: Props) {
                 ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
                 : "text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300"
             )}
-            title="Generate with LLM"
+            title={t("categoryForm.generateWithLLM")}
           >
             <RefreshCw size={12} className={generating ? "animate-spin" : ""} />
-            {generating ? "Generating…" : "Regenerate"}
+            {generating ? t("categoryForm.generating") : t("categoryForm.regenerate")}
           </button>
         </div>
         <textarea
           className={cn(inputClass, "resize-none", generating && "opacity-50")}
           rows={3}
-          value={generating ? "Asking the LLM to analyse this category…" : prompt}
+          value={generating ? t("categoryForm.generatingText") : prompt}
           onChange={(e) => handlePromptChange(e.target.value)}
           readOnly={generating}
-          placeholder="Describe what articles belong in this category…"
+          placeholder={t("categoryForm.promptPlaceholder")}
         />
         {generateError && (
           <p className="text-xs text-amber-500 mt-1">{generateError}</p>
         )}
-        <p className="text-xs text-gray-400 mt-1">
-          The LLM first reasons about what topics belong here, then writes the prompt. You can edit it freely.
-        </p>
+        <p className="text-xs text-gray-400 mt-1">{t("categoryForm.promptHint")}</p>
       </div>
 
       <div className="flex gap-2 mt-2">
@@ -175,14 +173,14 @@ export default function CategoryForm({ category, onClose }: Props) {
           onClick={onClose}
           className="flex-1 px-4 py-2 text-sm font-medium rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 transition-colors"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           type="submit"
           disabled={generating}
           className="flex-1 px-4 py-2 text-sm font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
         >
-          {isEdit ? "Save" : "Add Category"}
+          {isEdit ? t("common.save") : t("categoryForm.addCategory")}
         </button>
       </div>
     </form>

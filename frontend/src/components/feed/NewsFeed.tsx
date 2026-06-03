@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { FeedEntry } from "../../types/news";
 import NewsCard from "./NewsCard";
 import ClusterCard from "./ClusterCard";
@@ -25,6 +26,7 @@ export default function NewsFeed({
   onLoadMore?: () => void;
   onRefresh?: () => void;
 }) {
+  const { t } = useTranslation();
   const parentRef = useRef<HTMLDivElement>(null);
   const [pullY, setPullY] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -188,7 +190,7 @@ export default function NewsFeed({
             />
           )}
           <span>
-            {isRefreshing ? "Refreshing…" : atThreshold ? "Release to refresh" : "Pull to refresh"}
+            {isRefreshing ? t("newsfeed.refreshing") : atThreshold ? t("newsfeed.releaseToRefresh") : t("newsfeed.pullToRefresh")}
           </span>
         </div>
       </div>
@@ -206,8 +208,8 @@ export default function NewsFeed({
           </div>
         ) : items.length === 0 ? (
           <div className="text-center py-20 text-gray-400 dark:text-gray-600">
-            <p className="text-lg font-medium">No articles yet</p>
-            <p className="text-sm mt-1">Add sources in Settings to get started</p>
+            <p className="text-lg font-medium">{t("newsfeed.noArticles")}</p>
+            <p className="text-sm mt-1">{t("newsfeed.noArticlesHint")}</p>
           </div>
         ) : (
           <>

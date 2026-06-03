@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Plus, Trash2, ShieldCheck } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useUsers, useCreateUser, useDeleteUser } from "../../hooks/useAuth";
 
 export default function UsersPanel() {
+  const { t } = useTranslation();
   const { data: users, isLoading } = useUsers();
   const createUser = useCreateUser();
   const deleteUser = useDeleteUser();
@@ -22,19 +24,19 @@ export default function UsersPanel() {
       setIsAdmin(false);
       setShowForm(false);
     } catch (err: any) {
-      setFormError(err?.response?.data?.detail ?? "Failed to create user.");
+      setFormError(err?.response?.data?.detail ?? t("users.failedToCreate"));
     }
   };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100">Users</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-gray-100">{t("users.title")}</h2>
         <button
           onClick={() => { setShowForm(true); setFormError(null); }}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
         >
-          <Plus size={14} /> Add User
+          <Plus size={14} /> {t("users.addUser")}
         </button>
       </div>
 
@@ -43,9 +45,9 @@ export default function UsersPanel() {
           onSubmit={handleCreate}
           className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 flex flex-col gap-3"
         >
-          <h3 className="font-medium text-sm">New User</h3>
+          <h3 className="font-medium text-sm">{t("users.newUser")}</h3>
           <div>
-            <label className="block text-sm font-medium mb-1">Username</label>
+            <label className="block text-sm font-medium mb-1">{t("users.username")}</label>
             <input
               className={inputClass}
               value={username}
@@ -56,7 +58,7 @@ export default function UsersPanel() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
+            <label className="block text-sm font-medium mb-1">{t("users.password")}</label>
             <input
               type="password"
               className={inputClass}
@@ -64,7 +66,7 @@ export default function UsersPanel() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              placeholder="min. 6 characters"
+              placeholder={t("users.passwordPlaceholder")}
             />
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -74,7 +76,7 @@ export default function UsersPanel() {
               onChange={(e) => setIsAdmin(e.target.checked)}
               className="rounded"
             />
-            Admin (can manage users)
+            {t("users.admin")}
           </label>
           {formError && <p className="text-sm text-red-500">{formError}</p>}
           <div className="flex gap-2">
@@ -83,20 +85,20 @@ export default function UsersPanel() {
               onClick={() => setShowForm(false)}
               className="flex-1 px-4 py-2 text-sm font-medium rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 transition-colors"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={createUser.isPending}
               className="flex-1 px-4 py-2 text-sm font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
-              {createUser.isPending ? "Creating…" : "Create"}
+              {createUser.isPending ? t("users.creating") : t("common.create")}
             </button>
           </div>
         </form>
       )}
 
-      {isLoading && <p className="text-sm text-gray-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-gray-400">{t("common.loading")}</p>}
 
       <div className="flex flex-col gap-2">
         {users?.map((u) => (
@@ -115,9 +117,9 @@ export default function UsersPanel() {
               </div>
             </div>
             <button
-              title="Delete user"
+              title={t("users.deleteUser")}
               onClick={() => {
-                if (confirm(`Delete user "${u.username}"? All their data will be removed.`))
+                if (confirm(t("users.deleteConfirm", { name: u.username })))
                   deleteUser.mutate(u.id);
               }}
               className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

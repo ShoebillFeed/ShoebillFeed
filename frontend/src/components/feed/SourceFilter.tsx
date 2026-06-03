@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useSources } from "../../hooks/useSources";
 import { useFilterStore } from "../../stores/filterStore";
 import { cn } from "../../lib/utils";
@@ -16,6 +17,7 @@ const CHIP_ACTIVE = "bg-gray-800 text-white border-gray-800 dark:bg-gray-200 dar
 const CHIP_INACTIVE = "bg-white text-gray-600 border-gray-300 hover:border-gray-400 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600";
 
 export default function SourceFilter() {
+  const { t } = useTranslation();
   const { data: sources } = useSources();
   const { selectedSourceIds, toggleSource, clearSources } = useFilterStore();
   const [expanded, setExpanded] = useState(false);
@@ -35,7 +37,7 @@ export default function SourceFilter() {
           onClick={clearSources}
           className={cn(CHIP_BASE, !hasSelection ? CHIP_ACTIVE : CHIP_INACTIVE)}
         >
-          All sources
+          {t("filters.allSources")}
         </button>
       )}
 
@@ -68,7 +70,7 @@ export default function SourceFilter() {
             <ChevronUp size={11} />
           ) : (
             <>
-              {!hasSelection && <span>Sources</span>}
+              {!hasSelection && <span>{t("filters.sources")}</span>}
               {hasSelection && unselected.length > 0 && <span>+{unselected.length}</span>}
               <ChevronDown size={11} />
             </>

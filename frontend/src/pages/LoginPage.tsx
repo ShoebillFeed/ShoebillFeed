@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ShoebillIcon } from "../components/icons/ShoebillIcon";
 import { useLogin, useMe } from "../hooks/useAuth";
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: user } = useMe();
   const login = useLogin();
@@ -32,7 +34,7 @@ export default function LoginPage() {
             <ShoebillIcon size={28} />
             <span className="text-2xl font-bold">Shoebill Feed</span>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to your account</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t("login.title")}</p>
         </div>
 
         <form
@@ -40,7 +42,7 @@ export default function LoginPage() {
           className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 flex flex-col gap-4 shadow-sm"
         >
           <div>
-            <label className="block text-sm font-medium mb-1.5">Username</label>
+            <label className="block text-sm font-medium mb-1.5">{t("login.username")}</label>
             <input
               type="text"
               autoComplete="username"
@@ -52,7 +54,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5">Password</label>
+            <label className="block text-sm font-medium mb-1.5">{t("login.password")}</label>
             <input
               type="password"
               autoComplete="current-password"
@@ -64,9 +66,7 @@ export default function LoginPage() {
           </div>
 
           {login.error && (
-            <p className="text-sm text-red-500">
-              Invalid username or password.
-            </p>
+            <p className="text-sm text-red-500">{t("login.error")}</p>
           )}
 
           <button
@@ -74,7 +74,7 @@ export default function LoginPage() {
             disabled={login.isPending}
             className="w-full py-2 px-4 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
           >
-            {login.isPending ? "Signing in…" : "Sign in"}
+            {login.isPending ? t("login.submitting") : t("login.submit")}
           </button>
         </form>
       </div>

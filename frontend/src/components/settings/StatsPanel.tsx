@@ -1,5 +1,6 @@
 import { useState, Component } from "react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AreaChart, Area,
   BarChart, Bar,
@@ -19,11 +20,7 @@ class ChartErrorBoundary extends Component<{ children: ReactNode }, { crashed: b
   static getDerivedStateFromError() { return { crashed: true }; }
   render() {
     if (this.state.crashed) {
-      return (
-        <div className="flex items-center justify-center h-40 text-sm text-red-400 dark:text-red-500">
-          Chart failed to render.
-        </div>
-      );
+      return <ChartCrashMessage />;
     }
     return this.props.children;
   }
@@ -88,16 +85,37 @@ function ChartCard({
   );
 }
 
+function ChartCrashMessage() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center h-40 text-sm text-red-400 dark:text-red-500">
+      {t("stats.chartFailed")}
+    </div>
+  );
+}
+
+function WeightHistoryEmpty() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center justify-center h-40 gap-1 text-sm text-gray-400">
+      <span>{t("stats.noWeightHistory")}</span>
+      <span className="text-xs">{t("stats.starToStart")}</span>
+    </div>
+  );
+}
+
 function Empty() {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-center h-40 text-sm text-gray-400">
-      No data for this period yet.
+      {t("stats.noData")}
     </div>
   );
 }
 
 function Loading() {
-  return <div className="flex items-center justify-center h-40 text-sm text-gray-400">Loading…</div>;
+  const { t } = useTranslation();
+  return <div className="flex items-center justify-center h-40 text-sm text-gray-400">{t("common.loading")}</div>;
 }
 
 // ── Shared tooltip shell ──────────────────────────────────────────────────────
@@ -361,12 +379,7 @@ function WeightHistoryChart({ days }: { days: number }) {
   const { data, isLoading } = useWeightHistory(days);
   if (isLoading) return <Loading />;
   if (!data?.length) {
-    return (
-      <div className="flex flex-col items-center justify-center h-40 gap-1 text-sm text-gray-400">
-        <span>No weight history yet.</span>
-        <span className="text-xs">Star some articles to start recording.</span>
-      </div>
-    );
+    return <WeightHistoryEmpty />;
   }
 
   const allDates = Array.from(
@@ -510,6 +523,7 @@ function SourceClustersChart({ days }: { days: number }) {
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export default function StatsPanel() {
+  const { t } = useTranslation();
   const [activityDays, setActivityDays] = useState(30);
   const [categoryDays, setCategoryDays] = useState(30);
   const [sourceDays, setSourceDays] = useState(30);
@@ -524,23 +538,23 @@ export default function StatsPanel() {
     <div>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h2 className="font-semibold text-gray-900 dark:text-gray-100">Statistics</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-gray-100">{t("stats.title")}</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Insight into your reading habits and feed activity.
+            {t("stats.description")}
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-4">
           {!statsEnabled && (
             <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-              <PauseCircle size={13} /> Recording paused
+              <PauseCircle size={13} /> {t("stats.recordingPaused")}
             </span>
           )}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Record history</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{t("stats.recordHistory")}</span>
             <button
               role="switch"
               aria-checked={statsEnabled}
-              title={statsEnabled ? "Pause statistics recording" : "Resume statistics recording"}
+              title={statsEnabled ? t("stats.pauseRecording") : t("stats.resumeRecording")}
               onClick={() => update.mutate({ stats_enabled: !statsEnabled })}
               className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${statsEnabled ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"}`}
             >
@@ -552,8 +566,8 @@ export default function StatsPanel() {
 
       <div className="flex flex-col gap-6">
         <ChartCard
-          title="Reading activity"
-          description="Daily count of articles fetched, read, and starred. The gap between Fetched and Read shows your backlog; the Starred line reflects how often you find content worth keeping."
+          title={t("stats.activityTitle")}
+          description={t("stats.activityDesc")}
           action={<RangePicker value={activityDays} onChange={setActivityDays} />}
         >
           <ActivityChart key={activityDays} days={activityDays} />
@@ -561,16 +575,16 @@ export default function StatsPanel() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <ChartCard
-            title="Articles by category"
-            description="How many articles were assigned to each category in the selected period."
+            title={t("stats.byCategoryTitle")}
+            description={t("stats.byCategoryDesc")}
             action={<RangePicker value={categoryDays} onChange={setCategoryDays} />}
           >
             <ByCategoryChart key={categoryDays} days={categoryDays} />
           </ChartCard>
 
           <ChartCard
-            title="Articles by source"
-            description="Volume per source. Hover a bar to see the category breakdown for that source."
+            title={t("stats.bySourceTitle")}
+            description={t("stats.bySourceDesc")}
             action={<RangePicker value={sourceDays} onChange={setSourceDays} />}
           >
             <BySourceChart key={sourceDays} days={sourceDays} />
@@ -578,16 +592,16 @@ export default function StatsPanel() {
         </div>
 
         <ChartCard
-          title="Source co-clustering"
-          description="Which pairs of sources most often cover the same story (appear in the same cluster), broken down by category. High overlap means two sources report on the same topics."
+          title={t("stats.sourceClusterTitle")}
+          description={t("stats.sourceClusterDesc")}
           action={<RangePicker value={clusterDays} onChange={setClusterDays} />}
         >
           <SourceClustersChart key={clusterDays} days={clusterDays} />
         </ChartCard>
 
         <ChartCard
-          title="Category weight history"
-          description="How each category's learned relevance score has grown over time. Steeper curves mean you're consistently finding that category relevant. Requires recording to be enabled."
+          title={t("stats.weightHistoryTitle")}
+          description={t("stats.weightHistoryDesc")}
           action={<RangePicker value={weightDays} onChange={setWeightDays} />}
         >
           <WeightHistoryChart key={weightDays} days={weightDays} />

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useCategories } from "../../hooks/useCategories";
 import { useFilterStore } from "../../stores/filterStore";
 import { cn } from "../../lib/utils";
@@ -8,6 +9,7 @@ const CHIP_BASE = "px-3 py-1 rounded-full text-xs font-medium border transition-
 const CHIP_INACTIVE = "bg-white text-gray-600 border-gray-300 hover:border-gray-400 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600";
 
 export default function CategoryFilter() {
+  const { t } = useTranslation();
   const { data: categories } = useCategories();
   const { selectedCategoryIds, toggleCategory, clearCategories } = useFilterStore();
   const [expanded, setExpanded] = useState(false);
@@ -31,7 +33,7 @@ export default function CategoryFilter() {
               : CHIP_INACTIVE,
           )}
         >
-          All
+          {t("filters.all")}
         </button>
       )}
 
@@ -67,7 +69,7 @@ export default function CategoryFilter() {
             <ChevronUp size={11} />
           ) : (
             <>
-              {!hasSelection && <span>Categories</span>}
+              {!hasSelection && <span>{t("filters.categories")}</span>}
               {hasSelection && unselected.length > 0 && <span>+{unselected.length}</span>}
               <ChevronDown size={11} />
             </>

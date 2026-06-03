@@ -1,19 +1,21 @@
 import type { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Newspaper, Settings, LogOut, Sun, Moon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { ShoebillIcon } from "../icons/ShoebillIcon";
 import { cn } from "../../lib/utils";
 import { useMe, useLogout } from "../../hooks/useAuth";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 
 function ThemeToggle() {
+  const { t } = useTranslation();
   const theme = usePreferencesStore((s) => s.theme);
   const setTheme = usePreferencesStore((s) => s.setTheme);
 
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      title={t(theme === "dark" ? "header.switchToLight" : "header.switchToDark")}
       className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 transition-colors"
     >
       {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
@@ -22,6 +24,7 @@ function ThemeToggle() {
 }
 
 export default function Header() {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { data: user } = useMe();
@@ -42,8 +45,8 @@ export default function Header() {
         </Link>
 
         <nav className="flex items-center gap-1">
-          <NavLink to="/" active={pathname === "/"} icon={<Newspaper size={16} />} label="Feed" />
-          <NavLink to="/settings" active={pathname === "/settings"} icon={<Settings size={16} />} label="Settings" />
+          <NavLink to="/" active={pathname === "/"} icon={<Newspaper size={16} />} label={t("header.feed")} />
+          <NavLink to="/settings" active={pathname === "/settings"} icon={<Settings size={16} />} label={t("header.settings")} />
 
           <ThemeToggle />
 
@@ -54,11 +57,11 @@ export default function Header() {
               </span>
               <button
                 onClick={handleLogout}
-                title="Sign out"
+                title={t("header.signOut")}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <LogOut size={16} />
-                <span className="hidden sm:inline">Sign out</span>
+                <span className="hidden sm:inline">{t("header.signOut")}</span>
               </button>
             </div>
           )}

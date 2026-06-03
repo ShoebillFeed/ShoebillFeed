@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 
-const LANGUAGES = [
+const CONTENT_LANGUAGES = [
   { code: "en", label: "English" },
   { code: "de", label: "German" },
   { code: "fr", label: "French" },
@@ -24,6 +25,11 @@ const LANGUAGES = [
   { code: "cs", label: "Czech" },
   { code: "hu", label: "Hungarian" },
   { code: "ro", label: "Romanian" },
+];
+
+const UI_LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "de", label: "Deutsch" },
 ];
 
 const inputClass =
@@ -109,11 +115,12 @@ function NumericField({
 }
 
 export default function AdvancedPanel() {
+  const { t } = useTranslation();
   const { data: settings, isLoading } = useAdvancedSettings();
   const update = useUpdateAdvancedSettings();
-  const { autoLabelOnRead, setAutoLabelOnRead } = usePreferencesStore();
+  const { autoLabelOnRead, setAutoLabelOnRead, uiLocale, setUiLocale } = usePreferencesStore();
 
-  if (isLoading) return <p className="text-sm text-gray-400">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-gray-400">{t("common.loading")}</p>;
   if (!settings) return null;
 
   const base = settings.weight_base;
@@ -121,25 +128,17 @@ export default function AdvancedPanel() {
 
   return (
     <div>
-      <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-6">Advanced</h2>
+      <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-6">{t("advanced.title")}</h2>
 
-      <Section
-        title="Content Language"
-        description="Controls the language the AI uses when writing abstracts, summaries, and headlines."
-      >
-        <Field
-          label="Output language"
-          description="Keep original uses the article's own language. Selecting a language forces all generated text into that language regardless of the source."
-        >
+      <Section title={t("advanced.uiLanguage")} description={t("advanced.uiLanguageDesc")}>
+        <Field label={t("advanced.uiLanguage")}>
           <select
-            value={settings.output_language ?? ""}
-            onChange={(e) =>
-              update.mutate({ output_language: e.target.value || null })
-            }
+            value={uiLocale ?? ""}
+            onChange={(e) => setUiLocale(e.target.value || null)}
             className="px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="">Keep original</option>
-            {LANGUAGES.map((l) => (
+            <option value="">{t("advanced.browserDefault")}</option>
+            {UI_LANGUAGES.map((l) => (
               <option key={l.code} value={l.code}>
                 {l.label}
               </option>
@@ -148,10 +147,35 @@ export default function AdvancedPanel() {
         </Field>
       </Section>
 
-      <Section title="Reading">
+      <Section
+        title={t("advanced.contentLanguage")}
+        description={t("advanced.contentLanguageDesc")}
+      >
         <Field
-          label="Auto-star on read"
-          description="Automatically mark an article as relevant (★) when you open it. The star is highlighted so you can undo immediately."
+          label={t("advanced.outputLanguage")}
+          description={t("advanced.outputLanguageDesc")}
+        >
+          <select
+            value={settings.output_language ?? ""}
+            onChange={(e) =>
+              update.mutate({ output_language: e.target.value || null })
+            }
+            className="px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">{t("advanced.keepOriginal")}</option>
+            {CONTENT_LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </Section>
+
+      <Section title={t("advanced.reading")}>
+        <Field
+          label={t("advanced.autoStarOnRead")}
+          description={t("advanced.autoStarDesc")}
         >
           <input
             type="checkbox"
@@ -162,14 +186,15 @@ export default function AdvancedPanel() {
         </Field>
       </Section>
 
-
       <Section
-        title="Category Learning"
-        description={`Each time you star an article, its categories gain a learned score: base + log(1 + stars) × rate. With current settings: ${[1, 5, 10, 25].map((n) => `${n}★ → ${(base + Math.log1p(n) * mult).toFixed(2)}`).join(", ")}.`}
+        title={t("advanced.categoryLearning")}
+        description={t("advanced.categoryLearningDesc", {
+          examples: [1, 5, 10, 25].map((n) => `${n}★ → ${(base + Math.log1p(n) * mult).toFixed(2)}`).join(", "),
+        })}
       >
         <NumericField
-          label="Starting score"
-          description="Score a category has before you've starred anything. Higher values make all categories carry more weight from the start. Default: 1.0"
+          label={t("advanced.startingScore")}
+          description={t("advanced.startingScoreDesc")}
           value={settings.weight_base}
           min={0}
           max={10}
@@ -177,8 +202,8 @@ export default function AdvancedPanel() {
           onChange={(v) => update.mutate({ weight_base: v })}
         />
         <NumericField
-          label="Learning rate"
-          description="How fast a category's score grows as you star more articles. Higher = steeper curve. Default: 0.5"
+          label={t("advanced.learningRate")}
+          description={t("advanced.learningRateDesc")}
           value={settings.weight_log_multiplier}
           min={0}
           max={5}
@@ -188,12 +213,12 @@ export default function AdvancedPanel() {
       </Section>
 
       <Section
-        title="Relevant Tab Ranking"
-        description="The Relevant tab score combines the AI's rating, your reading history, a bonus for widely-covered stories, and a time decay factor. Each factor can be scaled or disabled independently."
+        title={t("advanced.relevantTabRanking")}
+        description={t("advanced.relevantTabRankingDesc")}
       >
         <NumericField
-          label="AI rating influence"
-          description="How much the AI's 1–10 relevance score counts. Set to 0 to rank purely by your own history. Default: 1.0"
+          label={t("advanced.aiRatingInfluence")}
+          description={t("advanced.aiRatingDesc")}
           value={settings.relevance_llm_weight}
           min={0}
           max={5}
@@ -201,8 +226,8 @@ export default function AdvancedPanel() {
           onChange={(v) => update.mutate({ relevance_llm_weight: v })}
         />
         <NumericField
-          label="Learning influence"
-          description="How strongly your starred articles and keywords shape the ranking. 0 = off, 1 = normal, 2 = amplified. Default: 1.0"
+          label={t("advanced.learningInfluence")}
+          description={t("advanced.learningInfluenceDesc")}
           value={settings.relevance_learning_weight}
           min={0}
           max={5}
@@ -210,8 +235,8 @@ export default function AdvancedPanel() {
           onChange={(v) => update.mutate({ relevance_learning_weight: v })}
         />
         <NumericField
-          label="Multi-source bonus"
-          description="Extra score for stories covered by several sources simultaneously. 0 = disabled. Default: 0.5"
+          label={t("advanced.multiSourceBonus")}
+          description={t("advanced.multiSourceBonusDesc")}
           value={settings.relevance_cluster_weight}
           min={0}
           max={5}
@@ -219,8 +244,10 @@ export default function AdvancedPanel() {
           onChange={(v) => update.mutate({ relevance_cluster_weight: v })}
         />
         <NumericField
-          label="Time decay rate"
-          description={`Multiplier applied to Relevant and Impact scores based on article age: 1 / (0.5 × (days × rate + 2)). A fresh article always scores at 1.0. 0 = no decay. With current setting: ${[1, 7, 30].map((d) => `${d}d → ${(1 / (0.5 * (d * (settings.time_decay_param ?? 0.5) + 2))).toFixed(2)}`).join(", ")}. Default: 2`}
+          label={t("advanced.timeDecayRate")}
+          description={t("advanced.timeDecayRateDesc", {
+            examples: [1, 7, 30].map((d) => `${d}d → ${(1 / (0.5 * (d * (settings.time_decay_param ?? 0.5) + 2))).toFixed(2)}`).join(", "),
+          })}
           value={settings.time_decay_param ?? 2.0}
           min={0}
           max={20}
@@ -230,10 +257,10 @@ export default function AdvancedPanel() {
       </Section>
 
       {update.isSuccess && (
-        <p className="text-xs text-green-600 dark:text-green-400 mt-2">Settings saved.</p>
+        <p className="text-xs text-green-600 dark:text-green-400 mt-2">{t("advanced.settingsSaved")}</p>
       )}
       {update.isError && (
-        <p className="text-xs text-red-500 mt-2">Failed to save settings.</p>
+        <p className="text-xs text-red-500 mt-2">{t("advanced.settingsFailed")}</p>
       )}
     </div>
   );

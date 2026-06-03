@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { Clock, Zap, TrendingUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useCategories } from "../../hooks/useCategories";
 import { useSources } from "../../hooks/useSources";
 import { cn } from "../../lib/utils";
 import type { UserTab, UserTabCreate, TabSort } from "../../types/tabs";
 
-const SORT_OPTIONS: { value: TabSort; label: string; icon: typeof Clock }[] = [
-  { value: "newest", label: "Newest", icon: Clock },
-  { value: "relevant", label: "Most Relevant", icon: Zap },
-  { value: "impact", label: "Most Impact", icon: TrendingUp },
+const SORT_IDS: { value: TabSort; icon: typeof Clock }[] = [
+  { value: "newest", icon: Clock },
+  { value: "relevant", icon: Zap },
+  { value: "impact", icon: TrendingUp },
 ];
 
 export default function TabForm({
@@ -20,6 +21,7 @@ export default function TabForm({
   onSave: (data: UserTabCreate) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const { data: categories } = useCategories();
   const { data: sources } = useSources();
 
@@ -39,19 +41,25 @@ export default function TabForm({
     onSave({ name: name.trim(), sort, category_ids: categoryIds, source_ids: sourceIds, unread_only: unreadOnly });
   };
 
+  const SORT_LABELS: Record<TabSort, string> = {
+    newest: t("tabs.newest"),
+    relevant: t("tabs.relevant"),
+    impact: t("tabs.impact"),
+  };
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {/* Name */}
       <div>
         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Tab name
+          {t("tabForm.tabName")}
         </label>
         <input
           autoFocus
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="My custom tab"
+          placeholder={t("tabForm.placeholder")}
           className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
@@ -59,10 +67,10 @@ export default function TabForm({
       {/* Sort */}
       <div>
         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Sort by
+          {t("tabForm.sortBy")}
         </label>
         <div className="flex gap-2">
-          {SORT_OPTIONS.map(({ value, label, icon: Icon }) => (
+          {SORT_IDS.map(({ value, icon: Icon }) => (
             <button
               key={value}
               type="button"
@@ -74,7 +82,7 @@ export default function TabForm({
                   : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-indigo-400",
               )}
             >
-              <Icon size={12} /> {label}
+              <Icon size={12} /> {SORT_LABELS[value]}
             </button>
           ))}
         </div>
@@ -84,7 +92,7 @@ export default function TabForm({
       {!!categories?.length && (
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            Filter by categories <span className="font-normal text-gray-400">(empty = all)</span>
+            {t("tabForm.filterCategories")} <span className="font-normal text-gray-400">{t("tabForm.emptyAll")}</span>
           </label>
           <div className="flex flex-wrap gap-1.5">
             {categories.map((cat) => {
@@ -114,7 +122,7 @@ export default function TabForm({
       {!!sources?.filter((s) => s.is_active).length && (
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            Filter by sources <span className="font-normal text-gray-400">(empty = all)</span>
+            {t("tabForm.filterSources")} <span className="font-normal text-gray-400">{t("tabForm.emptyAll")}</span>
           </label>
           <div className="flex flex-wrap gap-1.5">
             {sources.filter((s) => s.is_active).map((source) => {
@@ -147,7 +155,7 @@ export default function TabForm({
           onChange={(e) => setUnreadOnly(e.target.checked)}
           className="rounded accent-indigo-600"
         />
-        Show unread articles only
+        {t("tabForm.unreadOnly")}
       </label>
 
       {/* Actions */}
@@ -157,14 +165,14 @@ export default function TabForm({
           disabled={!name.trim()}
           className="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-40 transition-colors"
         >
-          {tab ? "Save" : "Create"}
+          {tab ? t("common.save") : t("common.create")}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </form>

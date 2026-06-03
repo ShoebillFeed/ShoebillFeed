@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, Trash2, Play, Pencil, RefreshCw, Download, Upload } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useSources, useDeleteSource, useFetchSource, useImportSources, useToggleSourceActive } from "../../hooks/useSources";
 import { sourcesApi } from "../../api/sources";
 import SourceForm from "./SourceForm";
@@ -17,6 +18,7 @@ function downloadJson(data: unknown, filename: string) {
 }
 
 export default function SourcesPanel() {
+  const { t } = useTranslation();
   const { data: sources, isLoading } = useSources();
   const deleteSource = useDeleteSource();
   const fetchSource = useFetchSource();
@@ -39,7 +41,7 @@ export default function SourcesPanel() {
         const data = JSON.parse(ev.target?.result as string);
         importSources.mutate(data);
       } catch {
-        alert("Invalid JSON file");
+        alert(t("sources.invalidJson"));
       }
     };
     reader.readAsText(file);
@@ -49,47 +51,47 @@ export default function SourcesPanel() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100">News Sources</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-gray-100">{t("sources.title")}</h2>
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={handleExport}
-            title="Export sources as JSON"
+            title={t("sources.exportTitle")}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
           >
-            <Download size={14} /> Export
+            <Download size={14} /> {t("common.export")}
           </button>
           <label
-            title="Import sources from JSON"
+            title={t("sources.importTitle")}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 cursor-pointer"
           >
-            <Upload size={14} /> Import
+            <Upload size={14} /> {t("common.import")}
             <input type="file" accept=".json" className="hidden" onChange={handleImport} />
           </label>
           <button
             onClick={() => { setEditing(null); setShowForm(true); }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
           >
-            <Plus size={14} /> Add Source
+            <Plus size={14} /> {t("sources.addSource")}
           </button>
         </div>
       </div>
 
       {showForm && (
         <div className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-          <h3 className="font-medium text-sm mb-3">Add New Source</h3>
+          <h3 className="font-medium text-sm mb-3">{t("sources.addNewSource")}</h3>
           <SourceForm
             onClose={() => setShowForm(false)}
           />
         </div>
       )}
 
-      {isLoading && <p className="text-sm text-gray-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-gray-400">{t("common.loading")}</p>}
 
       <div className="flex flex-col gap-2">
         {sources?.map((source) => (
           editing?.id === source.id ? (
             <div key={source.id} className="p-4 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-              <h3 className="font-medium text-sm mb-3 text-indigo-600 dark:text-indigo-400">Editing: {source.name}</h3>
+              <h3 className="font-medium text-sm mb-3 text-indigo-600 dark:text-indigo-400">{t("sources.editingSource", { name: source.name })}</h3>
               <SourceForm
                 source={source}
                 onClose={() => setEditing(null)}
@@ -104,7 +106,7 @@ export default function SourcesPanel() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => toggleActive.mutate({ id: source.id, is_active: !source.is_active })}
-                    title={source.is_active ? "Deactivate source" : "Activate source"}
+                    title={source.is_active ? t("sources.deactivate") : t("sources.activate")}
                     className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
                       source.is_active ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"
                     }`}
@@ -121,28 +123,28 @@ export default function SourcesPanel() {
                   </span>
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {source.item_count} items ·{" "}
+                  {t("sources.itemCount", { count: source.item_count })} ·{" "}
                   {source.last_fetched_at
-                    ? `fetched ${formatDistanceToNow(new Date(source.last_fetched_at), { addSuffix: true })}`
-                    : "never fetched"}
+                    ? t("sources.fetched", { timeAgo: formatDistanceToNow(new Date(source.last_fetched_at), { addSuffix: true }) })
+                    : t("sources.neverFetched")}
                 </p>
               </div>
 
               <div className="flex items-center gap-1">
                 <IconButton
-                  title="Fetch now"
+                  title={t("sources.fetchNow")}
                   onClick={() => fetchSource.mutate(source.id)}
                   disabled={fetchSource.isPending}
                 >
                   {fetchSource.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Play size={14} />}
                 </IconButton>
-                <IconButton title="Edit" onClick={() => { setEditing(source); setShowForm(false); }}>
+                <IconButton title={t("common.edit")} onClick={() => { setEditing(source); setShowForm(false); }}>
                   <Pencil size={14} />
                 </IconButton>
                 <IconButton
-                  title="Delete"
+                  title={t("common.delete")}
                   onClick={() => {
-                    if (confirm(`Delete source "${source.name}" and all its articles?`)) {
+                    if (confirm(t("sources.deleteConfirm", { name: source.name }))) {
                       deleteSource.mutate(source.id);
                     }
                   }}
@@ -156,9 +158,7 @@ export default function SourcesPanel() {
         ))}
 
         {sources?.length === 0 && !isLoading && (
-          <p className="text-sm text-gray-400 text-center py-8">
-            No sources yet. Add one to start aggregating news.
-          </p>
+          <p className="text-sm text-gray-400 text-center py-8">{t("sources.empty")}</p>
         )}
       </div>
     </div>
