@@ -9,6 +9,16 @@ from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetche
 
 logger = logging.getLogger(__name__)
 
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/125.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+}
+
 
 @register_fetcher("telegram")
 class TelegramFetcher(NewsFetcher):
@@ -25,21 +35,34 @@ class TelegramFetcher(NewsFetcher):
 
         url = f"https://t.me/s/{channel}"
         try:
-            resp = httpx.get(
-                url,
-                headers={"User-Agent": "Mozilla/5.0 (compatible; ShoebillFeed/1.0)"},
-                timeout=15,
-                follow_redirects=True,
-            )
+            resp = httpx.get(url, headers=_HEADERS, timeout=20, follow_redirects=True)
             resp.raise_for_status()
         except Exception:
             logger.exception("Error fetching Telegram channel %s", channel)
             return []
 
-        soup = BeautifulSoup(resp.text, "lxml")
-        items: list[RawNewsItem] = []
+        # If Telegram redirected away from /s/ the channel has no web preview
+        if "/s/" not in str(resp.url):
+            logger.warning(
+                "Telegram channel %s has no public web preview (redirected to %s)",
+                channel, resp.url,
+            )
+            return []
 
-        for wrap in soup.select(".tgme_widget_message_wrap"):
+        soup = BeautifulSoup(resp.text, "lxml")
+        wraps = soup.select(".tgme_widget_message_wrap")
+        logger.debug("Telegram %s: %d message wrappers found", channel, len(wraps))
+
+        if not wraps:
+            # Log a snippet so we can spot structural changes
+            logger.warning(
+                "Telegram %s: no messages found — page length %d, first 300 chars: %r",
+                channel, len(resp.text), resp.text[:300],
+            )
+            return []
+
+        items: list[RawNewsItem] = []
+        for wrap in wraps:
             try:
                 msg_div = wrap.select_one(".tgme_widget_message_text")
                 text = msg_div.get_text(separator=" ", strip=True) if msg_div else ""
