@@ -101,6 +101,11 @@ const pt = {
     deleteConfirm: "Eliminar a fonte «{{name}}» e todos os seus artigos?",
     empty: "Sem fontes. Adicione uma para começar a agregar notícias.",
     invalidJson: "Ficheiro JSON inválido",
+    sharedTitle: "Fontes de outros utilizadores",
+    sharedDesc: "Fontes configuradas por outros utilizadores. Clique em + para adicionar uma cópia ao seu feed.",
+    sharedSearch: "Pesquisar fontes…",
+    sharedNoMatch: "Nenhuma fonte corresponde à pesquisa.",
+    adoptSource: "Adicionar às minhas fontes",
   },
   categories: {
     title: "Categorias",

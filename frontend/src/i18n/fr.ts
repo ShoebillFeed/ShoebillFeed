@@ -101,6 +101,11 @@ const fr = {
     deleteConfirm: "Supprimer la source « {{name}} » et tous ses articles ?",
     empty: "Aucune source. Ajoutez-en une pour commencer.",
     invalidJson: "Fichier JSON invalide",
+    sharedTitle: "Sources des autres utilisateurs",
+    sharedDesc: "Sources configurées par d'autres utilisateurs. Cliquez sur + pour en ajouter une copie à votre fil.",
+    sharedSearch: "Rechercher des sources…",
+    sharedNoMatch: "Aucune source ne correspond à la recherche.",
+    adoptSource: "Ajouter à mes sources",
   },
   categories: {
     title: "Catégories",

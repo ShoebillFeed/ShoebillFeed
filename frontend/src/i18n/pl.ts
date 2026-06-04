@@ -101,6 +101,11 @@ const pl = {
     deleteConfirm: "Usunąć źródło „{{name}}\" i wszystkie jego artykuły?",
     empty: "Brak źródeł. Dodaj jedno, aby zbierać wiadomości.",
     invalidJson: "Nieprawidłowy plik JSON",
+    sharedTitle: "Źródła innych użytkowników",
+    sharedDesc: "Źródła skonfigurowane przez innych użytkowników. Kliknij +, aby dodać kopię do swojego feedu.",
+    sharedSearch: "Szukaj źródeł…",
+    sharedNoMatch: "Brak źródeł pasujących do wyszukiwania.",
+    adoptSource: "Dodaj do moich źródeł",
   },
   categories: {
     title: "Kategorie",

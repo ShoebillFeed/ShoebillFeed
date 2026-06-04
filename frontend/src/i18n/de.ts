@@ -101,6 +101,11 @@ const de = {
     deleteConfirm: "Quelle „{{name}}\" und alle zugehörigen Artikel löschen?",
     empty: "Noch keine Quellen. Füge eine hinzu, um Nachrichten zu sammeln.",
     invalidJson: "Ungültige JSON-Datei",
+    sharedTitle: "Quellen anderer Benutzer",
+    sharedDesc: "Von anderen Benutzern konfigurierte Quellen. Klicke auf +, um eine Kopie zu deinem Feed hinzuzufügen.",
+    sharedSearch: "Quellen suchen…",
+    sharedNoMatch: "Keine Quellen entsprechen der Suche.",
+    adoptSource: "Zu meinen Quellen hinzufügen",
   },
   categories: {
     title: "Kategorien",

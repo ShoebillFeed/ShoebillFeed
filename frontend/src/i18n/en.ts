@@ -101,6 +101,11 @@ const en = {
     deleteConfirm: "Delete source \"{{name}}\" and all its articles?",
     empty: "No sources yet. Add one to start aggregating news.",
     invalidJson: "Invalid JSON file",
+    sharedTitle: "Sources from other users",
+    sharedDesc: "Sources other users have configured. Click + to add a copy to your own feed.",
+    sharedSearch: "Search sources…",
+    sharedNoMatch: "No sources match your search.",
+    adoptSource: "Add to my sources",
   },
   categories: {
     title: "Categories",

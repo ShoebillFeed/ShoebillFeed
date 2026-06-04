@@ -101,6 +101,11 @@ const ro = {
     deleteConfirm: "Ștergeți sursa „{{name}}\" și toate articolele sale?",
     empty: "Nicio sursă. Adăugați una pentru a colecta știri.",
     invalidJson: "Fișier JSON invalid",
+    sharedTitle: "Surse de la alți utilizatori",
+    sharedDesc: "Surse configurate de alți utilizatori. Faceți clic pe + pentru a adăuga o copie la feedul dvs.",
+    sharedSearch: "Căutați surse…",
+    sharedNoMatch: "Nicio sursă nu corespunde căutării.",
+    adoptSource: "Adaugă la sursele mele",
   },
   categories: {
     title: "Categorii",

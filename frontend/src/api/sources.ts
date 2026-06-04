@@ -3,6 +3,7 @@ import type { Source, SourceCreate, SourceUpdate } from "../types/source";
 
 export const sourcesApi = {
   list: () => client.get<Source[]>("/sources").then((r) => r.data),
+  listShared: () => client.get<Source[]>("/sources/shared").then((r) => r.data),
   create: (data: SourceCreate) => client.post<Source>("/sources", data).then((r) => r.data),
   update: (id: string, data: SourceUpdate) =>
     client.patch<Source>(`/sources/${id}`, data).then((r) => r.data),

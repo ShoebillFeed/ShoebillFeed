@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Plus, Trash2, Play, Pencil, RefreshCw, Download, Upload } from "lucide-react";
+import { Plus, Trash2, Play, Pencil, RefreshCw, Download, Upload, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useSources, useDeleteSource, useFetchSource, useImportSources, useToggleSourceActive } from "../../hooks/useSources";
+import { useSources, useDeleteSource, useFetchSource, useImportSources, useToggleSourceActive, useSharedSources, useAdoptSource } from "../../hooks/useSources";
 import { sourcesApi } from "../../api/sources";
 import SourceForm from "./SourceForm";
 import type { Source } from "../../types/source";
@@ -20,12 +20,15 @@ function downloadJson(data: unknown, filename: string) {
 export default function SourcesPanel() {
   const { t } = useTranslation();
   const { data: sources, isLoading } = useSources();
+  const { data: sharedSources } = useSharedSources();
   const deleteSource = useDeleteSource();
   const fetchSource = useFetchSource();
   const importSources = useImportSources();
   const toggleActive = useToggleSourceActive();
+  const adoptSource = useAdoptSource();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Source | null>(null);
+  const [sharedSearch, setSharedSearch] = useState("");
 
   const handleExport = async () => {
     const data = await sourcesApi.export();
@@ -161,6 +164,61 @@ export default function SourcesPanel() {
           <p className="text-sm text-gray-400 text-center py-8">{t("sources.empty")}</p>
         )}
       </div>
+
+      {sharedSources && sharedSources.length > 0 && (
+        <div className="mt-8">
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">{t("sources.sharedTitle")}</h3>
+              <span className="text-xs text-gray-400">{sharedSources.length}</span>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{t("sources.sharedDesc")}</p>
+            <div className="relative mb-3">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder={t("sources.sharedSearch")}
+                value={sharedSearch}
+                onChange={(e) => setSharedSearch(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto pr-1">
+              {sharedSources
+                .filter((s) => s.name.toLowerCase().includes(sharedSearch.toLowerCase()))
+                .map((source) => (
+                  <div
+                    key={source.id}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
+                  >
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 shrink-0">
+                      {source.source_type}
+                    </span>
+                    <span className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">{source.name}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{source.item_count.toLocaleString()}</span>
+                    <button
+                      title={t("sources.adoptSource")}
+                      onClick={() => adoptSource.mutate({
+                        name: source.name,
+                        source_type: source.source_type,
+                        config: source.config,
+                        is_active: true,
+                        fetch_interval: source.fetch_interval,
+                      })}
+                      disabled={adoptSource.isPending}
+                      className="p-1 rounded text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors disabled:opacity-40 shrink-0"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                ))}
+              {sharedSources.filter((s) => s.name.toLowerCase().includes(sharedSearch.toLowerCase())).length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-4">{t("sources.sharedNoMatch")}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

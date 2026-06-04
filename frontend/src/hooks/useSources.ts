@@ -7,6 +7,21 @@ export function useSources() {
   return useQuery({ queryKey: ["sources"], queryFn: sourcesApi.list });
 }
 
+export function useSharedSources() {
+  return useQuery({ queryKey: ["sources", "shared"], queryFn: sourcesApi.listShared });
+}
+
+export function useAdoptSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: SourceCreate) => sourcesApi.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sources"] });
+      qc.invalidateQueries({ queryKey: ["sources", "shared"] });
+    },
+  });
+}
+
 export function useCreateSource() {
   const qc = useQueryClient();
   return useMutation({

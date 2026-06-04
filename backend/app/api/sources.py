@@ -36,6 +36,42 @@ def create_source(payload: SourceCreate, db: Session = Depends(get_db), current_
     return _with_count(db, source)
 
 
+_SAFE_TYPES = {"rss", "youtube", "mastodon", "arxiv", "scholar"}
+
+
+@router.get("/shared", response_model=list[SourceOut])
+def list_shared_sources(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Sources configured by other users that the current user has not yet added.
+    Credential-bearing types (email, reddit) are excluded."""
+    # Names+types already owned by the current user
+    owned = set(
+        db.execute(
+            select(func.lower(Source.name), Source.source_type)
+            .where(Source.user_id == current_user.id)
+        ).all()
+    )
+
+    sources = db.scalars(
+        select(Source)
+        .where(Source.user_id != current_user.id, Source.source_type.in_(_SAFE_TYPES))
+        .order_by(func.lower(Source.name))
+    ).all()
+
+    seen: set[tuple] = set()
+    result: list[SourceOut] = []
+    for s in sources:
+        key = (s.name.lower(), s.source_type)
+        if key in seen or key in owned:
+            continue
+        seen.add(key)
+        count = db.scalar(select(func.count()).where(NewsItem.source_id == s.id)) or 0
+        out = SourceOut.model_validate(s)
+        out.item_count = count
+        result.append(out)
+
+    return result
+
+
 @router.get("/export")
 def export_sources(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     sources = db.scalars(

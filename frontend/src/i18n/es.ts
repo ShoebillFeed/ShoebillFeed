@@ -101,6 +101,11 @@ const es = {
     deleteConfirm: "¿Eliminar la fuente «{{name}}» y todos sus artículos?",
     empty: "No hay fuentes. Añade una para empezar.",
     invalidJson: "Archivo JSON no válido",
+    sharedTitle: "Fuentes de otros usuarios",
+    sharedDesc: "Fuentes configuradas por otros usuarios. Haz clic en + para añadir una copia a tu feed.",
+    sharedSearch: "Buscar fuentes…",
+    sharedNoMatch: "Ninguna fuente coincide con la búsqueda.",
+    adoptSource: "Añadir a mis fuentes",
   },
   categories: {
     title: "Categorías",

@@ -101,6 +101,11 @@ const nl = {
     deleteConfirm: "Bron «{{name}}» en alle bijbehorende artikelen verwijderen?",
     empty: "Nog geen bronnen. Voeg er een toe om nieuws te verzamelen.",
     invalidJson: "Ongeldig JSON-bestand",
+    sharedTitle: "Bronnen van andere gebruikers",
+    sharedDesc: "Bronnen geconfigureerd door andere gebruikers. Klik op + om een kopie aan uw feed toe te voegen.",
+    sharedSearch: "Bronnen zoeken…",
+    sharedNoMatch: "Geen bronnen komen overeen met de zoekopdracht.",
+    adoptSource: "Toevoegen aan mijn bronnen",
   },
   categories: {
     title: "Categorieën",
