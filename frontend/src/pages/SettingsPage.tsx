@@ -7,9 +7,10 @@ import LLMConfigPanel from "../components/settings/LLMConfigPanel";
 import UsersPanel from "../components/settings/UsersPanel";
 import AdvancedPanel from "../components/settings/AdvancedPanel";
 import StatsPanel from "../components/settings/StatsPanel";
+import AboutPanel from "../components/settings/AboutPanel";
 import { useMe } from "../hooks/useAuth";
 
-type BaseTab = "sources" | "categories" | "llm" | "advanced" | "stats";
+type BaseTab = "sources" | "categories" | "llm" | "advanced" | "stats" | "about";
 type Tab = BaseTab | "users";
 
 export default function SettingsPage() {
@@ -23,6 +24,7 @@ export default function SettingsPage() {
     { id: "llm", label: t("settings.llm") },
     { id: "advanced", label: t("settings.advanced") },
     { id: "stats", label: t("settings.statistics") },
+    { id: "about", label: t("settings.about") },
   ];
   const tabs = me?.is_admin
     ? [...baseTabs, { id: "users" as Tab, label: t("settings.users") }]
@@ -55,6 +57,7 @@ export default function SettingsPage() {
         {activeTab === "llm" && <LLMConfigPanel />}
         {activeTab === "advanced" && <AdvancedPanel />}
         {activeTab === "stats" && <StatsPanel />}
+        {activeTab === "about" && <AboutPanel />}
         {activeTab === "users" && me?.is_admin && <UsersPanel />}
       </div>
     </div>
