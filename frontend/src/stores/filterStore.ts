@@ -7,6 +7,7 @@ interface FilterState {
   selectedCategoryIds: string[];
   selectedSourceIds: string[];
   showUnreadOnly: boolean;
+  showUncategorizedOnly: boolean;
   setTab: (tab: FeedTab) => void;
   setCustomTab: (id: string | null) => void;
   toggleCategory: (id: string) => void;
@@ -14,6 +15,7 @@ interface FilterState {
   toggleSource: (id: string) => void;
   clearSources: () => void;
   setShowUnreadOnly: (v: boolean) => void;
+  setShowUncategorizedOnly: (v: boolean) => void;
 }
 
 export const useFilterStore = create<FilterState>((set) => ({
@@ -22,6 +24,7 @@ export const useFilterStore = create<FilterState>((set) => ({
   selectedCategoryIds: [],
   selectedSourceIds: [],
   showUnreadOnly: false,
+  showUncategorizedOnly: false,
   setTab: (tab) => set({ activeTab: tab, activeCustomTabId: null }),
   setCustomTab: (id) => set({ activeCustomTabId: id }),
   toggleCategory: (id) =>
@@ -39,4 +42,5 @@ export const useFilterStore = create<FilterState>((set) => ({
     })),
   clearSources: () => set({ selectedSourceIds: [] }),
   setShowUnreadOnly: (v) => set({ showUnreadOnly: v }),
+  setShowUncategorizedOnly: (v) => set({ showUncategorizedOnly: v }),
 }));

@@ -9,6 +9,7 @@ export interface NewsParams {
   source_ids?: string[];
   is_read?: boolean;
   read_later?: boolean;
+  uncategorized?: boolean;
   page?: number;
   page_size?: number;
 }

@@ -29,6 +29,7 @@ const es = {
   feed: {
     title: "Feed de noticias",
     unreadOnly: "Solo no leídos",
+    uncategorizedOnly: "Solo sin categorizar",
     fetchAll: "Obtener todas las fuentes ahora",
     markAllRead: "Marcar todo como leído",
     allArticles: "Todos los artículos · ordenados por {{sort}}",

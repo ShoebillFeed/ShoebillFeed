@@ -29,6 +29,7 @@ const fr = {
   feed: {
     title: "Fil d'actualités",
     unreadOnly: "Non lus uniquement",
+    uncategorizedOnly: "Non catégorisés uniquement",
     fetchAll: "Récupérer toutes les sources maintenant",
     markAllRead: "Tout marquer comme lu",
     allArticles: "Tous les articles · triés par {{sort}}",

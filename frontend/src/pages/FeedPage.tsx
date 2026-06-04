@@ -20,6 +20,7 @@ export default function FeedPage() {
     setTab, setCustomTab,
     selectedCategoryIds, selectedSourceIds,
     showUnreadOnly, setShowUnreadOnly,
+    showUncategorizedOnly, setShowUncategorizedOnly,
   } = useFilterStore();
   const qc = useQueryClient();
   const markAllRead = useMarkAllRead();
@@ -42,6 +43,7 @@ export default function FeedPage() {
     source_ids: effectiveSourceIds.length ? effectiveSourceIds : undefined,
     is_read: effectiveIsRead,
     read_later: effectiveReadLater,
+    uncategorized: !activeCustomTab && showUncategorizedOnly ? true : undefined,
   });
 
   const items = useMemo<FeedEntry[]>(
@@ -70,15 +72,26 @@ export default function FeedPage() {
         <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t("feed.title")}</h1>
         <div className="flex items-center gap-2">
           {!activeCustomTab && (
-            <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showUnreadOnly}
-                onChange={(e) => setShowUnreadOnly(e.target.checked)}
-                className="rounded"
-              />
-              {t("feed.unreadOnly")}
-            </label>
+            <>
+              <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showUnreadOnly}
+                  onChange={(e) => setShowUnreadOnly(e.target.checked)}
+                  className="rounded"
+                />
+                {t("feed.unreadOnly")}
+              </label>
+              <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showUncategorizedOnly}
+                  onChange={(e) => setShowUncategorizedOnly(e.target.checked)}
+                  className="rounded"
+                />
+                {t("feed.uncategorizedOnly")}
+              </label>
+            </>
           )}
 
           <button

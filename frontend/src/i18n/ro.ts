@@ -29,6 +29,7 @@ const ro = {
   feed: {
     title: "Feed de știri",
     unreadOnly: "Doar necitite",
+    uncategorizedOnly: "Doar necategorizate",
     fetchAll: "Obțineți toate sursele acum",
     markAllRead: "Marcați totul ca citit",
     allArticles: "Toate articolele · sortate după {{sort}}",

@@ -29,6 +29,7 @@ const pl = {
   feed: {
     title: "Kanał informacyjny",
     unreadOnly: "Tylko nieprzeczytane",
+    uncategorizedOnly: "Tylko niesklasyfikowane",
     fetchAll: "Pobierz wszystkie źródła teraz",
     markAllRead: "Oznacz wszystko jako przeczytane",
     allArticles: "Wszystkie artykuły · posortowane wg {{sort}}",

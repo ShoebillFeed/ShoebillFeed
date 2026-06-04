@@ -29,6 +29,7 @@ const nl = {
   feed: {
     title: "Nieuwsfeed",
     unreadOnly: "Alleen ongelezen",
+    uncategorizedOnly: "Alleen ongecategoriseerd",
     fetchAll: "Alle bronnen nu ophalen",
     markAllRead: "Alles als gelezen markeren",
     allArticles: "Alle artikelen · gesorteerd op {{sort}}",

@@ -79,6 +79,7 @@ def _build_feed(
     source_ids: list[uuid.UUID],
     is_read: bool | None,
     read_later: bool | None,
+    uncategorized: bool | None = None,
 ) -> list:
     item_q = (
         select(NewsItem)
@@ -127,6 +128,17 @@ def _build_feed(
     if read_later is not None:
         item_q = item_q.where(NewsItem.read_later == read_later)
         cluster_q = cluster_q.where(NewsCluster.read_later == read_later)
+    if uncategorized:
+        item_q = item_q.where(
+            ~select(news_item_categories.c.news_item_id)
+            .where(news_item_categories.c.news_item_id == NewsItem.id)
+            .exists()
+        )
+        cluster_q = cluster_q.where(
+            ~select(news_cluster_categories.c.news_cluster_id)
+            .where(news_cluster_categories.c.news_cluster_id == NewsCluster.id)
+            .exists()
+        )
 
     standalone = list(db.scalars(item_q).unique().all())
     clusters = list(db.scalars(cluster_q).unique().all())
@@ -181,12 +193,13 @@ def list_news(
     source_ids: list[uuid.UUID] = Query(default=[]),
     is_read: bool | None = None,
     read_later: bool | None = None,
+    uncategorized: bool | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    all_entries = _build_feed(db, tab, current_user.id, category_ids, source_ids, is_read, read_later)
+    all_entries = _build_feed(db, tab, current_user.id, category_ids, source_ids, is_read, read_later, uncategorized)
     total = len(all_entries)
     page_entries = all_entries[(page - 1) * page_size: page * page_size]
 

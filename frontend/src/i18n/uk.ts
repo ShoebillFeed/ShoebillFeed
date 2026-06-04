@@ -29,6 +29,7 @@ const uk = {
   feed: {
     title: "Стрічка новин",
     unreadOnly: "Лише непрочитані",
+    uncategorizedOnly: "Лише без категорії",
     fetchAll: "Оновити всі джерела зараз",
     markAllRead: "Позначити все як прочитане",
     allArticles: "Усі статті · сортування: {{sort}}",

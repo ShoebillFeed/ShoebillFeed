@@ -29,6 +29,7 @@ const ru = {
   feed: {
     title: "Лента новостей",
     unreadOnly: "Только непрочитанные",
+    uncategorizedOnly: "Только без категории",
     fetchAll: "Обновить все источники сейчас",
     markAllRead: "Отметить всё как прочитанное",
     allArticles: "Все статьи · сортировка: {{sort}}",
