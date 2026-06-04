@@ -41,6 +41,10 @@ export default function NewsFeed({
   const markShown = useMarkShown();
   const { data: advancedSettings } = useAdvancedSettings();
   const markShownDelayMs = (advancedSettings?.mark_shown_delay_seconds ?? 5) * 1000;
+  const markShownDelayMsRef = useRef(markShownDelayMs);
+  markShownDelayMsRef.current = markShownDelayMs;
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
   const reportedRef = useRef(new Set<string>());
   const pendingRef = useRef(new Set<string>());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -151,6 +155,8 @@ export default function NewsFeed({
     }
   }, [lastVirtualItem?.index, items.length, hasMore, isLoadingMore, onLoadMore]);
 
+  // Populate pendingRef whenever visible items or item data changes.
+  // Does NOT touch the timer — a data refresh must not reset the countdown.
   useEffect(() => {
     for (const virtualItem of virtualItems) {
       const entry = items[virtualItem.index];
@@ -159,6 +165,11 @@ export default function NewsFeed({
         pendingRef.current.add(entry.id);
       }
     }
+  }, [virtualItems, items]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset the timer only when the visible set changes (scroll), not on data refresh.
+  // Uses itemsRef so the callback always resolves items against the latest data.
+  useEffect(() => {
     if (pendingRef.current.size === 0) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -167,7 +178,7 @@ export default function NewsFeed({
       const item_ids: string[] = [];
       const cluster_ids: string[] = [];
       for (const id of pending) {
-        const entry = items.find((e) => e.id === id);
+        const entry = itemsRef.current.find((e) => e.id === id);
         if (!entry) continue;
         if (entry.kind === "cluster") {
           cluster_ids.push(id);
@@ -180,11 +191,11 @@ export default function NewsFeed({
         reportedRef.current.add(id);
       }
       pendingRef.current.clear();
-    }, markShownDelayMs);
+    }, markShownDelayMsRef.current);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [virtualItems, items]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [virtualItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const progress = Math.min(pullY / PULL_THRESHOLD, 1);
   const atThreshold = pullY >= PULL_THRESHOLD;
