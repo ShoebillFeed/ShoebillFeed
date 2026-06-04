@@ -5,12 +5,16 @@ import { useCreateSource, useUpdateSource } from "../../hooks/useSources";
 import { cn } from "../../lib/utils";
 
 const SOURCE_TYPES: { id: SourceType; label: string }[] = [
-  { id: "rss", label: "RSS / Website" },
+  { id: "rss", label: "RSS / Atom" },
   { id: "reddit", label: "Reddit" },
-  { id: "youtube", label: "YouTube" },
   { id: "email", label: "Email (IMAP)" },
   { id: "mastodon", label: "Mastodon" },
   { id: "arxiv", label: "arXiv" },
+  { id: "lemmy", label: "Lemmy (experimental)" },
+  { id: "github", label: "GitHub (experimental)" },
+  { id: "bluesky", label: "Bluesky (experimental)" },
+  { id: "telegram", label: "Telegram (experimental)" },
+  { id: "scraper", label: "Web Scraper (experimental)" },
 ];
 
 const DEFAULT_INTERVALS = [
@@ -201,6 +205,82 @@ function ConfigFields({
         {t("sourceForm.arxivExamples")} <span className="font-mono">large language models</span> · <span className="font-mono">quantum computing error correction</span> · <span className="font-mono">CRISPR gene editing</span> · <span className="font-mono">reinforcement learning robotics</span>
         <br />{t("sourceForm.arxivTip")}
       </p>
+    </>
+  );
+  if (type === "lemmy") return (
+    <>
+      <Field label={t("sourceForm.instanceUrl")} field="instance_url" config={config} onChange={onChange} placeholder="lemmy.world" required />
+      <Field label={t("sourceForm.community")} field="community" config={config} onChange={onChange} placeholder="technology" required />
+      <div>
+        <label className="block text-sm font-medium mb-1">{t("sourceForm.lemmySort")}</label>
+        <select className={inputClass} value={config["sort"] ?? "Hot"} onChange={(e) => onChange("sort", e.target.value)}>
+          <option value="Hot">Hot</option>
+          <option value="New">New</option>
+          <option value="TopDay">Top (day)</option>
+          <option value="TopWeek">Top (week)</option>
+        </select>
+      </div>
+      <Field label={t("sourceForm.limit")} field="limit" config={config} onChange={onChange} placeholder="25" />
+    </>
+  );
+  if (type === "github") return (
+    <>
+      <div>
+        <label className="block text-sm font-medium mb-1">{t("sourceForm.githubMode")}</label>
+        <select className={inputClass} value={config["mode"] ?? "releases"} onChange={(e) => onChange("mode", e.target.value)}>
+          <option value="releases">{t("sourceForm.githubReleases")}</option>
+          <option value="trending">{t("sourceForm.githubTrending")}</option>
+        </select>
+      </div>
+      {(config["mode"] ?? "releases") === "releases" ? (
+        <>
+          <Field label={t("sourceForm.githubRepo")} field="repo" config={config} onChange={onChange} placeholder="openai/openai-python" required />
+          <Field label={t("sourceForm.limit")} field="limit" config={config} onChange={onChange} placeholder="20" />
+          <Field label={t("sourceForm.githubToken")} field="token" config={config} onChange={onChange} placeholder={t("sourceForm.githubTokenPlaceholder")} />
+        </>
+      ) : (
+        <>
+          <Field label={t("sourceForm.githubLanguage")} field="language" config={config} onChange={onChange} placeholder="python" />
+          <div>
+            <label className="block text-sm font-medium mb-1">{t("sourceForm.githubSince")}</label>
+            <select className={inputClass} value={config["since"] ?? "daily"} onChange={(e) => onChange("since", e.target.value)}>
+              <option value="daily">{t("sourceForm.githubDaily")}</option>
+              <option value="weekly">{t("sourceForm.githubWeekly")}</option>
+              <option value="monthly">{t("sourceForm.githubMonthly")}</option>
+            </select>
+          </div>
+        </>
+      )}
+    </>
+  );
+  if (type === "bluesky") return (
+    <>
+      <div>
+        <label className="block text-sm font-medium mb-1">{t("sourceForm.feedType")}</label>
+        <select className={inputClass} value={config["feed_type"] ?? "user"} onChange={(e) => onChange("feed_type", e.target.value)}>
+          <option value="user">{t("sourceForm.userTimeline")}</option>
+          <option value="search">{t("sourceForm.searchFeed")}</option>
+        </select>
+      </div>
+      {(config["feed_type"] ?? "user") === "user" ? (
+        <Field label={t("sourceForm.bskyHandle")} field="handle" config={config} onChange={onChange} placeholder="bsky.app" required />
+      ) : (
+        <Field label={t("sourceForm.searchQuery")} field="query" config={config} onChange={onChange} placeholder="#AI" required />
+      )}
+      <Field label={t("sourceForm.limit")} field="limit" config={config} onChange={onChange} placeholder="20" />
+    </>
+  );
+  if (type === "telegram") return (
+    <Field label={t("sourceForm.telegramChannel")} field="channel" config={config} onChange={onChange} placeholder="bbcnews" required />
+  );
+  if (type === "scraper") return (
+    <>
+      <Field label={t("sourceForm.scraperUrl")} field="url" config={config} onChange={onChange} placeholder="https://example.com/news" required />
+      <Field label={t("sourceForm.scraperItemSelector")} field="item_selector" config={config} onChange={onChange} placeholder="article.post" required />
+      <Field label={t("sourceForm.scraperTitleSelector")} field="title_selector" config={config} onChange={onChange} placeholder="h2.title" />
+      <Field label={t("sourceForm.scraperLinkSelector")} field="link_selector" config={config} onChange={onChange} placeholder="a.read-more" />
+      <Field label={t("sourceForm.scraperContentSelector")} field="content_selector" config={config} onChange={onChange} placeholder="p.summary" />
+      <p className="text-xs text-gray-400 dark:text-gray-500 -mt-2">{t("sourceForm.scraperTip")}</p>
     </>
   );
   return null;

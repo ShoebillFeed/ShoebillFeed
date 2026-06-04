@@ -36,7 +36,7 @@ def create_source(payload: SourceCreate, db: Session = Depends(get_db), current_
     return _with_count(db, source)
 
 
-_SAFE_TYPES = {"rss", "youtube", "mastodon", "arxiv", "scholar"}
+_SAFE_TYPES = {"rss", "atom", "youtube", "mastodon", "arxiv", "scholar", "lemmy", "github", "bluesky", "telegram", "scraper"}
 
 
 @router.get("/shared", response_model=list[SourceOut])

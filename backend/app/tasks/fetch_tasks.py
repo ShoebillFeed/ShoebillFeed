@@ -16,6 +16,12 @@ import app.services.fetchers.youtube  # noqa: F401
 import app.services.fetchers.email_imap  # noqa: F401
 import app.services.fetchers.mastodon  # noqa: F401
 import app.services.fetchers.scholar  # noqa: F401
+import app.services.fetchers.atom  # noqa: F401
+import app.services.fetchers.lemmy  # noqa: F401
+import app.services.fetchers.github  # noqa: F401
+import app.services.fetchers.bluesky  # noqa: F401
+import app.services.fetchers.telegram  # noqa: F401
+import app.services.fetchers.scraper  # noqa: F401
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)

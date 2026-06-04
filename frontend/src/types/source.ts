@@ -1,4 +1,4 @@
-export type SourceType = "rss" | "reddit" | "youtube" | "email" | "mastodon" | "arxiv" | "scholar";
+export type SourceType = "rss" | "atom" | "reddit" | "youtube" | "email" | "mastodon" | "arxiv" | "scholar" | "lemmy" | "github" | "bluesky" | "telegram" | "scraper";
 
 export interface Source {
   id: string;

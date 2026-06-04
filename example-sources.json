@@ -1,0 +1,354 @@
+[
+  {
+    "name": "BBC News – World",
+    "source_type": "rss",
+    "config": { "url": "https://feeds.bbci.co.uk/news/world/rss.xml" },
+    "is_active": true,
+    "fetch_interval": 1800
+  },
+  {
+    "name": "The Guardian – World",
+    "source_type": "rss",
+    "config": { "url": "https://www.theguardian.com/world/rss" },
+    "is_active": true,
+    "fetch_interval": 1800
+  },
+  {
+    "name": "Reuters – World News",
+    "source_type": "rss",
+    "config": { "url": "https://feeds.reuters.com/reuters/worldnews" },
+    "is_active": true,
+    "fetch_interval": 1800
+  },
+  {
+    "name": "The Economist – Finance & Economics",
+    "source_type": "rss",
+    "config": { "url": "https://www.economist.com/finance-and-economics/rss.xml" },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "FT – Economics",
+    "source_type": "rss",
+    "config": { "url": "https://www.ft.com/economics?format=rss" },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Ars Technica",
+    "source_type": "rss",
+    "config": { "url": "https://feeds.arstechnica.com/arstechnica/index" },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "The Verge",
+    "source_type": "rss",
+    "config": { "url": "https://www.theverge.com/rss/index.xml" },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Wired",
+    "source_type": "rss",
+    "config": { "url": "https://www.wired.com/feed/rss" },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "MIT Technology Review",
+    "source_type": "rss",
+    "config": { "url": "https://www.technologyreview.com/feed/" },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Hacker News – Front Page",
+    "source_type": "rss",
+    "config": { "url": "https://hnrss.org/frontpage" },
+    "is_active": true,
+    "fetch_interval": 1800
+  },
+  {
+    "name": "VentureBeat – AI",
+    "source_type": "rss",
+    "config": { "url": "https://venturebeat.com/category/ai/feed/" },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Import AI (Jack Clark)",
+    "source_type": "rss",
+    "config": { "url": "https://importai.substack.com/feed" },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "IEEE Spectrum",
+    "source_type": "rss",
+    "config": { "url": "https://spectrum.ieee.org/feeds/feed.rss" },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "The Robot Report",
+    "source_type": "rss",
+    "config": { "url": "https://www.therobotreport.com/feed/" },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Phys.org",
+    "source_type": "rss",
+    "config": { "url": "https://phys.org/rss-feed/" },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "New Scientist",
+    "source_type": "rss",
+    "config": { "url": "https://www.newscientist.com/feed/home" },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Nature – Latest Research",
+    "source_type": "rss",
+    "config": { "url": "https://www.nature.com/nature.rss" },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "Google AI Blog",
+    "source_type": "atom",
+    "config": { "url": "https://ai.googleblog.com/feeds/posts/default" },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "Hugging Face Blog",
+    "source_type": "atom",
+    "config": { "url": "https://huggingface.co/blog/feed.xml" },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "Anthropic News",
+    "source_type": "atom",
+    "config": { "url": "https://www.anthropic.com/news/rss" },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "DeepMind Blog",
+    "source_type": "atom",
+    "config": { "url": "https://deepmind.google/blog/rss.xml" },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "Lemmy – Technology",
+    "source_type": "lemmy",
+    "config": { "instance_url": "lemmy.world", "community": "technology", "sort": "Hot", "limit": 25 },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Lemmy – World News",
+    "source_type": "lemmy",
+    "config": { "instance_url": "lemmy.world", "community": "worldnews", "sort": "Hot", "limit": 25 },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Lemmy – Science",
+    "source_type": "lemmy",
+    "config": { "instance_url": "lemmy.world", "community": "science", "sort": "Hot", "limit": 25 },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Lemmy – Singularity (AI)",
+    "source_type": "lemmy",
+    "config": { "instance_url": "lemmy.world", "community": "singularity", "sort": "Hot", "limit": 25 },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Lemmy – Futurology",
+    "source_type": "lemmy",
+    "config": { "instance_url": "lemmy.world", "community": "futurology", "sort": "Hot", "limit": 25 },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "GitHub Releases – openai/openai-python",
+    "source_type": "github",
+    "config": { "mode": "releases", "repo": "openai/openai-python", "limit": 20 },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "GitHub Releases – huggingface/transformers",
+    "source_type": "github",
+    "config": { "mode": "releases", "repo": "huggingface/transformers", "limit": 20 },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "GitHub Releases – langchain-ai/langchain",
+    "source_type": "github",
+    "config": { "mode": "releases", "repo": "langchain-ai/langchain", "limit": 20 },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "GitHub Releases – ollama/ollama",
+    "source_type": "github",
+    "config": { "mode": "releases", "repo": "ollama/ollama", "limit": 20 },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "GitHub Releases – ros2/rclpy (Robotics)",
+    "source_type": "github",
+    "config": { "mode": "releases", "repo": "ros2/rclpy", "limit": 10 },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "GitHub Trending – All Languages (daily)",
+    "source_type": "github",
+    "config": { "mode": "trending", "since": "daily" },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "GitHub Trending – Python (daily)",
+    "source_type": "github",
+    "config": { "mode": "trending", "language": "python", "since": "daily" },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "GitHub Trending – Jupyter Notebooks (weekly)",
+    "source_type": "github",
+    "config": { "mode": "trending", "language": "jupyter-notebook", "since": "weekly" },
+    "is_active": true,
+    "fetch_interval": 86400
+  },
+  {
+    "name": "Bluesky – NASA",
+    "source_type": "bluesky",
+    "config": { "feed_type": "user", "handle": "nasa.gov", "limit": 20 },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Bluesky – Wired",
+    "source_type": "bluesky",
+    "config": { "feed_type": "user", "handle": "wired.com", "limit": 20 },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Bluesky – The Verge",
+    "source_type": "bluesky",
+    "config": { "feed_type": "user", "handle": "theverge.com", "limit": 20 },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Bluesky – Search #AI",
+    "source_type": "bluesky",
+    "config": { "feed_type": "search", "query": "#AI", "limit": 30 },
+    "is_active": true,
+    "fetch_interval": 1800
+  },
+  {
+    "name": "Bluesky – Search #robotics",
+    "source_type": "bluesky",
+    "config": { "feed_type": "search", "query": "#robotics", "limit": 25 },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Bluesky – Search #economics",
+    "source_type": "bluesky",
+    "config": { "feed_type": "search", "query": "#economics", "limit": 25 },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Telegram – BBC News",
+    "source_type": "telegram",
+    "config": { "channel": "bbcnews" },
+    "is_active": true,
+    "fetch_interval": 1800
+  },
+  {
+    "name": "Telegram – Reuters",
+    "source_type": "telegram",
+    "config": { "channel": "reuters" },
+    "is_active": true,
+    "fetch_interval": 1800
+  },
+  {
+    "name": "Telegram – CNN",
+    "source_type": "telegram",
+    "config": { "channel": "cnn" },
+    "is_active": true,
+    "fetch_interval": 1800
+  },
+  {
+    "name": "Telegram – DW News",
+    "source_type": "telegram",
+    "config": { "channel": "dwnews" },
+    "is_active": true,
+    "fetch_interval": 1800
+  },
+  {
+    "name": "Telegram – TechCrunch",
+    "source_type": "telegram",
+    "config": { "channel": "techcrunchofficial" },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Scraper – Hacker News",
+    "source_type": "scraper",
+    "config": {
+      "url": "https://news.ycombinator.com",
+      "item_selector": ".athing",
+      "title_selector": ".titleline > a",
+      "link_selector": ".titleline > a"
+    },
+    "is_active": true,
+    "fetch_interval": 1800
+  },
+  {
+    "name": "Scraper – Lobste.rs",
+    "source_type": "scraper",
+    "config": {
+      "url": "https://lobste.rs",
+      "item_selector": "li.story",
+      "title_selector": "a.u-url",
+      "link_selector": "a.u-url"
+    },
+    "is_active": true,
+    "fetch_interval": 3600
+  },
+  {
+    "name": "Scraper – Papers With Code (latest)",
+    "source_type": "scraper",
+    "config": {
+      "url": "https://paperswithcode.com/latest",
+      "item_selector": "div.paper-card",
+      "title_selector": "h1 a",
+      "link_selector": "h1 a",
+      "content_selector": "p.item-strip-abstract"
+    },
+    "is_active": true,
+    "fetch_interval": 3600
+  }
+]

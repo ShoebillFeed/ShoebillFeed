@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 class SourceBase(BaseModel):
     name: str = Field(..., max_length=200)
-    source_type: Literal["rss", "reddit", "youtube", "email", "mastodon", "arxiv", "scholar"]
+    source_type: Literal["rss", "atom", "reddit", "youtube", "email", "mastodon", "arxiv", "scholar", "lemmy", "github", "bluesky", "telegram", "scraper"]
     config: dict = Field(default_factory=dict)
     is_active: bool = True
     fetch_interval: int = Field(default=3600, ge=300)
