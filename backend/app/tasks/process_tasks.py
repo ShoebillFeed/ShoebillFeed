@@ -127,8 +127,10 @@ def process_news_item(self, news_item_id: str) -> None:
         if not item or item.llm_processed:
             return
 
+        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == item.user_id))
+        output_language = user_settings.output_language if user_settings else None
+        min_word_count = user_settings.llm_min_word_count if user_settings else 50
         categories_payload = _get_categories_payload(db, item.user_id)
-        output_language = _get_output_language(db, item.user_id)
         provider = get_llm_provider()
 
         source = db.get(Source, item.source_id) if item.source_id else None
@@ -143,28 +145,50 @@ def process_news_item(self, news_item_id: str) -> None:
         is_social = source is not None and source.source_type == "mastodon"
 
         word_count = len((item.title + " " + (item.raw_content or "")).split())
-        is_short = word_count <= 40
+        is_short = word_count <= min_word_count
 
         if is_short:
+            # E: items below llm_min_word_count get classify-only, no abstract generation
             result = provider.process_short_item(
                 title=item.title,
                 content=item.raw_content or "",
                 categories=categories_payload,
             )
             item.abstract = item.raw_content or item.title
-        else:
+        elif is_social:
             result = provider.process_item(
                 title=item.title,
                 content=item.raw_content or "",
                 categories=categories_payload,
-                social_post=is_social,
+                social_post=True,
                 output_language=output_language,
             )
-            if is_social and result.generated_title:
+            if result.generated_title:
                 item.title = result.generated_title
                 item.abstract = item.raw_content or ""
             else:
                 item.abstract = result.abstract
+        else:
+            # A: two-stage pipeline for regular articles
+            # Stage 1 — cheap classify-only with 200-char excerpt; no abstract requested
+            stage1 = provider.process_short_item(
+                title=item.title,
+                content=(item.raw_content or "")[:200],
+                categories=categories_payload,
+            )
+            if stage1.category_names or not categories_payload:
+                # Category matched (or user has no categories) → Stage 2: full abstract
+                result = provider.process_item(
+                    title=item.title,
+                    content=item.raw_content or "",
+                    categories=categories_payload,
+                    output_language=output_language,
+                )
+                item.abstract = result.abstract
+            else:
+                # No category matched → skip Stage 2, use raw content as abstract
+                result = stage1
+                item.abstract = item.raw_content or item.title
         item.extracted_keywords = result.keywords or None
         item.relevance_score = result.relevance_score
         item.impact_score = result.impact_score

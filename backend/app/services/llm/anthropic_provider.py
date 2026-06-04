@@ -23,6 +23,11 @@ class AnthropicProvider(LLMProvider):
         )
         return message.content[0].text
 
+    def _cached_system(self, text: str) -> list[dict]:
+        """Wrap a system prompt for Anthropic prompt caching.
+        Identical prompts within the 5-minute cache window cost ~10% of normal input price."""
+        return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
+
     def process_item(self, title, content, categories, max_content_chars=1500, social_post=False, output_language=None) -> ProcessedResult:
         truncated = (content or title)[:max_content_chars]
         known = [c["name"] for c in categories]
@@ -33,7 +38,7 @@ class AnthropicProvider(LLMProvider):
         message = self.client.messages.create(
             model=self.model,
             max_tokens=1024,
-            system=system,
+            system=self._cached_system(system),
             messages=[{"role": "user", "content": user}],
         )
         return parse_llm_response(message.content[0].text, known, social_post=social_post)
@@ -50,7 +55,7 @@ class AnthropicProvider(LLMProvider):
         message = self.client.messages.create(
             model=self.model,
             max_tokens=2048,
-            system=system,
+            system=self._cached_system(system),
             messages=[{"role": "user", "content": "\n\n".join(parts)}],
         )
         return parse_cluster_response(message.content[0].text, len(items), known)
@@ -61,7 +66,7 @@ class AnthropicProvider(LLMProvider):
         message = self.client.messages.create(
             model=self.model,
             max_tokens=4096,
-            system=system,
+            system=self._cached_system(system),
             messages=[{"role": "user", "content": f"Newsletter content:\n\n{content[:4000]}"}],
         )
         return parse_newsletter_response(message.content[0].text, known)

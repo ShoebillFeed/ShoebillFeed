@@ -6,7 +6,7 @@ from typing import Optional
 
 
 SYSTEM_PROMPT = """You are a news analyst. Given a news article title and content, return a JSON object with exactly these fields:
-- "abstract": string, 2-4 sentence summary of the article.
+- "abstract": string, 1-3 sentence summary of the article.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent the article's topic (e.g. ["llm", "openai", "reasoning models"])
 - "categories": array of category names from the provided list that fit this article (can be empty [], can have multiple matches)
 - "relevance_score": integer 1-10, how relevant this is to the matched categories' keywords (5 if no category matched)
@@ -47,7 +47,7 @@ Respond ONLY with valid JSON. No markdown fences, no extra text."""
 
 CLUSTER_SYSTEM_PROMPT = """You are a news analyst. Multiple sources have covered the same event. Return a JSON object with exactly these fields:
 - "title": string, a short headline (max 10 words) that captures the core event.
-- "unified_abstract": string, 2-4 sentence summary that synthesises all sources into one coherent account.
+- "unified_abstract": string, 1-3 sentence summary that synthesises all sources into one coherent account.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent this event (e.g. ["trade war", "tariffs", "eu"])
 - "categories": array of category names from the provided list that fit this event (can be empty [], can have multiple matches)
 - "relevance_score": integer 1-10
