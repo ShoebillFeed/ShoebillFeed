@@ -73,6 +73,7 @@ export function useInfiniteNews(params: {
   source_ids?: string[];
   is_read?: boolean;
   read_later?: boolean;
+  uncategorized?: boolean;
 }) {
   return useInfiniteQuery({
     queryKey: ["news", "infinite", params],
