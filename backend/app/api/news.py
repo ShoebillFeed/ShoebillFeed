@@ -147,7 +147,6 @@ def _build_feed(
             kw.keyword: kw.weight
             for kw in db.scalars(select(KeywordWeight).where(KeywordWeight.user_id == user_id)).all()
         }
-        llm_w = user_settings.relevance_llm_weight if user_settings else 1.0
         learn_w = user_settings.relevance_learning_weight if user_settings else 1.0
         cluster_w = user_settings.relevance_cluster_weight if user_settings else 0.5
 
@@ -167,7 +166,7 @@ def _build_feed(
             )
             kw_factor = 1.0 + (raw_kw - 1.0) * learn_w
 
-            return (e.relevance_score or 5) * llm_w * cat_w * source_bonus * kw_factor * _time_decay(e, decay_param) * _show_again_decay(e, show_decay)
+            return cat_w * source_bonus * kw_factor * _time_decay(e, decay_param) * _show_again_decay(e, show_decay)
         all_entries.sort(key=_rel_key, reverse=True)
     elif tab == "impact":
         all_entries.sort(key=lambda e: (e.impact_score or 0) * _time_decay(e, decay_param) * _show_again_decay(e, show_decay), reverse=True)
@@ -231,6 +230,15 @@ def toggle_read(item_id: uuid.UUID, db: Session = Depends(get_db), current_user:
     item = _get_item(item_id, db, current_user.id)
     item.is_read = not item.is_read
     db.commit()
+    # Reading/unreading changes the ignored set — recalculate weights for this item's categories.
+    if item.categories:
+        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
+        base = user_settings.weight_base if user_settings else 1.0
+        multiplier = user_settings.weight_log_multiplier if user_settings else 0.5
+        window_days = user_settings.learning_window_days if user_settings else 90
+        ignore_penalty = user_settings.ignore_penalty_weight if user_settings else 0.1
+        for cat in item.categories:
+            update_category_weight(db, cat.id, base=base, multiplier=multiplier, window_days=window_days, ignore_penalty=ignore_penalty)
     db.refresh(item)
     return item
 
@@ -240,14 +248,15 @@ def toggle_relevant(item_id: uuid.UUID, db: Session = Depends(get_db), current_u
     item = _get_item(item_id, db, current_user.id)
     item.is_relevant = not item.is_relevant
     db.commit()
-    if item.is_relevant:
-        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
-        base = user_settings.weight_base if user_settings else 1.0
-        multiplier = user_settings.weight_log_multiplier if user_settings else 0.5
-        for cat in item.categories:
-            update_category_weight(db, cat.id, base=base, multiplier=multiplier)
-        if item.extracted_keywords:
-            update_keyword_weights(db, item.extracted_keywords, current_user.id)
+    user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
+    base = user_settings.weight_base if user_settings else 1.0
+    multiplier = user_settings.weight_log_multiplier if user_settings else 0.5
+    window_days = user_settings.learning_window_days if user_settings else 90
+    ignore_penalty = user_settings.ignore_penalty_weight if user_settings else 0.1
+    for cat in item.categories:
+        update_category_weight(db, cat.id, base=base, multiplier=multiplier, window_days=window_days, ignore_penalty=ignore_penalty)
+    if item.is_relevant and item.extracted_keywords:
+        update_keyword_weights(db, item.extracted_keywords, current_user.id)
     db.refresh(item)
     return item
 
@@ -322,19 +331,44 @@ def mark_shown(
     current_user: User = Depends(get_current_user),
 ):
     now = datetime.now(timezone.utc)
+    # Collect categories of items being shown for the first time without engagement,
+    # so we can apply ignore penalties after the commit.
+    penalty_cat_ids: set[uuid.UUID] = set()
+
     if payload.item_ids:
         for item in db.scalars(
-            select(NewsItem).where(NewsItem.id.in_(payload.item_ids), NewsItem.user_id == current_user.id)
+            select(NewsItem)
+            .where(NewsItem.id.in_(payload.item_ids), NewsItem.user_id == current_user.id)
+            .options(selectinload(NewsItem.categories))
         ).all():
+            if item.show_count == 0 and not item.is_read and not item.is_relevant:
+                penalty_cat_ids.update(cat.id for cat in item.categories)
             item.show_count = (item.show_count or 0) + 1
             item.last_shown_at = now
+
     if payload.cluster_ids:
         for cluster in db.scalars(
-            select(NewsCluster).where(NewsCluster.id.in_(payload.cluster_ids), NewsCluster.user_id == current_user.id)
+            select(NewsCluster)
+            .where(NewsCluster.id.in_(payload.cluster_ids), NewsCluster.user_id == current_user.id)
+            .options(selectinload(NewsCluster.categories))
         ).all():
+            if cluster.show_count == 0 and not cluster.is_read and not cluster.is_relevant:
+                penalty_cat_ids.update(cat.id for cat in cluster.categories)
             cluster.show_count = (cluster.show_count or 0) + 1
             cluster.last_shown_at = now
+
     db.commit()
+
+    if penalty_cat_ids:
+        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
+        base = user_settings.weight_base if user_settings else 1.0
+        multiplier = user_settings.weight_log_multiplier if user_settings else 0.5
+        window_days = user_settings.learning_window_days if user_settings else 90
+        ignore_penalty = user_settings.ignore_penalty_weight if user_settings else 0.1
+        if ignore_penalty > 0:
+            for cat_id in penalty_cat_ids:
+                update_category_weight(db, cat_id, base=base, multiplier=multiplier, window_days=window_days, ignore_penalty=ignore_penalty)
+
     return {"updated": len(payload.item_ids) + len(payload.cluster_ids)}
 
 

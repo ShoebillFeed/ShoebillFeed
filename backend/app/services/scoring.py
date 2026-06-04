@@ -1,6 +1,7 @@
 import math
 import uuid
-from sqlalchemy import select, func
+from datetime import datetime, timedelta, timezone
+from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from app.models import NewsItem, CategoryWeight, KeywordWeight, Category
 from app.models.category_weight_snapshot import CategoryWeightSnapshot
@@ -13,17 +14,43 @@ def update_category_weight(
     category_id: uuid.UUID,
     base: float = 1.0,
     multiplier: float = 0.5,
+    window_days: int = 0,
+    ignore_penalty: float = 0.0,
 ) -> None:
-    total = db.scalar(
+    cutoff = None
+    if window_days > 0:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=window_days)
+
+    def _apply_window(q):
+        if cutoff is not None:
+            return q.where(or_(NewsItem.published_at >= cutoff, NewsItem.published_at.is_(None)))
+        return q
+
+    q_starred = _apply_window(
         select(func.count()).select_from(NewsItem)
         .join(news_item_categories, news_item_categories.c.news_item_id == NewsItem.id)
         .where(
             news_item_categories.c.category_id == category_id,
             NewsItem.is_relevant == True,  # noqa: E712
         )
-    ) or 0
+    )
+    total = db.scalar(q_starred) or 0
 
-    new_weight = base + math.log1p(total) * multiplier
+    total_ignored = 0
+    if ignore_penalty > 0:
+        q_ignored = _apply_window(
+            select(func.count()).select_from(NewsItem)
+            .join(news_item_categories, news_item_categories.c.news_item_id == NewsItem.id)
+            .where(
+                news_item_categories.c.category_id == category_id,
+                NewsItem.show_count > 0,
+                NewsItem.is_read == False,  # noqa: E712
+                NewsItem.is_relevant == False,  # noqa: E712
+            )
+        )
+        total_ignored = db.scalar(q_ignored) or 0
+
+    new_weight = max(0.0, base + math.log1p(total) * multiplier - math.log1p(total_ignored) * ignore_penalty)
 
     existing = db.scalar(
         select(CategoryWeight).where(CategoryWeight.category_id == category_id)

@@ -219,21 +219,30 @@ export default function AdvancedPanel() {
           step={0.05}
           onChange={(v) => update.mutate({ weight_log_multiplier: v })}
         />
+        <NumericField
+          label={t("advanced.learningWindow")}
+          description={t("advanced.learningWindowDesc")}
+          value={settings.learning_window_days ?? 90}
+          min={0}
+          max={3650}
+          step={1}
+          onChange={(v) => update.mutate({ learning_window_days: v })}
+        />
+        <NumericField
+          label={t("advanced.ignorePenalty")}
+          description={t("advanced.ignorePenaltyDesc")}
+          value={settings.ignore_penalty_weight ?? 0.1}
+          min={0}
+          max={5}
+          step={0.05}
+          onChange={(v) => update.mutate({ ignore_penalty_weight: v })}
+        />
       </Section>
 
       <Section
         title={t("advanced.relevantTabRanking")}
         description={t("advanced.relevantTabRankingDesc")}
       >
-        <NumericField
-          label={t("advanced.aiRatingInfluence")}
-          description={t("advanced.aiRatingDesc")}
-          value={settings.relevance_llm_weight}
-          min={0}
-          max={5}
-          step={0.1}
-          onChange={(v) => update.mutate({ relevance_llm_weight: v })}
-        />
         <NumericField
           label={t("advanced.learningInfluence")}
           description={t("advanced.learningInfluenceDesc")}

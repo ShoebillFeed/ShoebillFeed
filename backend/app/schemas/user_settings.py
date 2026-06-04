@@ -12,6 +12,8 @@ class UserSettingsOut(BaseModel):
     time_decay_param: float = 2.0
     show_decay_param: float = 0.0
     mark_shown_delay_seconds: int = 5
+    learning_window_days: int = 90
+    ignore_penalty_weight: float = 0.1
 
     model_config = {"from_attributes": True}
 
@@ -27,3 +29,5 @@ class UserSettingsUpdate(BaseModel):
     time_decay_param: float | None = Field(None, ge=0.0, le=20.0)
     show_decay_param: float | None = Field(None, ge=0.0, le=10.0)
     mark_shown_delay_seconds: int | None = Field(None, ge=1, le=60)
+    learning_window_days: int | None = Field(None, ge=0, le=3650)
+    ignore_penalty_weight: float | None = Field(None, ge=0.0, le=5.0)

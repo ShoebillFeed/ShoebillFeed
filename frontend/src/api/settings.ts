@@ -11,6 +11,8 @@ export interface UserSettings {
   time_decay_param: number;
   show_decay_param: number;
   mark_shown_delay_seconds: number;
+  learning_window_days: number;
+  ignore_penalty_weight: number;
 }
 
 export interface UserSettingsUpdate {
@@ -24,6 +26,8 @@ export interface UserSettingsUpdate {
   time_decay_param?: number;
   show_decay_param?: number;
   mark_shown_delay_seconds?: number;
+  learning_window_days?: number;
+  ignore_penalty_weight?: number;
 }
 
 export const settingsApi = {
