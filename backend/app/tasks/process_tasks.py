@@ -142,19 +142,29 @@ def process_news_item(self, news_item_id: str) -> None:
 
         is_social = source is not None and source.source_type == "mastodon"
 
-        result = provider.process_item(
-            title=item.title,
-            content=item.raw_content or "",
-            categories=categories_payload,
-            social_post=is_social,
-            output_language=output_language,
-        )
+        word_count = len((item.title + " " + (item.raw_content or "")).split())
+        is_short = word_count <= 40
 
-        if is_social and result.generated_title:
-            item.title = result.generated_title
-            item.abstract = item.raw_content or ""
+        if is_short:
+            result = provider.process_short_item(
+                title=item.title,
+                content=item.raw_content or "",
+                categories=categories_payload,
+            )
+            item.abstract = item.raw_content or item.title
         else:
-            item.abstract = result.abstract
+            result = provider.process_item(
+                title=item.title,
+                content=item.raw_content or "",
+                categories=categories_payload,
+                social_post=is_social,
+                output_language=output_language,
+            )
+            if is_social and result.generated_title:
+                item.title = result.generated_title
+                item.abstract = item.raw_content or ""
+            else:
+                item.abstract = result.abstract
         item.extracted_keywords = result.keywords or None
         item.relevance_score = result.relevance_score
         item.impact_score = result.impact_score

@@ -31,6 +31,20 @@ Each category has a name and keywords. If a description field is present, use it
 Respond ONLY with valid JSON. No markdown fences, no extra text."""
 
 
+SHORT_ITEM_SYSTEM_PROMPT = """You are a news classifier. The news item below is very short — do not rewrite or summarise it. Extract metadata only.
+
+Return a JSON object with exactly these fields:
+- "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent the topic
+- "categories": array of category names from the provided list that fit this item (can be empty [])
+- "relevance_score": integer 1-10, how relevant this is to the matched categories' keywords (5 if no category matched)
+- "impact_score": integer 1-10, how broadly impactful this is (10 = global significance, 1 = minor local event)
+
+Available categories: {categories_json}
+Each category has a name and keywords. If a description field is present, use it to judge whether the article fits that category.
+
+Respond ONLY with valid JSON. No markdown fences, no extra text."""
+
+
 CLUSTER_SYSTEM_PROMPT = """You are a news analyst. Multiple sources have covered the same event. Return a JSON object with exactly these fields:
 - "title": string, a short headline (max 10 words) that captures the core event.
 - "unified_abstract": string, 2-4 sentence summary that synthesises all sources into one coherent account.
@@ -170,6 +184,27 @@ def parse_llm_response(text: str, known_categories: list[str], social_post: bool
     )
 
 
+def parse_short_llm_response(text: str, known_categories: list[str]) -> ProcessedResult:
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = json.loads(repair_json(text))
+
+    raw_cats = data.get("categories", data.get("category"))
+    return ProcessedResult(
+        abstract="",  # caller fills this from the original content
+        keywords=_parse_keywords(data.get("keywords")),
+        category_names=_parse_categories(raw_cats, known_categories),
+        relevance_score=_clamp(data.get("relevance_score"), 5),
+        impact_score=_clamp(data.get("impact_score"), 5),
+    )
+
+
 def parse_cluster_response(text: str, item_count: int, known_categories: list[str]) -> ClusterResult:
     text = text.strip()
     if text.startswith("```"):
@@ -296,6 +331,19 @@ class LLMProvider(ABC):
         social_post: bool = False,
         output_language: str | None = None,
     ) -> ProcessedResult: ...
+
+    def process_short_item(
+        self,
+        title: str,
+        content: str,
+        categories: list[dict],
+    ) -> ProcessedResult:
+        """Classify a short item (≤40 words): extract keywords/categories only, no abstract generation."""
+        known = [c["name"] for c in categories]
+        system = SHORT_ITEM_SYSTEM_PROMPT.format(categories_json=json.dumps(categories, ensure_ascii=False))
+        user = f"Title: {title}\nContent: {content}" if content.strip() else f"Title: {title}"
+        text = self._complete(system=system, user=user, max_tokens=256)
+        return parse_short_llm_response(text, known)
 
     @abstractmethod
     def process_cluster(
