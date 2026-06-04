@@ -51,8 +51,13 @@ export default function FeedPage() {
   const total = data?.pages[0]?.total ?? 0;
 
   const handleFetchAll = async () => {
-    await sourcesApi.fetchAll();
-    setTimeout(() => qc.invalidateQueries({ queryKey: ["news"] }), 2000);
+    qc.invalidateQueries({ queryKey: ["news"] });
+    try {
+      await sourcesApi.fetchAll();
+      setTimeout(() => qc.invalidateQueries({ queryKey: ["news"] }), 5000);
+    } catch {
+      // backend fetch errors don't block the re-sort
+    }
   };
 
   const handleRefresh = useCallback(() => {
