@@ -423,7 +423,7 @@ function WeightHistoryChart({ days }: { days: number }) {
             );
           }}
         />
-        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, left: 0, width: "100%", textAlign: "center" }} />
         {data.map((cat) => (
           <Line key={cat.id} type="monotone" dataKey={cat.name} stroke={cat.color} strokeWidth={2} dot={false} connectNulls />
         ))}
