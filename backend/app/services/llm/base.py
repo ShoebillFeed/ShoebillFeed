@@ -6,7 +6,7 @@ from typing import Optional
 
 
 SYSTEM_PROMPT = """You are a news analyst. Given a news article title and content, return a JSON object with exactly these fields:
-- "abstract": string, 2-4 sentence summary of the article. Write the abstract in the same language as the article.
+- "abstract": string, 2-4 sentence summary of the article.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent the article's topic (e.g. ["llm", "openai", "reasoning models"])
 - "categories": array of category names from the provided list that fit this article (can be empty [], can have multiple matches)
 - "relevance_score": integer 1-10, how relevant this is to the matched categories' keywords (5 if no category matched)
@@ -18,8 +18,8 @@ Each category has a name and keywords. If a description field is present, use it
 Respond ONLY with valid JSON. No markdown fences, no extra text."""
 
 SOCIAL_SYSTEM_PROMPT = """You are a news analyst. Given a social media post, return a JSON object with exactly these fields:
-- "headline": string, a short punchy headline (max 12 words) that captures the core topic of the post. Write in the same language as the post.
-- "abstract": string, 1-2 sentence summary of the post. Write in the same language as the post.
+- "headline": string, a short punchy headline (max 12 words) that captures the core topic of the post.
+- "abstract": string, 1-2 sentence summary of the post.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent the post's topic.
 - "categories": array of category names from the provided list that fit this post (can be empty [], can have multiple matches)
 - "relevance_score": integer 1-10, how relevant this is to the matched categories' keywords (5 if no category matched)
@@ -32,8 +32,8 @@ Respond ONLY with valid JSON. No markdown fences, no extra text."""
 
 
 CLUSTER_SYSTEM_PROMPT = """You are a news analyst. Multiple sources have covered the same event. Return a JSON object with exactly these fields:
-- "title": string, a short headline (max 10 words) that captures the core event. Write in the same language as the source articles.
-- "unified_abstract": string, 2-4 sentence summary that synthesises all sources into one coherent account. Write in the same language as the source articles.
+- "title": string, a short headline (max 10 words) that captures the core event.
+- "unified_abstract": string, 2-4 sentence summary that synthesises all sources into one coherent account.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent this event (e.g. ["trade war", "tariffs", "eu"])
 - "categories": array of category names from the provided list that fit this event (can be empty [], can have multiple matches)
 - "relevance_score": integer 1-10
@@ -72,13 +72,16 @@ LANGUAGE_NAMES: dict[str, str] = {
 
 
 def language_suffix(output_language: str | None) -> str:
-    """Return a prompt suffix that forces a specific output language, or empty string."""
+    """Return a prompt suffix controlling output language for all generated text fields."""
+    fields = "(title, abstract, unified_abstract, headline, summary, source_summaries)"
     if not output_language:
-        return ""
+        return (
+            f"\n\nIMPORTANT: All generated text fields {fields} "
+            f"MUST be written in the same language as the source article(s). Do not translate."
+        )
     name = LANGUAGE_NAMES.get(output_language, output_language)
     return (
-        f"\n\nIMPORTANT: All generated text fields "
-        f"(abstract, unified_abstract, headline, summary, source_summaries) "
+        f"\n\nIMPORTANT: All generated text fields {fields} "
         f"MUST be written in {name}, regardless of the article's original language."
     )
 
@@ -214,9 +217,9 @@ FORMAT B — Raw text with inline [link text](url) markers:
   Those links are the article URLs.
 
 For each article, return one object with:
-- "headline": the article title, in the same language as the content (max 15 words)
+- "headline": the article title (max 15 words)
 - "url": the article URL (tracking/redirect URLs are fine; set null only if truly absent)
-- "summary": 1-3 sentence summary in the same language
+- "summary": 1-3 sentence summary
 - "keywords": array of 3-5 lowercase keywords
 - "categories": array of matching category names from the list (can be [])
 - "relevance_score": integer 1-10
