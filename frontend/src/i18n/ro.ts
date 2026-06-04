@@ -250,6 +250,8 @@ const ro = {
     timeDecayRateDesc: "Multiplicator bazat pe vârsta articolului: 1 / (0,5 × (zile × rată + 2)). 0 = fără decădere. Cu setarea actuală: {{examples}}. Implicit: 2",
     showDecayRate: "Decădere de reafișare",
     showDecayRateDesc: "De fiecare dată când un card este văzut, scorul său este înmulțit cu 1/(1 + de_ori_văzut × rată). Cumulativ. 0 = dezactivat. Cu setarea actuală: văzut 1× → {{ex1}}, 3× → {{ex3}}, 10× → {{ex10}}.",
+    markShownDelay: "Întârziere pentru marcare ca văzut",
+    markShownDelayDesc: "Câte secunde trebuie să fie vizibil un card în feed înainte de a fi numărat ca văzut. Implicit: 5",
     settingsSaved: "Setări salvate.",
     settingsFailed: "Eșec la salvarea setărilor.",
   },

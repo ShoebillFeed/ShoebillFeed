@@ -11,6 +11,7 @@ class UserSettingsOut(BaseModel):
     output_language: str | None = None
     time_decay_param: float = 2.0
     show_decay_param: float = 0.0
+    mark_shown_delay_seconds: int = 5
 
     model_config = {"from_attributes": True}
 
@@ -25,3 +26,4 @@ class UserSettingsUpdate(BaseModel):
     output_language: str | None = Field(None, max_length=10)
     time_decay_param: float | None = Field(None, ge=0.0, le=20.0)
     show_decay_param: float | None = Field(None, ge=0.0, le=10.0)
+    mark_shown_delay_seconds: int | None = Field(None, ge=1, le=60)

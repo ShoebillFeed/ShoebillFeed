@@ -250,6 +250,8 @@ const pl = {
     timeDecayRateDesc: "Mnożnik oparty na wieku artykułu: 1 / (0,5 × (dni × wskaźnik + 2)). 0 = brak zaniku. Przy bieżącym ustawieniu: {{examples}}. Domyślnie: 2",
     showDecayRate: "Zanik ponownego wyświetlania",
     showDecayRateDesc: "Za każdym razem, gdy karta jest widoczna, jej wynik jest mnożony przez 1/(1 + razy_wyświetlono × wskaźnik). Kumulatywny. 0 = wyłączone. Przy bieżącym ustawieniu: widziano 1× → {{ex1}}, 3× → {{ex3}}, 10× → {{ex10}}.",
+    markShownDelay: "Opóźnienie oznaczenia jako wyświetlone",
+    markShownDelayDesc: "Ile sekund karta musi być widoczna w feedzie, zanim zostanie zaliczona jako wyświetlona. Domyślnie: 5",
     settingsSaved: "Ustawienia zapisane.",
     settingsFailed: "Nie udało się zapisać ustawień.",
   },

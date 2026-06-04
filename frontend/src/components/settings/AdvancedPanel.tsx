@@ -276,6 +276,15 @@ export default function AdvancedPanel() {
           step={0.1}
           onChange={(v) => update.mutate({ show_decay_param: v })}
         />
+        <NumericField
+          label={t("advanced.markShownDelay")}
+          description={t("advanced.markShownDelayDesc")}
+          value={settings.mark_shown_delay_seconds ?? 5}
+          min={1}
+          max={60}
+          step={1}
+          onChange={(v) => update.mutate({ mark_shown_delay_seconds: v })}
+        />
       </Section>
 
       {update.isSuccess && (

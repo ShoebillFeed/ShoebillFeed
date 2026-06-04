@@ -8,6 +8,7 @@ import ClusterCard from "./ClusterCard";
 import NewsCardSkeleton from "./NewsCardSkeleton";
 import { cn } from "../../lib/utils";
 import { useMarkShown } from "../../hooks/useNews";
+import { useAdvancedSettings } from "../../hooks/useSettings";
 
 const PULL_THRESHOLD = 80;
 const INDICATOR_MAX_H = 48;
@@ -38,6 +39,8 @@ export default function NewsFeed({
   isRefreshingRef.current = isRefreshing;
 
   const markShown = useMarkShown();
+  const { data: advancedSettings } = useAdvancedSettings();
+  const markShownDelayMs = (advancedSettings?.mark_shown_delay_seconds ?? 5) * 1000;
   const reportedRef = useRef(new Set<string>());
   const pendingRef = useRef(new Set<string>());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -177,7 +180,7 @@ export default function NewsFeed({
         reportedRef.current.add(id);
       }
       pendingRef.current.clear();
-    }, 2000);
+    }, markShownDelayMs);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };

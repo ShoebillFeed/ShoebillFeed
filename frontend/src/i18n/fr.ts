@@ -250,6 +250,8 @@ const fr = {
     timeDecayRateDesc: "Multiplicateur appliqué selon l'âge de l'article : 1 / (0,5 × (jours × taux + 2)). 0 = pas de déclin. Avec le paramètre actuel : {{examples}}. Défaut : 2",
     showDecayRate: "Déclin de réaffichage",
     showDecayRateDesc: "Chaque fois qu'une carte est vue, son score est multiplié par 1/(1 + fois_vu × taux). Cumulatif. 0 = désactivé. Avec le paramètre actuel : vu 1× → {{ex1}}, 3× → {{ex3}}, 10× → {{ex10}}.",
+    markShownDelay: "Délai de marquage comme vu",
+    markShownDelayDesc: "Nombre de secondes qu'une carte doit être visible dans le fil avant d'être comptée comme vue. Défaut : 5",
     settingsSaved: "Paramètres enregistrés.",
     settingsFailed: "Échec de l'enregistrement des paramètres.",
   },

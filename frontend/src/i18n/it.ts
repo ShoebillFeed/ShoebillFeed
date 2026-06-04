@@ -250,6 +250,8 @@ const it = {
     timeDecayRateDesc: "Moltiplicatore basato sull'età dell'articolo: 1 / (0,5 × (giorni × tasso + 2)). 0 = nessun decadimento. Con l'impostazione attuale: {{examples}}. Predefinito: 2",
     showDecayRate: "Decadimento di riapparizione",
     showDecayRateDesc: "Ogni volta che una scheda è visibile, il suo punteggio viene moltiplicato per 1/(1 + volte_visto × tasso). Cumulativo. 0 = disabilitato. Con l'impostazione attuale: visto 1× → {{ex1}}, 3× → {{ex3}}, 10× → {{ex10}}.",
+    markShownDelay: "Ritardo per marcare come visto",
+    markShownDelayDesc: "Quanti secondi una scheda deve essere visibile nel feed prima di essere contata come vista. Predefinito: 5",
     settingsSaved: "Impostazioni salvate.",
     settingsFailed: "Impossibile salvare le impostazioni.",
   },

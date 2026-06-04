@@ -250,6 +250,8 @@ const de = {
     timeDecayRateDesc: "Multiplikator auf Relevanz- und Wirkungsscores basierend auf dem Alter des Artikels: 1 / (0,5 × (Tage × Rate + 2)). Ein frischer Artikel erzielt immer 1,0. 0 = kein Abkling. Mit den aktuellen Einstellungen: {{examples}}. Standard: 2",
     showDecayRate: "Wiederanzeige-Abklingrate",
     showDecayRateDesc: "Jedes Mal, wenn eine Karte im Feed sichtbar war, wird ihr Score mit 1/(1 + Anzeigeanzahl × Rate) multipliziert. Kumulativ – bereits gesehene Karten ranken immer schlechter, sodass neue Inhalte aufsteigen. 0 = deaktiviert. Mit aktueller Einstellung: 1× gesehen → {{ex1}}, 3× → {{ex3}}, 10× → {{ex10}}.",
+    markShownDelay: "Anzeigeverzögerung",
+    markShownDelayDesc: "Wie viele Sekunden eine Karte im Feed sichtbar sein muss, bevor sie als gesehen gezählt wird. Standard: 5",
     settingsSaved: "Einstellungen gespeichert.",
     settingsFailed: "Einstellungen konnten nicht gespeichert werden.",
   },

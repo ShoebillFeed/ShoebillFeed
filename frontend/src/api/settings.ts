@@ -10,6 +10,7 @@ export interface UserSettings {
   output_language: string | null;
   time_decay_param: number;
   show_decay_param: number;
+  mark_shown_delay_seconds: number;
 }
 
 export interface UserSettingsUpdate {
@@ -22,6 +23,7 @@ export interface UserSettingsUpdate {
   output_language?: string | null;
   time_decay_param?: number;
   show_decay_param?: number;
+  mark_shown_delay_seconds?: number;
 }
 
 export const settingsApi = {

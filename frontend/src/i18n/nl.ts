@@ -250,6 +250,8 @@ const nl = {
     timeDecayRateDesc: "Vermenigvuldiger op basis van de leeftijd van het artikel: 1 / (0,5 × (dagen × tarief + 2)). 0 = geen verval. Met de huidige instelling: {{examples}}. Standaard: 2",
     showDecayRate: "Herweergaveverval",
     showDecayRateDesc: "Elke keer dat een kaart zichtbaar is, wordt de score vermenigvuldigd met 1/(1 + keer_gezien × tarief). Cumulatief. 0 = uitgeschakeld. Met de huidige instelling: 1× gezien → {{ex1}}, 3× → {{ex3}}, 10× → {{ex10}}.",
+    markShownDelay: "Vertraging voor markeren als gezien",
+    markShownDelayDesc: "Hoeveel seconden een kaart zichtbaar moet zijn in de feed voordat deze als gezien wordt geteld. Standaard: 5",
     settingsSaved: "Instellingen opgeslagen.",
     settingsFailed: "Instellingen konden niet worden opgeslagen.",
   },

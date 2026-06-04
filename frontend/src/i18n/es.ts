@@ -250,6 +250,8 @@ const es = {
     timeDecayRateDesc: "Multiplicador según la edad del artículo: 1 / (0,5 × (días × tasa + 2)). 0 = sin decaimiento. Con el ajuste actual: {{examples}}. Predeterminado: 2",
     showDecayRate: "Decaimiento de reapariencia",
     showDecayRateDesc: "Cada vez que se ve una tarjeta, su score se multiplica por 1/(1 + veces_visto × tasa). Acumulativo. 0 = desactivado. Con el ajuste actual: visto 1× → {{ex1}}, 3× → {{ex3}}, 10× → {{ex10}}.",
+    markShownDelay: "Retraso para marcar como visto",
+    markShownDelayDesc: "Cuántos segundos debe estar visible una tarjeta en el feed antes de contarse como vista. Predeterminado: 5",
     settingsSaved: "Ajustes guardados.",
     settingsFailed: "Error al guardar los ajustes.",
   },
