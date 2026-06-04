@@ -64,7 +64,6 @@ export function useNews(params: {
   return useQuery({
     queryKey: ["news", params],
     queryFn: () => newsApi.list({ page_size: 50, ...params }),
-    refetchInterval: 60_000,
   });
 }
 
@@ -81,7 +80,6 @@ export function useInfiniteNews(params: {
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.page < lastPage.pages ? lastPage.page + 1 : undefined,
-    refetchInterval: 60_000,
   });
 }
 

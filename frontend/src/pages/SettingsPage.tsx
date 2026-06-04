@@ -32,7 +32,7 @@ export default function SettingsPage() {
     <div>
       <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">{t("settings.title")}</h1>
 
-      <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 mb-6">
+      <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 mb-6 overflow-x-auto scrollbar-none">
         {tabs.map(({ id, label }) => (
           <button
             key={id}
@@ -49,7 +49,7 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6 overflow-x-auto">
         {activeTab === "sources" && <SourcesPanel />}
         {activeTab === "categories" && <CategoriesPanel />}
         {activeTab === "llm" && <LLMConfigPanel />}
