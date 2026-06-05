@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,8 +11,12 @@ class Settings(BaseSettings):
 
     # Ordered, comma-separated provider list. First = primary, rest = fallbacks.
     # Valid names: anthropic, ollama
+    # Accepts both LLM_PROVIDERS and LLM_PROVIDER (legacy singular name).
     # Example: LLM_PROVIDERS=anthropic,ollama
-    llm_providers: str = "anthropic"
+    llm_providers: str = Field(
+        default="anthropic",
+        validation_alias=AliasChoices("llm_providers", "llm_provider"),
+    )
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-haiku-4-5"
     # Set to a remote host to use Ollama on another machine, e.g. http://192.168.1.10:11434
