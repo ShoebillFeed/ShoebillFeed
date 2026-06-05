@@ -1,0 +1,50 @@
+# Standalone Ollama stack — run this on the GPU/inference machine.
+#
+# Usage:
+#   docker compose -f docker-compose.ollama.yml up -d
+#
+# Then point Shoebill at it:
+#   OLLAMA_BASE_URL=http://<this-machine-ip>:11434
+#   LLM_PROVIDERS=ollama          # or: anthropic,ollama for fallback
+#
+# The ollama-init service pulls the model once and exits.
+# Re-run it any time to pull a newer model version:
+#   docker compose -f docker-compose.ollama.yml run --rm ollama-init
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    # ── NVIDIA GPU (uncomment to enable) ──────────────────────────────────────
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    # ─────────────────────────────────────────────────────────────────────────
+
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["ollama", "pull", "qwen2.5:3b"]
+    restart: "no"
+
+volumes:
+  ollama_data:
