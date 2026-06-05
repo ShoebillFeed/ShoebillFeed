@@ -47,7 +47,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
     const sourceLine = item.source ? `${item.source.name}: ${item.url}` : item.url;
     const text = [...parts, sourceLine].join("\n\n");
     if (navigator.share) {
-      try { await navigator.share({ title: item.title, text: parts.join("\n\n"), url: item.url }); } catch { /* cancelled */ }
+      try { await navigator.share({ title: item.title, text, url: item.url }); } catch { /* cancelled */ }
     } else {
       await navigator.clipboard.writeText(text);
       setCopied(true);

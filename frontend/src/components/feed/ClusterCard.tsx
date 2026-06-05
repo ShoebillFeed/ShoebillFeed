@@ -57,7 +57,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
     const text = [heading, sourceLines].filter(Boolean).join("\n\n");
     const firstUrl = cluster.items[0]?.url;
     if (navigator.share) {
-      try { await navigator.share({ title: cluster.title || "", text: heading, url: firstUrl }); } catch { /* cancelled */ }
+      try { await navigator.share({ title: cluster.title || "", text, url: firstUrl }); } catch { /* cancelled */ }
     } else {
       await navigator.clipboard.writeText(text);
       setCopied(true);
