@@ -4,6 +4,7 @@ import anthropic
 from app.services.llm.base import (
     LLMProvider, ProcessedResult, ClusterResult, NewsletterResult,
     SYSTEM_PROMPT, SOCIAL_SYSTEM_PROMPT, SHORT_ITEM_SYSTEM_PROMPT,
+    MULTI_ITEM_SYSTEM_PROMPT, MULTI_SHORT_ITEM_SYSTEM_PROMPT, MULTI_SOCIAL_SYSTEM_PROMPT,
     CLUSTER_SYSTEM_PROMPT, NEWSLETTER_SYSTEM_PROMPT,
     parse_llm_response, parse_cluster_response, parse_newsletter_response,
     language_suffix,
@@ -101,6 +102,44 @@ class AnthropicProvider(LLMProvider):
                 "max_tokens": max_tokens,
                 "system": self._cached_system(system),
                 "messages": [{"role": "user", "content": user}],
+            },
+        }
+
+    def build_multi_item_request(
+        self,
+        custom_id: str,
+        items: list[dict],
+        categories: list[dict],
+        group_type: str = "full",
+        output_language: str | None = None,
+        max_content_chars: int = 1500,
+    ) -> dict:
+        """Return a batch request dict covering multiple items (no API call)."""
+        if group_type == "short":
+            system = MULTI_SHORT_ITEM_SYSTEM_PROMPT.format(categories_json=json.dumps(categories, ensure_ascii=False))
+            max_tokens = min(len(items) * 150, 2048)
+        elif group_type == "social":
+            system = MULTI_SOCIAL_SYSTEM_PROMPT.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
+            max_tokens = min(len(items) * 400, 4096)
+        else:
+            system = MULTI_ITEM_SYSTEM_PROMPT.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
+            max_tokens = min(len(items) * 400, 4096)
+
+        parts = []
+        for item in items:
+            content = (item.get("content") or "").strip()
+            if content:
+                parts.append(f"[{item['id']}]\nTitle: {item['title']}\nContent: {content[:max_content_chars]}")
+            else:
+                parts.append(f"[{item['id']}]\nTitle: {item['title']}")
+
+        return {
+            "custom_id": custom_id,
+            "params": {
+                "model": self.model,
+                "max_tokens": max_tokens,
+                "system": self._cached_system(system),
+                "messages": [{"role": "user", "content": "\n\n".join(parts)}],
             },
         }
 

@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -6,9 +7,14 @@ from sqlalchemy.orm import Session, joinedload
 from app.models import NewsItem, NewsCluster, Source, Category
 from app.models.llm_batch import LLMBatch
 from app.models.user_settings import UserSettings
-from app.services.llm.base import parse_llm_response, parse_short_llm_response, parse_cluster_response
+from app.services.llm.base import (
+    parse_cluster_response,
+    parse_multi_item_response,
+)
 
 logger = logging.getLogger(__name__)
+
+ITEMS_PER_GROUP = 8
 
 
 def _categories_payload(db: Session, user_id) -> list[dict]:
@@ -31,7 +37,7 @@ def _output_language(db: Session, user_id) -> str | None:
 
 def _min_word_count(db: Session, user_id) -> int:
     s = db.scalar(select(UserSettings).where(UserSettings.user_id == user_id))
-    return s.llm_min_word_count if s else 50
+    return s.llm_min_word_count if s else 100
 
 
 def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "LLMBatch | None":
@@ -47,8 +53,8 @@ def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "L
             user_langs[uid] = _output_language(db, user_id)
             user_min_words[uid] = _min_word_count(db, user_id)
 
-    batch_requests = []
-    request_meta = []
+    # Collect items into groups keyed by (user_id, group_type)
+    groups: dict[tuple, list[dict]] = {}
 
     for item_id in item_ids:
         item = db.get(NewsItem, item_id)
@@ -60,25 +66,37 @@ def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "L
         is_social = source is not None and source.source_type == "mastodon"
         word_count = len((item.title + " " + (item.raw_content or "")).split())
         is_short = word_count <= user_min_words[uid]
+        group_type = "social" if is_social else ("short" if is_short else "full")
 
-        custom_id = f"item_{item.id}"
-        batch_requests.append(provider.build_item_request(
-            custom_id=custom_id,
-            title=item.title,
-            content=item.raw_content or "",
-            categories=user_cats[uid],
-            is_short=is_short,
-            social_post=is_social,
-            output_language=user_langs[uid],
-        ))
-        request_meta.append({
-            "custom_id": custom_id,
-            "item_id": str(item.id),
-            "item_type": "news_item",
-            "is_short": is_short,
-            "social_post": is_social,
+        groups.setdefault((uid, group_type), []).append({
+            "id": str(item.id),
+            "title": item.title,
+            "content": item.raw_content or "",
         })
 
+    batch_requests = []
+    request_meta = []
+
+    # One multi-item request per chunk of ITEMS_PER_GROUP
+    for (uid, group_type), items_list in groups.items():
+        for i in range(0, len(items_list), ITEMS_PER_GROUP):
+            chunk = items_list[i:i + ITEMS_PER_GROUP]
+            custom_id = f"grp_{uuid.uuid4().hex[:16]}"
+            batch_requests.append(provider.build_multi_item_request(
+                custom_id=custom_id,
+                items=chunk,
+                categories=user_cats[uid],
+                group_type=group_type,
+                output_language=user_langs[uid],
+            ))
+            request_meta.append({
+                "custom_id": custom_id,
+                "item_ids": [it["id"] for it in chunk],
+                "item_type": "news_item_group",
+                "group_type": group_type,
+            })
+
+    # Clusters remain as individual requests (already multi-item by nature)
     for cluster_id in cluster_ids:
         cluster = db.get(NewsCluster, cluster_id)
         if not cluster or cluster.llm_processed:
@@ -126,7 +144,9 @@ def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "L
     )
     db.add(llm_batch)
     db.commit()
-    logger.info("Submitted Anthropic batch %s with %d requests", batch.id, len(batch_requests))
+    n_groups = sum(1 for m in request_meta if m["item_type"] == "news_item_group")
+    n_clusters = sum(1 for m in request_meta if m["item_type"] == "cluster")
+    logger.info("Submitted batch %s: %d group requests, %d cluster requests", batch.id, n_groups, n_clusters)
     return llm_batch
 
 
@@ -145,8 +165,8 @@ def apply_batch_results(db: Session, llm_batch: LLMBatch, results) -> set[str]:
             continue
         text = result.result.message.content[0].text
         try:
-            if meta["item_type"] == "news_item":
-                _apply_item_result(db, meta, text)
+            if meta["item_type"] == "news_item_group":
+                _apply_item_group_result(db, meta, text)
             else:
                 _apply_cluster_result(db, meta, text)
             applied.add(cid)
@@ -157,39 +177,54 @@ def apply_batch_results(db: Session, llm_batch: LLMBatch, results) -> set[str]:
     return applied
 
 
-def _apply_item_result(db: Session, meta: dict, text: str) -> None:
-    item = db.get(NewsItem, meta["item_id"])
-    if not item or item.llm_processed:
-        return
+def _apply_item_group_result(db: Session, meta: dict, text: str) -> None:
+    group_type = meta["group_type"]
+    is_short = group_type == "short"
+    is_social = group_type == "social"
 
+    # All items in a group share the same user_id
+    first_item = db.get(NewsItem, meta["item_ids"][0])
+    if not first_item:
+        return
     known = [c.name for c in db.scalars(
-        select(Category).where(Category.user_id == item.user_id, Category.is_active == True)  # noqa: E712
+        select(Category).where(Category.user_id == first_item.user_id, Category.is_active == True)  # noqa: E712
     ).all()]
 
-    if meta.get("is_short"):
-        result = parse_short_llm_response(text, known)
-        item.abstract = item.raw_content or item.title
-    else:
-        result = parse_llm_response(text, known, social_post=meta.get("social_post", False))
-        if meta.get("social_post") and result.generated_title:
+    results = parse_multi_item_response(text, known, is_short=is_short, is_social=is_social)
+
+    for item_id in meta["item_ids"]:
+        result = results.get(item_id)
+        if not result:
+            # LLM missed this item — fall back to individual sync processing
+            from app.tasks.process_tasks import process_news_item
+            process_news_item.apply_async(args=[item_id], queue="process")
+            continue
+
+        item = db.get(NewsItem, item_id)
+        if not item or item.llm_processed:
+            continue
+
+        if is_short:
+            item.abstract = item.raw_content or item.title
+        elif is_social and result.generated_title:
             item.title = result.generated_title
             item.abstract = item.raw_content or ""
         else:
             item.abstract = result.abstract
 
-    item.extracted_keywords = result.keywords or None
-    item.relevance_score = result.relevance_score
-    item.impact_score = result.impact_score
-    item.llm_processed = True
+        item.extracted_keywords = result.keywords or None
+        item.relevance_score = result.relevance_score
+        item.impact_score = result.impact_score
+        item.llm_processed = True
 
-    if result.category_names:
-        cats = db.scalars(
-            select(Category).where(
-                Category.name.in_(result.category_names),
-                Category.user_id == item.user_id,
-            )
-        ).all()
-        item.categories = list(cats)
+        if result.category_names:
+            cats = db.scalars(
+                select(Category).where(
+                    Category.name.in_(result.category_names),
+                    Category.user_id == item.user_id,
+                )
+            ).all()
+            item.categories = list(cats)
 
 
 def _apply_cluster_result(db: Session, meta: dict, text: str) -> None:

@@ -45,6 +45,52 @@ Each category has a name and keywords. If a description field is present, use it
 Respond ONLY with valid JSON. No markdown fences, no extra text."""
 
 
+MULTI_ITEM_SYSTEM_PROMPT = """You are a news analyst. Analyse each news item below and return a JSON array — one object per item.
+
+Each object must contain:
+- "id": the item identifier exactly as given
+- "abstract": string, 1-3 sentence summary
+- "keywords": array of 3-7 short lowercase keywords or keyphrases
+- "categories": array of matching category names from the list (can be [])
+- "relevance_score": integer 1-10, how relevant to matched categories (5 if none matched)
+- "impact_score": integer 1-10, how broadly impactful (10 = global significance, 1 = minor local event)
+
+Available categories: {categories_json}
+Each category has a name and keywords. If a description is present, use it to judge fit. Include all categories that genuinely apply.
+
+Respond ONLY with a valid JSON array. No markdown fences, no extra text."""
+
+
+MULTI_SHORT_ITEM_SYSTEM_PROMPT = """You are a news classifier. For each item below, extract metadata only — do not summarise.
+
+Return a JSON array — one object per item — each containing:
+- "id": the item identifier exactly as given
+- "keywords": array of 3-7 short lowercase keywords or keyphrases
+- "categories": array of matching category names (can be [])
+- "relevance_score": integer 1-10 (5 if none matched)
+- "impact_score": integer 1-10
+
+Available categories: {categories_json}
+
+Respond ONLY with a valid JSON array. No markdown fences, no extra text."""
+
+
+MULTI_SOCIAL_SYSTEM_PROMPT = """You are a news analyst. For each social media post below, return a JSON array — one object per post.
+
+Each object must contain:
+- "id": the item identifier exactly as given
+- "headline": short punchy headline (max 12 words) capturing the core topic
+- "abstract": string, 1-2 sentence summary
+- "keywords": array of 3-7 short lowercase keywords or keyphrases
+- "categories": array of matching category names (can be [])
+- "relevance_score": integer 1-10 (5 if none matched)
+- "impact_score": integer 1-10
+
+Available categories: {categories_json}
+
+Respond ONLY with a valid JSON array. No markdown fences, no extra text."""
+
+
 CLUSTER_SYSTEM_PROMPT = """You are a news analyst. Multiple sources have covered the same event. Return a JSON object with exactly these fields:
 - "title": string, a short headline (max 10 words) that captures the core event.
 - "unified_abstract": string, 1-3 sentence summary that synthesises all sources into one coherent account.
@@ -236,6 +282,57 @@ def parse_cluster_response(text: str, item_count: int, known_categories: list[st
         impact_score=_clamp(data.get("impact_score"), 5),
         source_summaries=source_summaries,
     )
+
+
+def parse_multi_item_response(
+    text: str,
+    known_categories: list[str],
+    is_short: bool = False,
+    is_social: bool = False,
+) -> dict[str, "ProcessedResult"]:
+    """Parse a multi-item LLM response. Returns a dict keyed by item id."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = json.loads(repair_json(text))
+
+    if not isinstance(data, list):
+        return {}
+
+    results: dict[str, ProcessedResult] = {}
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        item_id = str(entry.get("id", "")).strip()
+        if not item_id:
+            continue
+        raw_cats = entry.get("categories", entry.get("category"))
+        category_names = _parse_categories(raw_cats, known_categories)
+
+        if is_short:
+            result = ProcessedResult(
+                abstract="",
+                keywords=_parse_keywords(entry.get("keywords")),
+                category_names=category_names,
+                relevance_score=_clamp(entry.get("relevance_score"), 5),
+                impact_score=_clamp(entry.get("impact_score"), 5),
+            )
+        else:
+            result = ProcessedResult(
+                abstract=str(entry.get("abstract", "")).strip() or "No abstract available.",
+                keywords=_parse_keywords(entry.get("keywords")),
+                category_names=category_names,
+                relevance_score=_clamp(entry.get("relevance_score"), 5),
+                impact_score=_clamp(entry.get("impact_score"), 5),
+                generated_title=str(entry["headline"]).strip() if is_social and entry.get("headline") else None,
+            )
+        results[item_id] = result
+    return results
 
 
 NEWSLETTER_SYSTEM_PROMPT = """You are a newsletter parser. Extract individual news items from newsletter content.

@@ -415,5 +415,8 @@ def _dispatch_fallback(llm_batch: LLMBatch, applied: set[str]) -> None:
         if meta["custom_id"] not in applied:
             if meta["item_type"] == "news_item":
                 process_news_item.apply_async(args=[meta["item_id"]], queue="process")
+            elif meta["item_type"] == "news_item_group":
+                for item_id in meta["item_ids"]:
+                    process_news_item.apply_async(args=[item_id], queue="process")
             elif meta["item_type"] == "cluster":
                 process_cluster.apply_async(args=[meta["item_id"]], queue="process")
