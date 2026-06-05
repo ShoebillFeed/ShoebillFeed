@@ -218,6 +218,9 @@ const nl = {
     redis: "Redis",
     healthy: "bereikbaar",
     unreachable: "onbereikbaar",
+    configuredProviders: "Geconfigureerde providers",
+    primary: "primair",
+    fallback: "reserve",
   },
   stats: {
     title: "Statistieken",

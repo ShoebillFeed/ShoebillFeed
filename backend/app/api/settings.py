@@ -7,7 +7,7 @@ from app.api.deps import get_db, get_current_user
 from app.config import get_settings
 from app.models.user import User
 from app.models.user_settings import UserSettings
-from app.schemas.news_item import HealthOut, LLMConfigOut, LLMConfigUpdate
+from app.schemas.news_item import HealthOut, LLMConfigOut, LLMConfigUpdate, ProviderInfo, ProviderHealth
 from app.schemas.user_settings import UserSettingsOut, UserSettingsUpdate
 from app.services.llm.factory import get_llm_provider
 
@@ -34,38 +34,46 @@ def health_check(db: Session = Depends(get_db)):
     except Exception:
         pass
 
+    provider_health: list[ProviderHealth] = []
     try:
-        provider = get_llm_provider()
-        llm_ok = provider.health_check()
+        from app.services.llm.factory import _get_provider_instances
+        instances = _get_provider_instances()
+        for name, p in instances.items():
+            try:
+                healthy = p.health_check()
+            except Exception:
+                healthy = False
+            provider_health.append(ProviderHealth(name=name, healthy=healthy))
+        llm_ok = any(ph.healthy for ph in provider_health)
     except Exception:
         pass
 
-    return HealthOut(db=db_ok, redis=redis_ok, llm=llm_ok)
+    return HealthOut(db=db_ok, redis=redis_ok, llm=llm_ok, provider_health=provider_health)
+
+
+def _build_llm_config() -> LLMConfigOut:
+    settings = get_settings()
+    providers = []
+    for i, name in enumerate(settings.llm_provider_list):
+        info = ProviderInfo(name=name, is_primary=(i == 0))
+        if name == "anthropic":
+            info.model = settings.anthropic_model
+        elif name == "ollama":
+            info.model = settings.ollama_model
+            info.base_url = settings.ollama_base_url
+        providers.append(info)
+    return LLMConfigOut(providers=providers)
 
 
 @router.get("/llm", response_model=LLMConfigOut)
 def get_llm_config():
-    settings = get_settings()
-    return LLMConfigOut(
-        llm_provider=settings.llm_providers,
-        anthropic_model=settings.anthropic_model,
-        ollama_base_url=settings.ollama_base_url,
-        ollama_model=settings.ollama_model,
-    )
+    return _build_llm_config()
 
 
 @router.patch("/llm", response_model=LLMConfigOut)
 def update_llm_config(payload: LLMConfigUpdate):
-    # In a containerised setup, provider config comes from env vars.
-    # This endpoint reports back the current effective config;
-    # actual changes require updating .env and restarting the service.
-    settings = get_settings()
-    return LLMConfigOut(
-        llm_provider=payload.llm_provider or settings.llm_providers,
-        anthropic_model=payload.anthropic_model or settings.anthropic_model,
-        ollama_base_url=payload.ollama_base_url or settings.ollama_base_url,
-        ollama_model=payload.ollama_model or settings.ollama_model,
-    )
+    # Config is read-only via API; changes require updating .env and restarting.
+    return _build_llm_config()
 
 
 def _get_or_create_settings(db: Session, user_id) -> UserSettings:

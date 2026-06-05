@@ -218,6 +218,9 @@ const uk = {
     redis: "Redis",
     healthy: "працює",
     unreachable: "недоступний",
+    configuredProviders: "Налаштовані провайдери",
+    primary: "основний",
+    fallback: "резервний",
   },
   stats: {
     title: "Статистика",

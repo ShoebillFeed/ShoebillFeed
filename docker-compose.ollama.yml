@@ -27,13 +27,13 @@ services:
       start_period: 10s
 
     # ── NVIDIA GPU (uncomment to enable) ──────────────────────────────────────
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     # ─────────────────────────────────────────────────────────────────────────
 
   ollama-init:

@@ -83,11 +83,15 @@ class NewsItemPatch(BaseModel):
     read_later: bool | None = None
 
 
+class ProviderInfo(BaseModel):
+    name: str
+    is_primary: bool
+    model: str | None = None
+    base_url: str | None = None
+
+
 class LLMConfigOut(BaseModel):
-    llm_provider: str
-    anthropic_model: str
-    ollama_base_url: str
-    ollama_model: str
+    providers: list[ProviderInfo]
 
 
 class LLMConfigUpdate(BaseModel):
@@ -97,7 +101,13 @@ class LLMConfigUpdate(BaseModel):
     ollama_model: str | None = None
 
 
+class ProviderHealth(BaseModel):
+    name: str
+    healthy: bool
+
+
 class HealthOut(BaseModel):
     db: bool
     redis: bool
     llm: bool
+    provider_health: list[ProviderHealth] = []

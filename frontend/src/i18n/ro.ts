@@ -218,6 +218,9 @@ const ro = {
     redis: "Redis",
     healthy: "funcțional",
     unreachable: "inaccesibil",
+    configuredProviders: "Furnizori configurați",
+    primary: "principal",
+    fallback: "de rezervă",
   },
   stats: {
     title: "Statistici",

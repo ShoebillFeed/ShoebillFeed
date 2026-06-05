@@ -218,6 +218,9 @@ const ru = {
     redis: "Redis",
     healthy: "работает",
     unreachable: "недоступен",
+    configuredProviders: "Настроенные провайдеры",
+    primary: "основной",
+    fallback: "резервный",
   },
   stats: {
     title: "Статистика",

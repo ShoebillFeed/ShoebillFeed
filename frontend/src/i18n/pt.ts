@@ -218,6 +218,9 @@ const pt = {
     redis: "Redis",
     healthy: "operacional",
     unreachable: "inacessível",
+    configuredProviders: "Fornecedores configurados",
+    primary: "principal",
+    fallback: "alternativo",
   },
   stats: {
     title: "Estatísticas",

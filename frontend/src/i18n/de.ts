@@ -218,6 +218,9 @@ const de = {
     redis: "Redis",
     healthy: "erreichbar",
     unreachable: "nicht erreichbar",
+    configuredProviders: "Konfigurierte Anbieter",
+    primary: "primär",
+    fallback: "Fallback",
   },
   stats: {
     title: "Statistiken",
