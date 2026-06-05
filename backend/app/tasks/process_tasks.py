@@ -1,12 +1,15 @@
 import logging
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import anthropic as anthropic_sdk
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
+from app.config import get_settings
 from app.database import SessionLocal
 from app.models import NewsItem, Category, NewsCluster, Source
+from app.models.llm_batch import LLMBatch
 from app.models.user_settings import UserSettings
 from app.services.clustering import recluster_processed_item
 from app.services.deduplication import url_hash
@@ -312,25 +315,105 @@ def process_cluster(self, cluster_id: str) -> None:
 
 @celery_app.task(name="app.tasks.process_tasks.batch_process_unprocessed", queue="process")
 def batch_process_unprocessed(limit: int = 50) -> int:
+    settings = get_settings()
     db = SessionLocal()
     try:
-        # Standalone unprocessed items (not in a cluster)
-        item_ids = db.scalars(
+        item_ids = list(db.scalars(
             select(NewsItem.id)
             .where(NewsItem.llm_processed == False, NewsItem.cluster_id == None)  # noqa: E711,E712
             .limit(limit)
-        ).all()
-        for i, item_id in enumerate(item_ids):
+        ).all())
+        cluster_ids = list(db.scalars(
+            select(NewsCluster.id).where(NewsCluster.llm_processed == False).limit(limit)  # noqa: E712
+        ).all())
+
+        if settings.llm_provider != "anthropic":
+            for i, item_id in enumerate(item_ids):
+                process_news_item.apply_async(args=[str(item_id)], queue="process", countdown=i * 2)
+            for i, cid in enumerate(cluster_ids):
+                process_cluster.apply_async(args=[str(cid)], queue="process", countdown=(len(item_ids) + i) * 2)
+            return len(item_ids) + len(cluster_ids)
+
+        # Anthropic batch path — newsletter (email) items must still be processed individually
+        email_ids = set(db.scalars(
+            select(NewsItem.id)
+            .join(Source, NewsItem.source_id == Source.id)
+            .where(NewsItem.id.in_(item_ids), Source.source_type == "email")
+        ).all())
+        for i, item_id in enumerate(email_ids):
             process_news_item.apply_async(args=[str(item_id)], queue="process", countdown=i * 2)
 
-        # Unprocessed clusters
-        cluster_ids = db.scalars(
-            select(NewsCluster.id).where(NewsCluster.llm_processed == False).limit(limit)  # noqa: E712
-        ).all()
-        offset = len(item_ids)
-        for i, cid in enumerate(cluster_ids):
-            process_cluster.apply_async(args=[str(cid)], queue="process", countdown=(offset + i) * 2)
+        batch_item_ids = [iid for iid in item_ids if iid not in email_ids]
 
+        from app.services.llm.batch_service import submit_batch
+        provider = get_llm_provider()
+        submit_batch(db, provider, batch_item_ids, cluster_ids)
         return len(item_ids) + len(cluster_ids)
     finally:
         db.close()
+
+
+@celery_app.task(name="app.tasks.process_tasks.poll_llm_batches", queue="process")
+def poll_llm_batches() -> None:
+    settings = get_settings()
+    if settings.llm_provider != "anthropic":
+        return
+
+    db = SessionLocal()
+    provider = get_llm_provider()
+    max_wait = timedelta(minutes=settings.llm_batch_max_wait_minutes)
+    now = datetime.now(timezone.utc)
+
+    try:
+        pending = db.scalars(
+            select(LLMBatch).where(LLMBatch.status.in_(["pending", "cancelling"]))
+        ).all()
+
+        from app.services.llm.batch_service import apply_batch_results
+
+        for llm_batch in pending:
+            try:
+                batch_info = provider.client.messages.batches.retrieve(llm_batch.anthropic_batch_id)
+
+                if batch_info.processing_status == "ended":
+                    results = list(provider.client.messages.batches.results(llm_batch.anthropic_batch_id))
+                    applied = apply_batch_results(db, llm_batch, results)
+
+                    if llm_batch.status == "cancelling":
+                        _dispatch_fallback(llm_batch, applied)
+                        llm_batch.status = "cancelled"
+                        logger.warning(
+                            "Batch %s cancelled: %d applied, %d fell back",
+                            llm_batch.anthropic_batch_id, len(applied),
+                            len(llm_batch.requests) - len(applied),
+                        )
+                    else:
+                        llm_batch.status = "completed"
+                        logger.info("Batch %s completed: %d applied", llm_batch.anthropic_batch_id, len(applied))
+
+                    db.commit()
+
+                elif llm_batch.status == "pending":
+                    submitted = llm_batch.submitted_at
+                    if submitted.tzinfo is None:
+                        submitted = submitted.replace(tzinfo=timezone.utc)
+                    if now - submitted > max_wait:
+                        provider.client.messages.batches.cancel(llm_batch.anthropic_batch_id)
+                        llm_batch.status = "cancelling"
+                        db.commit()
+                        logger.warning("Batch %s timed out after %d min, cancelling", llm_batch.anthropic_batch_id, settings.llm_batch_max_wait_minutes)
+
+            except Exception:
+                logger.exception("Error polling batch %s", llm_batch.anthropic_batch_id)
+    finally:
+        db.close()
+
+
+def _dispatch_fallback(llm_batch: LLMBatch, applied: set[str]) -> None:
+    """Dispatch sync tasks for any requests that weren't processed in the batch."""
+    for meta in llm_batch.requests:
+        if meta["custom_id"] not in applied:
+            if meta["item_type"] == "news_item":
+                process_news_item.apply_async(args=[meta["item_id"]], queue="process")
+            elif meta["item_type"] == "cluster":
+                process_cluster.apply_async(args=[meta["item_id"]], queue="process")

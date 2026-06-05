@@ -3,7 +3,8 @@ import anthropic
 
 from app.services.llm.base import (
     LLMProvider, ProcessedResult, ClusterResult, NewsletterResult,
-    SYSTEM_PROMPT, SOCIAL_SYSTEM_PROMPT, CLUSTER_SYSTEM_PROMPT, NEWSLETTER_SYSTEM_PROMPT,
+    SYSTEM_PROMPT, SOCIAL_SYSTEM_PROMPT, SHORT_ITEM_SYSTEM_PROMPT,
+    CLUSTER_SYSTEM_PROMPT, NEWSLETTER_SYSTEM_PROMPT,
     parse_llm_response, parse_cluster_response, parse_newsletter_response,
     language_suffix,
 )
@@ -18,7 +19,7 @@ class AnthropicProvider(LLMProvider):
         message = self.client.messages.create(
             model=self.model,
             max_tokens=max_tokens,
-            system=system,
+            system=self._cached_system(system),
             messages=[{"role": "user", "content": user}],
         )
         return message.content[0].text
@@ -70,6 +71,62 @@ class AnthropicProvider(LLMProvider):
             messages=[{"role": "user", "content": f"Newsletter content:\n\n{content[:4000]}"}],
         )
         return parse_newsletter_response(message.content[0].text, known)
+
+    def build_item_request(
+        self,
+        custom_id: str,
+        title: str,
+        content: str,
+        categories: list[dict],
+        is_short: bool = False,
+        social_post: bool = False,
+        output_language: str | None = None,
+        max_content_chars: int = 1500,
+    ) -> dict:
+        """Return a batch request dict (no API call)."""
+        if is_short:
+            system = SHORT_ITEM_SYSTEM_PROMPT.format(categories_json=json.dumps(categories, ensure_ascii=False))
+            user = f"Title: {title}\nContent: {content}" if content.strip() else f"Title: {title}"
+            max_tokens = 256
+        else:
+            truncated = (content or title)[:max_content_chars]
+            prompt_template = SOCIAL_SYSTEM_PROMPT if social_post else SYSTEM_PROMPT
+            system = prompt_template.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
+            user = f"Post: {truncated}" if social_post else f"Title: {title}\n\nContent: {truncated}"
+            max_tokens = 1024
+        return {
+            "custom_id": custom_id,
+            "params": {
+                "model": self.model,
+                "max_tokens": max_tokens,
+                "system": self._cached_system(system),
+                "messages": [{"role": "user", "content": user}],
+            },
+        }
+
+    def build_cluster_request(
+        self,
+        custom_id: str,
+        items: list[dict],
+        categories: list[dict],
+        output_language: str | None = None,
+        max_content_chars: int = 800,
+    ) -> dict:
+        """Return a batch request dict (no API call)."""
+        system = CLUSTER_SYSTEM_PROMPT.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
+        parts = []
+        for i, item in enumerate(items):
+            content = (item.get("content") or item["title"])[:max_content_chars]
+            parts.append(f"Item {i} (Source: {item['source_name']}):\nTitle: {item['title']}\nContent: {content}")
+        return {
+            "custom_id": custom_id,
+            "params": {
+                "model": self.model,
+                "max_tokens": 2048,
+                "system": self._cached_system(system),
+                "messages": [{"role": "user", "content": "\n\n".join(parts)}],
+            },
+        }
 
     def health_check(self) -> bool:
         try:

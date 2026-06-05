@@ -135,7 +135,7 @@
   {
     "name": "Anthropic News",
     "source_type": "atom",
-    "config": { "url": "https://www.anthropic.com/news/rss" },
+    "config": { "url": "https://www.anthropic.com/rss/index.xml" },
     "is_active": true,
     "fetch_interval": 86400
   },

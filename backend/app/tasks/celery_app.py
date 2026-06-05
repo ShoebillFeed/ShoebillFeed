@@ -33,6 +33,11 @@ celery_app.conf.update(
             "schedule": crontab(minute="*/15"),
             "options": {"queue": "process"},
         },
+        "poll-llm-batches": {
+            "task": "app.tasks.process_tasks.poll_llm_batches",
+            "schedule": crontab(minute="*/2"),
+            "options": {"queue": "process"},
+        },
         "cleanup-old-items": {
             "task": "app.tasks.fetch_tasks.cleanup_old_items",
             "schedule": crontab(hour=3, minute=0),

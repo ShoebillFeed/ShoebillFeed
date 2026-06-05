@@ -22,6 +22,8 @@ class Settings(BaseSettings):
 
     youtube_api_key: str = ""
 
+    llm_batch_max_wait_minutes: int = 10
+
     jwt_secret: str = "change-me-in-production"
     jwt_expire_hours: int = 168  # 7 days
     admin_username: str = ""
