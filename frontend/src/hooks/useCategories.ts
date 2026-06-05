@@ -2,8 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { categoriesApi, type CategoryExportItem } from "../api/categories";
 import type { CategoryCreate, CategoryUpdate } from "../types/category";
 
-export function useCategories() {
-  return useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
+export function useCategories(sourceIds?: string[]) {
+  const key = sourceIds?.length ? ["categories", sourceIds] : ["categories"];
+  return useQuery({ queryKey: key, queryFn: () => categoriesApi.list(sourceIds) });
 }
 
 export function useCreateCategory() {

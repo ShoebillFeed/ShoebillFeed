@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, update
@@ -15,25 +15,33 @@ from app.services.llm.factory import get_llm_provider
 router = APIRouter()
 
 
-def _build_out(db: Session, category: Category) -> CategoryOut:
-    count = db.scalar(
-        select(func.count()).select_from(news_item_categories)
-        .where(news_item_categories.c.category_id == category.id)
-    ) or 0
+def _build_out(db: Session, category: Category, source_ids: list[str] | None = None) -> CategoryOut:
+    q = select(func.count()).select_from(news_item_categories).where(
+        news_item_categories.c.category_id == category.id
+    )
+    if source_ids:
+        q = q.join(NewsItem, NewsItem.id == news_item_categories.c.news_item_id).where(
+            NewsItem.source_id.in_(source_ids)
+        )
+    count = db.scalar(q) or 0
     out = CategoryOut.model_validate(category)
     out.item_count = count
     return out
 
 
 @router.get("", response_model=list[CategoryOut])
-def list_categories(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_categories(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    source_ids: list[str] | None = Query(None),
+):
     categories = db.scalars(
         select(Category)
         .where(Category.user_id == current_user.id)
         .options(joinedload(Category.weight))
         .order_by(Category.name)
     ).unique().all()
-    return [_build_out(db, c) for c in categories]
+    return [_build_out(db, c, source_ids) for c in categories]
 
 
 @router.post("", response_model=CategoryOut, status_code=201)

@@ -9,7 +9,11 @@ export interface CategoryExportItem {
 }
 
 export const categoriesApi = {
-  list: () => client.get<Category[]>("/categories").then((r) => r.data),
+  list: (sourceIds?: string[]) =>
+    client.get<Category[]>("/categories", {
+      params: sourceIds?.length ? { source_ids: sourceIds } : undefined,
+      paramsSerializer: { indexes: null },
+    }).then((r) => r.data),
   create: (data: CategoryCreate) => client.post<Category>("/categories", data).then((r) => r.data),
   update: (id: string, data: CategoryUpdate) =>
     client.patch<Category>(`/categories/${id}`, data).then((r) => r.data),
