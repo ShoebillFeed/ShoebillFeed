@@ -30,6 +30,15 @@ class CreateUserRequest(BaseModel):
     is_admin: bool = False
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=6)
+
+
+class ResetPasswordRequest(BaseModel):
+    password: str = Field(..., min_length=6)
+
+
 def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -65,6 +74,18 @@ def me(current_user: User = Depends(get_current_user)):
     return UserOut(id=str(current_user.id), username=current_user.username, is_admin=current_user.is_admin)
 
 
+@router.patch("/me/password", status_code=204)
+def change_own_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    current_user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+
+
 # ── Admin-only user management ──────────────────────────────────────────────
 
 @router.get("/users", response_model=list[UserOut])
@@ -87,6 +108,20 @@ def create_user(payload: CreateUserRequest, db: Session = Depends(get_db), _: Us
     db.commit()
     db.refresh(user)
     return UserOut(id=str(user.id), username=user.username, is_admin=user.is_admin)
+
+
+@router.patch("/users/{user_id}/password", status_code=204)
+def reset_user_password(
+    user_id: uuid.UUID,
+    payload: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_admin_user),
+):
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.hashed_password = hash_password(payload.password)
+    db.commit()
 
 
 @router.delete("/users/{user_id}", status_code=204)

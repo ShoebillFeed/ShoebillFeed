@@ -286,6 +286,14 @@ const uk = {
     markShownDelayDesc: "Скільки секунд картка має бути видима у стрічці, перш ніж буде зарахована як переглянута. За замовчуванням: 5",
     settingsSaved: "Налаштування збережено.",
     settingsFailed: "Не вдалося зберегти налаштування.",
+    security: "Безпека",
+    changePassword: "Змінити пароль",
+    currentPassword: "Поточний пароль",
+    newPassword: "Новий пароль",
+    confirmPassword: "Підтвердіть новий пароль",
+    passwordMismatch: "Паролі не збігаються.",
+    passwordChanged: "Пароль успішно змінено.",
+    passwordChangeFailed: "Не вдалося змінити пароль.",
   },
   settings: {
     title: "Налаштування",
@@ -325,6 +333,9 @@ const uk = {
     deleteConfirm: "Видалити користувача «{{name}}»? Всі його дані будуть видалені.",
     deleteUser: "Видалити користувача",
     failedToCreate: "Не вдалося створити користувача.",
+    resetPassword: "Скинути пароль",
+    resetSuccess: "Пароль успішно скинуто.",
+    resetFailed: "Не вдалося скинути пароль.",
   },
 } as const;
 

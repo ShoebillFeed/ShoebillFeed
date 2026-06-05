@@ -286,6 +286,14 @@ const de = {
     markShownDelayDesc: "Wie viele Sekunden eine Karte im Feed sichtbar sein muss, bevor sie als gesehen gezählt wird. Standard: 5",
     settingsSaved: "Einstellungen gespeichert.",
     settingsFailed: "Einstellungen konnten nicht gespeichert werden.",
+    security: "Sicherheit",
+    changePassword: "Passwort ändern",
+    currentPassword: "Aktuelles Passwort",
+    newPassword: "Neues Passwort",
+    confirmPassword: "Neues Passwort bestätigen",
+    passwordMismatch: "Die Passwörter stimmen nicht überein.",
+    passwordChanged: "Passwort erfolgreich geändert.",
+    passwordChangeFailed: "Passwort konnte nicht geändert werden.",
   },
   settings: {
     title: "Einstellungen",
@@ -325,6 +333,9 @@ const de = {
     deleteConfirm: "Benutzer „{{name}}\" löschen? Alle Daten werden entfernt.",
     deleteUser: "Benutzer löschen",
     failedToCreate: "Benutzer konnte nicht erstellt werden.",
+    resetPassword: "Passwort zurücksetzen",
+    resetSuccess: "Passwort erfolgreich zurückgesetzt.",
+    resetFailed: "Passwort konnte nicht zurückgesetzt werden.",
   },
 } as const;
 

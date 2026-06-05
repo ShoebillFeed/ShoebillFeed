@@ -286,6 +286,14 @@ const ro = {
     markShownDelayDesc: "Câte secunde trebuie să fie vizibil un card în feed înainte de a fi numărat ca văzut. Implicit: 5",
     settingsSaved: "Setări salvate.",
     settingsFailed: "Eșec la salvarea setărilor.",
+    security: "Securitate",
+    changePassword: "Schimbați parola",
+    currentPassword: "Parola actuală",
+    newPassword: "Parolă nouă",
+    confirmPassword: "Confirmați parola nouă",
+    passwordMismatch: "Parolele nu se potrivesc.",
+    passwordChanged: "Parola a fost schimbată cu succes.",
+    passwordChangeFailed: "Nu s-a putut schimba parola.",
   },
   settings: {
     title: "Setări",
@@ -325,6 +333,9 @@ const ro = {
     deleteConfirm: "Ștergeți utilizatorul „{{name}}\"? Toate datele sale vor fi eliminate.",
     deleteUser: "Ștergeți utilizatorul",
     failedToCreate: "Nu s-a putut crea utilizatorul.",
+    resetPassword: "Resetați parola",
+    resetSuccess: "Parola a fost resetată cu succes.",
+    resetFailed: "Nu s-a putut reseta parola.",
   },
 } as const;
 

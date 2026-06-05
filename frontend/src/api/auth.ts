@@ -15,4 +15,8 @@ export const authApi = {
   createUser: (username: string, password: string, is_admin: boolean) =>
     client.post<AuthUser>("/auth/users", { username, password, is_admin }).then((r) => r.data),
   deleteUser: (id: string) => client.delete(`/auth/users/${id}`),
+  resetUserPassword: (id: string, password: string) =>
+    client.patch(`/auth/users/${id}/password`, { password }),
+  changePassword: (current_password: string, new_password: string) =>
+    client.patch("/auth/me/password", { current_password, new_password }),
 };

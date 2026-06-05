@@ -286,6 +286,14 @@ const pl = {
     markShownDelayDesc: "Ile sekund karta musi być widoczna w feedzie, zanim zostanie zaliczona jako wyświetlona. Domyślnie: 5",
     settingsSaved: "Ustawienia zapisane.",
     settingsFailed: "Nie udało się zapisać ustawień.",
+    security: "Bezpieczeństwo",
+    changePassword: "Zmień hasło",
+    currentPassword: "Aktualne hasło",
+    newPassword: "Nowe hasło",
+    confirmPassword: "Potwierdź nowe hasło",
+    passwordMismatch: "Hasła nie są zgodne.",
+    passwordChanged: "Hasło zostało pomyślnie zmienione.",
+    passwordChangeFailed: "Nie udało się zmienić hasła.",
   },
   settings: {
     title: "Ustawienia",
@@ -325,6 +333,9 @@ const pl = {
     deleteConfirm: "Usunąć użytkownika „{{name}}\"? Wszystkie dane zostaną usunięte.",
     deleteUser: "Usuń użytkownika",
     failedToCreate: "Nie udało się utworzyć użytkownika.",
+    resetPassword: "Resetuj hasło",
+    resetSuccess: "Hasło zostało pomyślnie zresetowane.",
+    resetFailed: "Nie udało się zresetować hasła.",
   },
 } as const;
 

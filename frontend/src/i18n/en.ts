@@ -286,6 +286,14 @@ const en = {
     markShownDelayDesc: "How many seconds a card must be visible in the feed before it is counted as shown. Default: 5",
     settingsSaved: "Settings saved.",
     settingsFailed: "Failed to save settings.",
+    security: "Security",
+    changePassword: "Change password",
+    currentPassword: "Current password",
+    newPassword: "New password",
+    confirmPassword: "Confirm new password",
+    passwordMismatch: "Passwords do not match.",
+    passwordChanged: "Password changed successfully.",
+    passwordChangeFailed: "Failed to change password.",
   },
   settings: {
     title: "Settings",
@@ -325,6 +333,9 @@ const en = {
     deleteConfirm: "Delete user \"{{name}}\"? All their data will be removed.",
     deleteUser: "Delete user",
     failedToCreate: "Failed to create user.",
+    resetPassword: "Reset password",
+    resetSuccess: "Password reset successfully.",
+    resetFailed: "Failed to reset password.",
   },
 } as const;
 

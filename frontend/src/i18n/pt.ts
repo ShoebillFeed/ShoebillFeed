@@ -286,6 +286,14 @@ const pt = {
     markShownDelayDesc: "Quantos segundos um cartão deve estar visível no feed antes de ser contado como visto. Predefinição: 5",
     settingsSaved: "Definições guardadas.",
     settingsFailed: "Falha ao guardar as definições.",
+    security: "Segurança",
+    changePassword: "Alterar palavra-passe",
+    currentPassword: "Palavra-passe atual",
+    newPassword: "Nova palavra-passe",
+    confirmPassword: "Confirmar nova palavra-passe",
+    passwordMismatch: "As palavras-passe não coincidem.",
+    passwordChanged: "Palavra-passe alterada com sucesso.",
+    passwordChangeFailed: "Não foi possível alterar a palavra-passe.",
   },
   settings: {
     title: "Definições",
@@ -325,6 +333,9 @@ const pt = {
     deleteConfirm: "Eliminar o utilizador «{{name}}»? Todos os dados serão removidos.",
     deleteUser: "Eliminar utilizador",
     failedToCreate: "Não foi possível criar o utilizador.",
+    resetPassword: "Repor palavra-passe",
+    resetSuccess: "Palavra-passe reposta com sucesso.",
+    resetFailed: "Não foi possível repor a palavra-passe.",
   },
 } as const;
 

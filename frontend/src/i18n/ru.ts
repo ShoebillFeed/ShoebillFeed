@@ -286,6 +286,14 @@ const ru = {
     markShownDelayDesc: "Сколько секунд карточка должна быть видна в ленте, прежде чем будет засчитана как просмотренная. По умолчанию: 5",
     settingsSaved: "Настройки сохранены.",
     settingsFailed: "Не удалось сохранить настройки.",
+    security: "Безопасность",
+    changePassword: "Изменить пароль",
+    currentPassword: "Текущий пароль",
+    newPassword: "Новый пароль",
+    confirmPassword: "Подтвердите новый пароль",
+    passwordMismatch: "Пароли не совпадают.",
+    passwordChanged: "Пароль успешно изменён.",
+    passwordChangeFailed: "Не удалось изменить пароль.",
   },
   settings: {
     title: "Настройки",
@@ -325,6 +333,9 @@ const ru = {
     deleteConfirm: "Удалить пользователя «{{name}}»? Все его данные будут удалены.",
     deleteUser: "Удалить пользователя",
     failedToCreate: "Не удалось создать пользователя.",
+    resetPassword: "Сбросить пароль",
+    resetSuccess: "Пароль успешно сброшен.",
+    resetFailed: "Не удалось сбросить пароль.",
   },
 } as const;
 

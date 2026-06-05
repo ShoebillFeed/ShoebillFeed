@@ -286,6 +286,14 @@ const nl = {
     markShownDelayDesc: "Hoeveel seconden een kaart zichtbaar moet zijn in de feed voordat deze als gezien wordt geteld. Standaard: 5",
     settingsSaved: "Instellingen opgeslagen.",
     settingsFailed: "Instellingen konden niet worden opgeslagen.",
+    security: "Beveiliging",
+    changePassword: "Wachtwoord wijzigen",
+    currentPassword: "Huidig wachtwoord",
+    newPassword: "Nieuw wachtwoord",
+    confirmPassword: "Nieuw wachtwoord bevestigen",
+    passwordMismatch: "Wachtwoorden komen niet overeen.",
+    passwordChanged: "Wachtwoord succesvol gewijzigd.",
+    passwordChangeFailed: "Wachtwoord kon niet worden gewijzigd.",
   },
   settings: {
     title: "Instellingen",
@@ -325,6 +333,9 @@ const nl = {
     deleteConfirm: "Gebruiker «{{name}}» verwijderen? Alle gegevens worden verwijderd.",
     deleteUser: "Gebruiker verwijderen",
     failedToCreate: "Gebruiker kon niet worden aangemaakt.",
+    resetPassword: "Wachtwoord resetten",
+    resetSuccess: "Wachtwoord succesvol gereset.",
+    resetFailed: "Wachtwoord kon niet worden gereset.",
   },
 } as const;
 

@@ -286,6 +286,14 @@ const fr = {
     markShownDelayDesc: "Nombre de secondes qu'une carte doit être visible dans le fil avant d'être comptée comme vue. Défaut : 5",
     settingsSaved: "Paramètres enregistrés.",
     settingsFailed: "Échec de l'enregistrement des paramètres.",
+    security: "Sécurité",
+    changePassword: "Changer le mot de passe",
+    currentPassword: "Mot de passe actuel",
+    newPassword: "Nouveau mot de passe",
+    confirmPassword: "Confirmer le nouveau mot de passe",
+    passwordMismatch: "Les mots de passe ne correspondent pas.",
+    passwordChanged: "Mot de passe modifié avec succès.",
+    passwordChangeFailed: "Impossible de modifier le mot de passe.",
   },
   settings: {
     title: "Paramètres",
@@ -325,6 +333,9 @@ const fr = {
     deleteConfirm: "Supprimer l'utilisateur « {{name}} » ? Toutes ses données seront supprimées.",
     deleteUser: "Supprimer l'utilisateur",
     failedToCreate: "Impossible de créer l'utilisateur.",
+    resetPassword: "Réinitialiser le mot de passe",
+    resetSuccess: "Mot de passe réinitialisé avec succès.",
+    resetFailed: "Impossible de réinitialiser le mot de passe.",
   },
 } as const;
 

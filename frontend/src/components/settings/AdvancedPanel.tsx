@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
+import { useChangePassword } from "../../hooks/useAuth";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 
 const CONTENT_LANGUAGES = [
@@ -122,6 +123,58 @@ function NumericField({
     </Field>
   );
 }
+
+function ChangePasswordSection() {
+  const { t } = useTranslation();
+  const changePassword = useChangePassword();
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (next !== confirm) { setError(t("advanced.passwordMismatch")); return; }
+    try {
+      await changePassword.mutateAsync({ current_password: current, new_password: next });
+      setCurrent(""); setNext(""); setConfirm("");
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? t("advanced.passwordChangeFailed"));
+    }
+  };
+
+  return (
+    <Section title={t("advanced.security")}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 max-w-sm">
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">{t("advanced.currentPassword")}</label>
+          <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required className={pwInputClass} placeholder="••••••" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">{t("advanced.newPassword")}</label>
+          <input type="password" value={next} onChange={(e) => setNext(e.target.value)} required minLength={6} className={pwInputClass} placeholder={t("users.passwordPlaceholder")} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">{t("advanced.confirmPassword")}</label>
+          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} className={pwInputClass} placeholder={t("users.passwordPlaceholder")} />
+        </div>
+        {error && <p className="text-xs text-red-500">{error}</p>}
+        {changePassword.isSuccess && <p className="text-xs text-green-600 dark:text-green-400">{t("advanced.passwordChanged")}</p>}
+        <button
+          type="submit"
+          disabled={changePassword.isPending}
+          className="self-start px-4 py-2 text-sm font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+        >
+          {changePassword.isPending ? "…" : t("advanced.changePassword")}
+        </button>
+      </form>
+    </Section>
+  );
+}
+
+const pwInputClass =
+  "w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500";
 
 export default function AdvancedPanel() {
   const { t } = useTranslation();
@@ -302,6 +355,8 @@ export default function AdvancedPanel() {
       {update.isError && (
         <p className="text-xs text-red-500 mt-2">{t("advanced.settingsFailed")}</p>
       )}
+
+      <ChangePasswordSection />
     </div>
   );
 }

@@ -286,6 +286,14 @@ const it = {
     markShownDelayDesc: "Quanti secondi una scheda deve essere visibile nel feed prima di essere contata come vista. Predefinito: 5",
     settingsSaved: "Impostazioni salvate.",
     settingsFailed: "Impossibile salvare le impostazioni.",
+    security: "Sicurezza",
+    changePassword: "Cambia password",
+    currentPassword: "Password attuale",
+    newPassword: "Nuova password",
+    confirmPassword: "Conferma nuova password",
+    passwordMismatch: "Le password non corrispondono.",
+    passwordChanged: "Password cambiata con successo.",
+    passwordChangeFailed: "Impossibile cambiare la password.",
   },
   settings: {
     title: "Impostazioni",
@@ -325,6 +333,9 @@ const it = {
     deleteConfirm: "Eliminare l'utente «{{name}}»? Tutti i dati verranno rimossi.",
     deleteUser: "Elimina utente",
     failedToCreate: "Impossibile creare l'utente.",
+    resetPassword: "Reimposta password",
+    resetSuccess: "Password reimpostata con successo.",
+    resetFailed: "Impossibile reimpostare la password.",
   },
 } as const;
 

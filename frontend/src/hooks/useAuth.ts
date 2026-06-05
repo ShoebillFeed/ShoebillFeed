@@ -22,6 +22,20 @@ export function useDeleteUser() {
   });
 }
 
+export function useResetUserPassword() {
+  return useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      authApi.resetUserPassword(id, password),
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: ({ current_password, new_password }: { current_password: string; new_password: string }) =>
+      authApi.changePassword(current_password, new_password),
+  });
+}
+
 export function useMe() {
   return useQuery({
     queryKey: ["auth", "me"],
