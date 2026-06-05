@@ -4,43 +4,38 @@ import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useS
 import { useChangePassword } from "../../hooks/useAuth";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 
-const CONTENT_LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "de", label: "German" },
-  { code: "fr", label: "French" },
-  { code: "es", label: "Spanish" },
-  { code: "it", label: "Italian" },
-  { code: "pt", label: "Portuguese" },
-  { code: "nl", label: "Dutch" },
-  { code: "pl", label: "Polish" },
-  { code: "ru", label: "Russian" },
-  { code: "zh", label: "Chinese" },
-  { code: "ja", label: "Japanese" },
-  { code: "ar", label: "Arabic" },
-  { code: "ko", label: "Korean" },
-  { code: "tr", label: "Turkish" },
-  { code: "sv", label: "Swedish" },
-  { code: "da", label: "Danish" },
-  { code: "fi", label: "Finnish" },
-  { code: "nb", label: "Norwegian" },
-  { code: "cs", label: "Czech" },
-  { code: "hu", label: "Hungarian" },
-  { code: "ro", label: "Romanian" },
+// Shared language set — UI translations and content output stay in sync.
+// Arabic is content-only (RTL layout not yet supported in the UI).
+const SHARED_LANGUAGES = [
+  { code: "en", label: "English",    native: "English" },
+  { code: "de", label: "German",     native: "Deutsch" },
+  { code: "fr", label: "French",     native: "Français" },
+  { code: "es", label: "Spanish",    native: "Español" },
+  { code: "it", label: "Italian",    native: "Italiano" },
+  { code: "nl", label: "Dutch",      native: "Nederlands" },
+  { code: "pl", label: "Polish",     native: "Polski" },
+  { code: "pt", label: "Portuguese", native: "Português" },
+  { code: "ro", label: "Romanian",   native: "Română" },
+  { code: "ru", label: "Russian",    native: "Русский" },
+  { code: "uk", label: "Ukrainian",  native: "Українська" },
+  { code: "zh", label: "Chinese",    native: "中文" },
+  { code: "ja", label: "Japanese",   native: "日本語" },
+  { code: "ko", label: "Korean",     native: "한국어" },
+  { code: "tr", label: "Turkish",    native: "Türkçe" },
+  { code: "sv", label: "Swedish",    native: "Svenska" },
+  { code: "da", label: "Danish",     native: "Dansk" },
+  { code: "nb", label: "Norwegian",  native: "Norsk" },
+  { code: "fi", label: "Finnish",    native: "Suomi" },
+  { code: "cs", label: "Czech",      native: "Čeština" },
+  { code: "hu", label: "Hungarian",  native: "Magyar" },
 ];
 
-const UI_LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "de", label: "Deutsch" },
-  { code: "fr", label: "Français" },
-  { code: "es", label: "Español" },
-  { code: "it", label: "Italiano" },
-  { code: "nl", label: "Nederlands" },
-  { code: "pl", label: "Polski" },
-  { code: "pt", label: "Português" },
-  { code: "ro", label: "Română" },
-  { code: "ru", label: "Русский" },
-  { code: "uk", label: "Українська" },
+const CONTENT_LANGUAGES = [
+  ...SHARED_LANGUAGES,
+  { code: "ar", label: "Arabic", native: "العربية" }, // content-only, RTL UI not yet supported
 ];
+
+const UI_LANGUAGES = SHARED_LANGUAGES;
 
 const inputClass =
   "w-24 px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500";
@@ -202,7 +197,7 @@ export default function AdvancedPanel() {
             <option value="">{t("advanced.browserDefault")}</option>
             {UI_LANGUAGES.map((l) => (
               <option key={l.code} value={l.code}>
-                {l.label}
+                {l.native}
               </option>
             ))}
           </select>

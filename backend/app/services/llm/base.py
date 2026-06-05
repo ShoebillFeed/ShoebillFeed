@@ -128,6 +128,7 @@ LANGUAGE_NAMES: dict[str, str] = {
     "cs": "Czech",
     "hu": "Hungarian",
     "ro": "Romanian",
+    "uk": "Ukrainian",
 }
 
 

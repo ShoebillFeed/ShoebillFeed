@@ -12,6 +12,16 @@ import pt from "./pt";
 import ro from "./ro";
 import ru from "./ru";
 import uk from "./uk";
+import zh from "./zh";
+import ja from "./ja";
+import ko from "./ko";
+import tr from "./tr";
+import sv from "./sv";
+import da from "./da";
+import nb from "./nb";
+import fi from "./fi";
+import cs from "./cs";
+import hu from "./hu";
 
 function getStoredLocale(): string | undefined {
   try {
@@ -42,6 +52,16 @@ i18n
       ro: { translation: ro },
       ru: { translation: ru },
       uk: { translation: uk },
+      zh: { translation: zh },
+      ja: { translation: ja },
+      ko: { translation: ko },
+      tr: { translation: tr },
+      sv: { translation: sv },
+      da: { translation: da },
+      nb: { translation: nb },
+      fi: { translation: fi },
+      cs: { translation: cs },
+      hu: { translation: hu },
     },
     lng: getStoredLocale(),
     fallbackLng: "en",
