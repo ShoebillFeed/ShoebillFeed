@@ -21,6 +21,6 @@ class UserSettings(Base):
     output_language: Mapped[str | None] = mapped_column(String(10), nullable=True, default=None)
     time_decay_param: Mapped[float] = mapped_column(Float, nullable=False, default=2.0)
     show_decay_param: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    mark_shown_delay_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    mark_shown_delay_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
     learning_window_days: Mapped[int] = mapped_column(Integer, nullable=False, default=90)
     ignore_penalty_weight: Mapped[float] = mapped_column(Float, nullable=False, default=0.1)
