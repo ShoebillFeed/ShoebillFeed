@@ -10,10 +10,10 @@ from app.services.llm.base import (
 
 
 class OllamaProvider(LLMProvider):
-    def __init__(self, base_url: str, model: str = "qwen2.5:0.5b"):
+    def __init__(self, base_url: str, model: str = "qwen2.5:0.5b", timeout: int = 120):
         self.base_url = base_url.rstrip("/")
         self.model = model
-        self.client = httpx.Client(timeout=120.0)
+        self.client = httpx.Client(timeout=float(timeout))
 
     def _complete(self, system: str, user: str, max_tokens: int = 512) -> str:
         payload = {

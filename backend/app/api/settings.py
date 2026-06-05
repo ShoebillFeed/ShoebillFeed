@@ -47,7 +47,7 @@ def health_check(db: Session = Depends(get_db)):
 def get_llm_config():
     settings = get_settings()
     return LLMConfigOut(
-        llm_provider=settings.llm_provider,
+        llm_provider=settings.llm_providers,
         anthropic_model=settings.anthropic_model,
         ollama_base_url=settings.ollama_base_url,
         ollama_model=settings.ollama_model,
@@ -61,7 +61,7 @@ def update_llm_config(payload: LLMConfigUpdate):
     # actual changes require updating .env and restarting the service.
     settings = get_settings()
     return LLMConfigOut(
-        llm_provider=payload.llm_provider or settings.llm_provider,
+        llm_provider=payload.llm_provider or settings.llm_providers,
         anthropic_model=payload.anthropic_model or settings.anthropic_model,
         ollama_base_url=payload.ollama_base_url or settings.ollama_base_url,
         ollama_model=payload.ollama_model or settings.ollama_model,

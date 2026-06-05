@@ -13,7 +13,7 @@ from app.models.llm_batch import LLMBatch
 from app.models.user_settings import UserSettings
 from app.services.clustering import recluster_processed_item
 from app.services.deduplication import url_hash
-from app.services.llm.factory import get_llm_provider
+from app.services.llm.factory import get_llm_provider, get_anthropic_provider
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -327,7 +327,8 @@ def batch_process_unprocessed(limit: int = 50) -> int:
             select(NewsCluster.id).where(NewsCluster.llm_processed == False).limit(limit)  # noqa: E712
         ).all())
 
-        if settings.llm_provider != "anthropic":
+        anthropic = get_anthropic_provider()
+        if anthropic is None:
             for i, item_id in enumerate(item_ids):
                 process_news_item.apply_async(args=[str(item_id)], queue="process", countdown=i * 2)
             for i, cid in enumerate(cluster_ids):
@@ -346,8 +347,7 @@ def batch_process_unprocessed(limit: int = 50) -> int:
         batch_item_ids = [iid for iid in item_ids if iid not in email_ids]
 
         from app.services.llm.batch_service import submit_batch
-        provider = get_llm_provider()
-        submit_batch(db, provider, batch_item_ids, cluster_ids)
+        submit_batch(db, anthropic, batch_item_ids, cluster_ids)
         return len(item_ids) + len(cluster_ids)
     finally:
         db.close()
@@ -355,12 +355,12 @@ def batch_process_unprocessed(limit: int = 50) -> int:
 
 @celery_app.task(name="app.tasks.process_tasks.poll_llm_batches", queue="process")
 def poll_llm_batches() -> None:
-    settings = get_settings()
-    if settings.llm_provider != "anthropic":
+    anthropic = get_anthropic_provider()
+    if anthropic is None:
         return
 
+    settings = get_settings()
     db = SessionLocal()
-    provider = get_llm_provider()
     max_wait = timedelta(minutes=settings.llm_batch_max_wait_minutes)
     now = datetime.now(timezone.utc)
 
@@ -373,10 +373,10 @@ def poll_llm_batches() -> None:
 
         for llm_batch in pending:
             try:
-                batch_info = provider.client.messages.batches.retrieve(llm_batch.anthropic_batch_id)
+                batch_info = anthropic.client.messages.batches.retrieve(llm_batch.anthropic_batch_id)
 
                 if batch_info.processing_status == "ended":
-                    results = list(provider.client.messages.batches.results(llm_batch.anthropic_batch_id))
+                    results = list(anthropic.client.messages.batches.results(llm_batch.anthropic_batch_id))
                     applied = apply_batch_results(db, llm_batch, results)
 
                     if llm_batch.status == "cancelling":
@@ -398,7 +398,7 @@ def poll_llm_batches() -> None:
                     if submitted.tzinfo is None:
                         submitted = submitted.replace(tzinfo=timezone.utc)
                     if now - submitted > max_wait:
-                        provider.client.messages.batches.cancel(llm_batch.anthropic_batch_id)
+                        anthropic.client.messages.batches.cancel(llm_batch.anthropic_batch_id)
                         llm_batch.status = "cancelling"
                         db.commit()
                         logger.warning("Batch %s timed out after %d min, cancelling", llm_batch.anthropic_batch_id, settings.llm_batch_max_wait_minutes)

@@ -8,11 +8,16 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://phoenix:changeme@localhost:5432/phoenix"
     redis_url: str = "redis://localhost:6379/0"
 
-    llm_provider: str = "anthropic"
+    # Ordered, comma-separated provider list. First = primary, rest = fallbacks.
+    # Valid names: anthropic, ollama
+    # Example: LLM_PROVIDERS=anthropic,ollama
+    llm_providers: str = "anthropic"
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-haiku-4-5"
+    # Set to a remote host to use Ollama on another machine, e.g. http://192.168.1.10:11434
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:14b"
+    ollama_timeout: int = 120  # seconds; increase for remote/slow hosts
 
     reddit_client_id: str = ""
     reddit_client_secret: str = ""
@@ -28,6 +33,16 @@ class Settings(BaseSettings):
     jwt_expire_hours: int = 168  # 7 days
     admin_username: str = ""
     admin_password: str = ""
+
+
+    @property
+    def llm_provider(self) -> str:
+        """Primary provider name (first entry in llm_providers)."""
+        return self.llm_providers.split(",")[0].strip()
+
+    @property
+    def llm_provider_list(self) -> list[str]:
+        return [p.strip() for p in self.llm_providers.split(",") if p.strip()]
 
 
 @lru_cache(maxsize=1)
