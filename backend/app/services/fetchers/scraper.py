@@ -1,5 +1,5 @@
 import logging
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -68,6 +68,8 @@ class WebScraperFetcher(NewsFetcher):
                     continue
 
                 full_url = urljoin(base_url, href)
+                if urlparse(full_url).scheme not in ("http", "https"):
+                    continue
 
                 content = ""
                 if content_selector:

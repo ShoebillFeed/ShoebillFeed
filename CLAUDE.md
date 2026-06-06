@@ -77,7 +77,7 @@ There is no test suite currently.
 
 ### Key Design Decisions
 
-- **Pluggable LLM**: Set `LLM_PROVIDER=anthropic` (default: `claude-haiku-4-5`) or `LLM_PROVIDER=ollama` (default: `qwen2.5:14b`) in `.env`. Changing LLM config requires container restart.
+- **Pluggable LLM**: Set `LLM_PROVIDERS=anthropic` or `LLM_PROVIDERS=ollama` in `.env`; comma-separate for ordered fallback, e.g. `LLM_PROVIDERS=ollama,anthropic`. The legacy singular `LLM_PROVIDER` is also accepted. Changing LLM config requires container restart.
 - **Dynamic scoring**: `CategoryWeight.weight` grows logarithmically as users mark items as "relevant", influencing the Relevant tab ranking.
 - **URL canonicalization**: Tracking parameters are stripped before hashing to prevent duplicate entries for the same article.
 - **LLM config is read-only via API**: The settings UI displays current LLM config but all changes require `.env` edits + restart.
@@ -88,7 +88,7 @@ Copy `.env.example` to `.env`. Key variables:
 
 ```
 POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB
-LLM_PROVIDER              # anthropic | ollama
+LLM_PROVIDERS             # anthropic | ollama | ollama,anthropic (ordered, first = primary)
 ANTHROPIC_API_KEY
 ANTHROPIC_MODEL           # default: claude-haiku-4-5
 OLLAMA_BASE_URL
