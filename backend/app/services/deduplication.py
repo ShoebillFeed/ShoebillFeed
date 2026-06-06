@@ -4,8 +4,20 @@ from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 
 
 _TRACKING_PARAMS = frozenset({
+    # UTM campaign tracking
     "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "fbclid", "gclid", "mc_eid", "ref", "source",
+    "utm_id", "utm_reader", "utm_name",
+    # Click / attribution IDs
+    "fbclid", "gclid", "gbraid", "wbraid", "msclkid", "twclid",
+    "mc_eid", "mc_cid", "clickid", "click_id",
+    # Referrer hints — never article identifiers
+    "ref", "referer", "referrer", "source",
+    # Session identifiers
+    "phpsessid", "jsessionid", "sessid", "session_id", "sessionid",
+    "aspsessionid", "cfid", "cftoken",
+    # Cache-busting signals
+    "_", "cb", "bust", "nocache", "no_cache", "cache_bust",
+    "rnd", "rand",
 })
 
 

@@ -1,5 +1,6 @@
 import logging
-from urllib.parse import urljoin, urlparse
+import re
+from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -7,6 +8,32 @@ from bs4 import BeautifulSoup
 from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher
 
 logger = logging.getLogger(__name__)
+
+# Values that are overwhelmingly session tokens rather than article identifiers:
+# 16+ hex chars (MD5 halves, random hex) or standard UUIDs.
+_SESSION_VALUE_RE = re.compile(
+    r"^[a-f0-9]{16,}$"
+    r"|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+
+def _scrub_url(url: str) -> str:
+    """Strip query params whose values look like random session tokens.
+
+    Complements the known-name stripping in canonical_url() for sites that use
+    non-standard session param names (e.g. ?token=a3f9..., ?k=uuid-here).
+    Only applied in the scraper context where arbitrary site URLs are encountered.
+    """
+    parsed = urlparse(url)
+    if not parsed.query:
+        return url
+    qs = parse_qs(parsed.query, keep_blank_values=True)
+    clean = {
+        k: v for k, v in qs.items()
+        if not (len(v) == 1 and _SESSION_VALUE_RE.match(v[0]))
+    }
+    return urlunparse(parsed._replace(query=urlencode(sorted(clean.items()), doseq=True)))
 
 
 @register_fetcher("scraper")
@@ -70,6 +97,7 @@ class WebScraperFetcher(NewsFetcher):
                 full_url = urljoin(base_url, href)
                 if urlparse(full_url).scheme not in ("http", "https"):
                     continue
+                full_url = _scrub_url(full_url)
 
                 content = ""
                 if content_selector:
