@@ -8,6 +8,7 @@ from app.models import NewsItem, NewsCluster, Source, Category
 from app.models.llm_batch import LLMBatch
 from app.models.user_settings import UserSettings
 from app.services.llm.base import (
+    dedup_cluster_payload,
     parse_cluster_response,
     parse_multi_item_response,
 )
@@ -110,7 +111,7 @@ def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "L
             continue
         _load_user(cluster.user_id)
         uid = str(cluster.user_id)
-        items_payload = [
+        all_items_payload = [
             {
                 "title": i.title,
                 "content": i.raw_content or "",
@@ -118,10 +119,11 @@ def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "L
             }
             for i in items
         ]
+        dedup_items, orig_to_dedup = dedup_cluster_payload(all_items_payload)
         custom_id = f"cluster_{cluster.id}"
         batch_requests.append(provider.build_cluster_request(
             custom_id=custom_id,
-            items=items_payload,
+            items=dedup_items,
             categories=user_cats[uid],
             output_language=user_langs[uid],
         ))
@@ -130,6 +132,8 @@ def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "L
             "item_id": str(cluster.id),
             "item_type": "cluster",
             "item_count": len(items),
+            "dedup_item_count": len(dedup_items),
+            "orig_to_dedup": orig_to_dedup,
         })
 
     if not batch_requests:
@@ -236,7 +240,8 @@ def _apply_cluster_result(db: Session, meta: dict, text: str) -> None:
         select(Category).where(Category.user_id == cluster.user_id, Category.is_active == True)  # noqa: E712
     ).all()]
 
-    result = parse_cluster_response(text, meta.get("item_count", 0), known)
+    dedup_count = meta.get("dedup_item_count", meta.get("item_count", 0))
+    result = parse_cluster_response(text, dedup_count, known)
     cluster.title = result.title
     cluster.unified_abstract = result.unified_abstract
     cluster.extracted_keywords = result.keywords or None
@@ -254,6 +259,8 @@ def _apply_cluster_result(db: Session, meta: dict, text: str) -> None:
         cluster.categories = list(cats)
 
     items = db.scalars(select(NewsItem).where(NewsItem.cluster_id == cluster.id)).all()
+    orig_to_dedup: list[int | None] = meta.get("orig_to_dedup") or list(range(len(items)))
     for i, item in enumerate(items):
-        item.source_summary = result.source_summaries.get(f"item_{i}", "")
+        dedup_idx = orig_to_dedup[i] if i < len(orig_to_dedup) else i
+        item.source_summary = result.source_summaries.get(f"item_{dedup_idx}", "") if dedup_idx is not None else ""
         item.llm_processed = True

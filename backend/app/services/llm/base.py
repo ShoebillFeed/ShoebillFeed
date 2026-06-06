@@ -1,4 +1,5 @@
 import json
+import re
 from abc import ABC, abstractmethod
 from json_repair import repair_json
 from dataclasses import dataclass, field
@@ -98,7 +99,7 @@ CLUSTER_SYSTEM_PROMPT = """You are a news analyst. Multiple sources have covered
 - "categories": array of category names from the provided list that fit this event (can be empty [], can have multiple matches)
 - "relevance_score": integer 1-10
 - "impact_score": integer 1-10, how broadly impactful this event is
-- "source_summaries": object where each key is "item_0", "item_1", etc. and each value is a 1-2 sentence description of how that source's angle or emphasis differs from the others
+- "source_summaries": object where each key is "item_0", "item_1", etc. Set a key to null if that item's content is identical or near-identical to another item. Otherwise write a telegraphic phrase (max 12 words) stating only what is unique to that source — no preamble words like "This source", "Unlike others", "This article", "Focuses on", "Reports that".
 
 Available categories: {categories_json}
 Each category has a name and keywords. If a description field is present, use it to judge whether the article fits that category. Include all categories that genuinely apply.
@@ -252,6 +253,35 @@ def parse_short_llm_response(text: str, known_categories: list[str]) -> Processe
     )
 
 
+# Matches LLM outputs like "same as item_0", "identical to item 1", "see item_2", etc.
+_SAME_AS_RE = re.compile(
+    r"\b(same\s+as|identical\s+to|no\s+different|see\s+item|identical\s+content)\b",
+    re.IGNORECASE,
+)
+# Common filler preambles the LLM tends to produce even when told not to
+_PREAMBLE_RE = re.compile(
+    r"^(this\s+source\b|unlike\s+(other\s+sources?|others?)\b|this\s+article\b|focuses?\s+on\b|reports?\s+that\b)",
+    re.IGNORECASE,
+)
+
+
+def _clean_source_summary(val) -> str:
+    if not val or not isinstance(val, str):
+        return ""
+    text = val.strip()
+    if _SAME_AS_RE.search(text):
+        return ""
+    # Strip leading preambles iteratively — handles chains like "Unlike other sources, this article focuses on …"
+    for _ in range(4):
+        stripped = _PREAMBLE_RE.sub("", text).strip(" ,;:—-")
+        if stripped == text:
+            break
+        text = stripped
+    if text:
+        text = text[0].upper() + text[1:]
+    return text
+
+
 def parse_cluster_response(text: str, item_count: int, known_categories: list[str]) -> ClusterResult:
     text = text.strip()
     if text.startswith("```"):
@@ -270,7 +300,7 @@ def parse_cluster_response(text: str, item_count: int, known_categories: list[st
 
     raw = data.get("source_summaries", {})
     source_summaries = {
-        f"item_{i}": str(raw.get(f"item_{i}", "")).strip()
+        f"item_{i}": _clean_source_summary(raw.get(f"item_{i}"))
         for i in range(item_count)
     }
 
@@ -400,6 +430,34 @@ def parse_newsletter_response(text: str, known_categories: list[str]) -> Newslet
             impact_score=_clamp(entry.get("impact_score"), 5),
         ))
     return NewsletterResult(items=items)
+
+
+def dedup_cluster_payload(
+    items: list[dict],
+    max_content_chars: int = 800,
+) -> tuple[list[dict], list[int | None]]:
+    """Deduplicate cluster items by content before sending to the LLM.
+
+    Returns:
+        dedup_items  — unique items to send (subset of `items`)
+        orig_to_dedup — for each original item index, its index in dedup_items,
+                        or None if it is a duplicate (identical content to an earlier item)
+    """
+    seen: dict[str, int] = {}
+    dedup_items: list[dict] = []
+    orig_to_dedup: list[int | None] = []
+
+    for item in items:
+        key = (item.get("content") or item.get("title", ""))[:max_content_chars]
+        if key in seen:
+            orig_to_dedup.append(None)
+        else:
+            idx = len(dedup_items)
+            seen[key] = idx
+            orig_to_dedup.append(idx)
+            dedup_items.append(item)
+
+    return dedup_items, orig_to_dedup
 
 
 CATEGORY_TOPICS_PROMPT = """What topics, themes, subtopics, and related keywords typically appear in news coverage under the category "{name}"?{keywords_hint}

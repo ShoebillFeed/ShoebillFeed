@@ -13,6 +13,7 @@ from app.models.llm_batch import LLMBatch
 from app.models.user_settings import UserSettings
 from app.services.clustering import recluster_processed_item
 from app.services.deduplication import url_hash
+from app.services.llm.base import dedup_cluster_payload
 from app.services.llm.factory import get_llm_provider, get_anthropic_provider
 from app.tasks.celery_app import celery_app
 
@@ -265,7 +266,7 @@ def process_cluster(self, cluster_id: str) -> None:
         output_language = _get_output_language(db, cluster.user_id)
         provider = get_llm_provider()
 
-        items_payload = [
+        all_items_payload = [
             {
                 "title": item.title,
                 "content": item.raw_content or "",
@@ -274,7 +275,10 @@ def process_cluster(self, cluster_id: str) -> None:
             for item in items
         ]
 
-        result = provider.process_cluster(items=items_payload, categories=categories_payload, output_language=output_language)
+        # Deduplicate identical content before sending to LLM to save tokens
+        dedup_items, orig_to_dedup = dedup_cluster_payload(all_items_payload)
+
+        result = provider.process_cluster(items=dedup_items, categories=categories_payload, output_language=output_language)
 
         cluster.title = result.title
         cluster.unified_abstract = result.unified_abstract
@@ -293,7 +297,8 @@ def process_cluster(self, cluster_id: str) -> None:
             cluster.categories = list(cats)
 
         for i, item in enumerate(items):
-            item.source_summary = result.source_summaries.get(f"item_{i}", "")
+            dedup_idx = orig_to_dedup[i]
+            item.source_summary = result.source_summaries.get(f"item_{dedup_idx}", "") if dedup_idx is not None else ""
             item.llm_processed = True
 
         db.commit()
