@@ -47,6 +47,9 @@ def cluster_new_items(db: Session, new_item_ids: list[uuid.UUID]) -> dict[uuid.U
     Creates or extends NewsCluster rows and assigns cluster_id on NewsItem objects.
     Does NOT commit — caller must commit.
     Returns {item_id: cluster_id | None} for new items only.
+
+    When new_item_ids spans multiple users (companion-source fan-out), items are
+    grouped by user_id first so clustering never crosses user boundaries.
     """
     if not new_item_ids:
         return {}
@@ -54,14 +57,35 @@ def cluster_new_items(db: Session, new_item_ids: list[uuid.UUID]) -> dict[uuid.U
     new_item_id_set = set(new_item_ids)
     new_items = db.scalars(select(NewsItem).where(NewsItem.id.in_(new_item_ids))).all()
 
-    # Load recent items from other sources to enable cross-source clustering
+    # Group by user so clustering stays within each user's data
+    by_user: dict[uuid.UUID | None, list[NewsItem]] = {}
+    for item in new_items:
+        by_user.setdefault(item.user_id, []).append(item)
+
+    result: dict[uuid.UUID, uuid.UUID | None] = {}
+    for user_id, user_items in by_user.items():
+        result.update(_cluster_for_user(db, user_id, user_items, new_item_id_set))
+    return result
+
+
+def _cluster_for_user(
+    db: Session,
+    user_id: uuid.UUID | None,
+    new_items: list["NewsItem"],
+    new_item_id_set: set[uuid.UUID],
+) -> dict[uuid.UUID, uuid.UUID | None]:
+    """Run the title-Jaccard clustering algorithm for a single user's new items."""
+    new_ids = [i.id for i in new_items]
+
+    # Load recent items from other sources for THIS user only
     cutoff = datetime.now(timezone.utc) - timedelta(hours=LOOKBACK_HOURS)
-    recent_items = db.scalars(
-        select(NewsItem).where(
-            NewsItem.id.notin_(new_item_ids),
-            NewsItem.fetched_at >= cutoff,
-        )
-    ).all()
+    q = select(NewsItem).where(
+        NewsItem.id.notin_(new_ids),
+        NewsItem.fetched_at >= cutoff,
+    )
+    if user_id is not None:
+        q = q.where(NewsItem.user_id == user_id)
+    recent_items = db.scalars(q).all()
 
     all_items = new_items + recent_items
     words = {item.id: _title_words(item.title) for item in all_items}
@@ -122,7 +146,6 @@ def cluster_new_items(db: Session, new_item_ids: list[uuid.UUID]) -> dict[uuid.U
             # All standalone — create a new cluster
             all_dates = [i.published_at for i in group_items if i.published_at]
             earliest = min(all_dates) if all_dates else None
-            user_id = group_items[0].user_id
             cluster = NewsCluster(published_at=earliest, user_id=user_id)
             db.add(cluster)
             db.flush()
