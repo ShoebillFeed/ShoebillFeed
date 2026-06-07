@@ -31,3 +31,5 @@ class UserSettings(Base):
     push_all_sources: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     push_source_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     push_cluster_per_source: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    push_all_tabs: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    push_tab_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")

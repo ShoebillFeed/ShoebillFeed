@@ -20,6 +20,8 @@ export interface UserSettings {
   push_all_sources: boolean;
   push_source_ids: string[];
   push_cluster_per_source: boolean;
+  push_all_tabs: boolean;
+  push_tab_ids: string[];
 }
 
 export interface UserSettingsUpdate {
@@ -42,6 +44,8 @@ export interface UserSettingsUpdate {
   push_all_sources?: boolean;
   push_source_ids?: string[];
   push_cluster_per_source?: boolean;
+  push_all_tabs?: boolean;
+  push_tab_ids?: string[];
 }
 
 export const settingsApi = {

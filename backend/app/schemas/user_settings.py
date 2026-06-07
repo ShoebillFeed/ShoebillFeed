@@ -21,6 +21,8 @@ class UserSettingsOut(BaseModel):
     push_all_sources: bool = True
     push_source_ids: list[str] = []
     push_cluster_per_source: bool = False
+    push_all_tabs: bool = True
+    push_tab_ids: list[str] = []
 
     model_config = {"from_attributes": True}
 
@@ -45,3 +47,5 @@ class UserSettingsUpdate(BaseModel):
     push_all_sources: bool | None = None
     push_source_ids: list[str] | None = None
     push_cluster_per_source: bool | None = None
+    push_all_tabs: bool | None = None
+    push_tab_ids: list[str] | None = None

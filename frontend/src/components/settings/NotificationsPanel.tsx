@@ -3,8 +3,7 @@ import { BellOff, Check, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
-import { useCategories } from "../../hooks/useCategories";
-import { useSources } from "../../hooks/useSources";
+import { useUserTabs } from "../../hooks/useTabs";
 import {
   useVapidPublicKey,
   subscribeToPush,
@@ -28,7 +27,7 @@ function Section({ title, description, children }: { title: string; description?
 function Field({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-4">
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{label}</p>
         {description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>}
       </div>
@@ -59,15 +58,9 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
   );
 }
 
-function ScoreSlider({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-}) {
+function ScoreSlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
-    <div className="flex items-center gap-3 w-48">
+    <div className="flex items-center gap-3 w-full max-w-xs">
       <input
         type="range"
         min={1}
@@ -77,7 +70,7 @@ function ScoreSlider({
         onChange={(e) => onChange(Number(e.target.value))}
         className="flex-1 h-2 appearance-none bg-gray-200 dark:bg-gray-700 rounded-full cursor-pointer accent-indigo-600"
       />
-      <span className="text-sm font-medium w-8 text-right text-gray-800 dark:text-gray-200">
+      <span className="text-sm font-medium w-10 text-right shrink-0 text-gray-800 dark:text-gray-200">
         {value}/10
       </span>
     </div>
@@ -89,8 +82,7 @@ export default function NotificationsPanel() {
   const { data: settings, isLoading } = useAdvancedSettings();
   const updateSettings = useUpdateAdvancedSettings();
   const { data: vapid } = useVapidPublicKey();
-  const { data: categories = [] } = useCategories();
-  const { data: sources = [] } = useSources();
+  const { data: userTabs = [] } = useUserTabs();
   const saveSub = useSavePushSubscription();
   const deleteSub = useDeletePushSubscription();
 
@@ -128,15 +120,9 @@ export default function NotificationsPanel() {
       if (enable) {
         const permission = await Notification.requestPermission();
         setPermissionState(permission);
-        if (permission !== "granted") {
-          setToggling(false);
-          return;
-        }
+        if (permission !== "granted") { setToggling(false); return; }
         const sub = await subscribeToPush(vapid!.public_key);
-        if (sub) {
-          await saveSub.mutateAsync(sub);
-          setIsSubscribed(true);
-        }
+        if (sub) { await saveSub.mutateAsync(sub); setIsSubscribed(true); }
         save({ push_enabled: true });
       } else {
         await deleteSub.mutateAsync();
@@ -150,19 +136,26 @@ export default function NotificationsPanel() {
     }
   };
 
-  const toggleCategory = (id: string) => {
-    const current = settings.push_category_ids ?? [];
+  const toggleTabId = (id: string) => {
+    const current = Array.isArray(settings.push_tab_ids) ? settings.push_tab_ids : [];
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-    save({ push_category_ids: next });
-  };
-
-  const toggleSource = (id: string) => {
-    const current = settings.push_source_ids ?? [];
-    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-    save({ push_source_ids: next });
+    save({ push_tab_ids: next });
   };
 
   const notConfigured = vapid && !vapid.configured;
+
+  // Built-in virtual tabs (exclude newest)
+  const builtinTabs = [
+    { id: "relevant", label: t("tabs.relevant") },
+    { id: "impact", label: t("tabs.impact") },
+  ];
+
+  // User's custom tabs, excluding those sorted by newest
+  const customTabs = userTabs.filter((tab) => tab.sort !== "newest");
+
+  const allSelectableTabs = [...builtinTabs, ...customTabs.map((tab) => ({ id: tab.id, label: tab.name }))];
+
+  const selectedTabIds = Array.isArray(settings.push_tab_ids) ? settings.push_tab_ids : [];
 
   return (
     <div>
@@ -212,85 +205,36 @@ export default function NotificationsPanel() {
             </Field>
           </Section>
 
-          <Section title={t("notifications.categories")} description={t("notifications.categoriesDesc")}>
-            <Field label={t("notifications.allCategories")} description="">
+          <Section title={t("notifications.feedTabs")} description={t("notifications.feedTabsDesc")}>
+            <Field label={t("notifications.allTabs")} description="">
               <Toggle
-                checked={settings.push_all_categories}
-                onChange={(v) => save({ push_all_categories: v })}
+                checked={settings.push_all_tabs}
+                onChange={(v) => save({ push_all_tabs: v })}
               />
             </Field>
 
-            {!settings.push_all_categories && (
+            {!settings.push_all_tabs && (
               <div className="flex flex-wrap gap-2 mt-1">
-                {categories.filter((c) => c.is_active).map((cat) => {
-                  const selected = settings.push_category_ids?.includes(cat.id) ?? false;
+                {allSelectableTabs.map((tab) => {
+                  const selected = selectedTabIds.includes(tab.id);
                   return (
                     <button
-                      key={cat.id}
-                      onClick={() => toggleCategory(cat.id)}
+                      key={tab.id}
+                      onClick={() => toggleTabId(tab.id)}
                       className={cn(
                         "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
                         selected
-                          ? "text-white border-transparent"
+                          ? "bg-indigo-600 text-white border-transparent"
                           : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400",
                       )}
-                      style={selected ? { backgroundColor: cat.color, borderColor: cat.color } : undefined}
                     >
                       {selected && <Check size={10} />}
-                      {cat.name}
+                      {tab.label}
                     </button>
                   );
                 })}
-                {categories.filter((c) => c.is_active).length === 0 && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t("notifications.noCategories")}</p>
-                )}
-              </div>
-            )}
-          </Section>
-
-          <Section title={t("notifications.sources")} description={t("notifications.sourcesDesc")}>
-            <Field label={t("notifications.allSources")} description="">
-              <Toggle
-                checked={settings.push_all_sources}
-                onChange={(v) => save({ push_all_sources: v })}
-              />
-            </Field>
-
-            {!settings.push_all_sources && (
-              <div className="flex flex-col gap-2 mt-1">
-                {sources.filter((s) => s.is_active).map((source) => {
-                  const selected = settings.push_source_ids?.includes(source.id) ?? false;
-                  return (
-                    <label
-                      key={source.id}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors",
-                        selected
-                          ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-950 dark:border-indigo-600"
-                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600",
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => toggleSource(source.id)}
-                        className="sr-only"
-                      />
-                      <span className={cn(
-                        "flex h-4 w-4 shrink-0 rounded border items-center justify-center",
-                        selected
-                          ? "bg-indigo-600 border-indigo-600"
-                          : "border-gray-300 dark:border-gray-600",
-                      )}>
-                        {selected && <Check size={10} className="text-white" />}
-                      </span>
-                      <span className="text-sm text-gray-800 dark:text-gray-200">{source.name}</span>
-                      <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">{source.source_type}</span>
-                    </label>
-                  );
-                })}
-                {sources.filter((s) => s.is_active).length === 0 && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t("notifications.noSources")}</p>
+                {allSelectableTabs.length === 0 && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t("notifications.noTabs")}</p>
                 )}
               </div>
             )}
