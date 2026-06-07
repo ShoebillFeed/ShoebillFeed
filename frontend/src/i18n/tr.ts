@@ -127,6 +127,11 @@ const tr = {
     disable: "Kategoriyi devre dışı bırak",
     enable: "Kategoriyi etkinleştir",
     invalidJson: "Geçersiz JSON dosyası",
+    presetsTitle: "Kategori şablonları",
+    presetsDesc: "Anahtar kelimeler ve istemlerle önceden doldurulmuş hazır kategoriler. Eklemek için + tıklayın.",
+    presetsSearch: "Şablon ara…",
+    presetsNoMatch: "Aramayla eşleşen şablon bulunamadı.",
+    presetsAlreadyAdded: "Zaten eklendi",
   },
   tabForm: {
     tabName: "Sekme adı",

@@ -127,6 +127,11 @@ const ru = {
     disable: "Отключить категорию",
     enable: "Включить категорию",
     invalidJson: "Неверный файл JSON",
+    presetsTitle: "Шаблоны категорий",
+    presetsDesc: "Готовые категории с предзаполненными ключевыми словами и подсказками. Нажмите +, чтобы добавить.",
+    presetsSearch: "Поиск шаблонов…",
+    presetsNoMatch: "Шаблоны не найдены.",
+    presetsAlreadyAdded: "Уже добавлено",
   },
   tabForm: {
     tabName: "Название вкладки",

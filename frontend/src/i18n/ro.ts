@@ -127,6 +127,11 @@ const ro = {
     disable: "Dezactivați categoria",
     enable: "Activați categoria",
     invalidJson: "Fișier JSON invalid",
+    presetsTitle: "Șabloane de categorii",
+    presetsDesc: "Categorii gata de utilizare cu cuvinte cheie și prompturi predefinite. Apăsați + pentru a adăuga.",
+    presetsSearch: "Căutați șabloane…",
+    presetsNoMatch: "Niciun șablon nu corespunde căutării.",
+    presetsAlreadyAdded: "Deja adăugat",
   },
   tabForm: {
     tabName: "Numele filei",

@@ -127,6 +127,11 @@ const nb = {
     disable: "Deaktiver kategori",
     enable: "Aktiver kategori",
     invalidJson: "Ugyldig JSON-fil",
+    presetsTitle: "Kategorimaler",
+    presetsDesc: "Ferdige kategorier med forhåndsutfylte nøkkelord og ledetekster. Klikk + for å legge til.",
+    presetsSearch: "Søk i maler…",
+    presetsNoMatch: "Ingen maler samsvarer med søket.",
+    presetsAlreadyAdded: "Allerede lagt til",
   },
   tabForm: {
     tabName: "Fanenavn",

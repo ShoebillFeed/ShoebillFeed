@@ -127,6 +127,11 @@ const en = {
     disable: "Disable category",
     enable: "Enable category",
     invalidJson: "Invalid JSON file",
+    presetsTitle: "Category templates",
+    presetsDesc: "Ready-made categories with pre-filled keywords and prompts. Click + to add to your feed.",
+    presetsSearch: "Search templates…",
+    presetsNoMatch: "No templates match your search.",
+    presetsAlreadyAdded: "Already added",
   },
   tabForm: {
     tabName: "Tab name",

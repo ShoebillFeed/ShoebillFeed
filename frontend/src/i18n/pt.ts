@@ -127,6 +127,11 @@ const pt = {
     disable: "Desativar categoria",
     enable: "Ativar categoria",
     invalidJson: "Ficheiro JSON inválido",
+    presetsTitle: "Modelos de categorias",
+    presetsDesc: "Categorias prontas com palavras-chave e prompts pré-preenchidos. Clique em + para adicionar.",
+    presetsSearch: "Pesquisar modelos…",
+    presetsNoMatch: "Nenhum modelo corresponde à pesquisa.",
+    presetsAlreadyAdded: "Já adicionado",
   },
   tabForm: {
     tabName: "Nome do separador",

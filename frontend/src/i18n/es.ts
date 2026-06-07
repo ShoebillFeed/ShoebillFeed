@@ -127,6 +127,11 @@ const es = {
     disable: "Desactivar categoría",
     enable: "Activar categoría",
     invalidJson: "Archivo JSON no válido",
+    presetsTitle: "Plantillas de categorías",
+    presetsDesc: "Categorías listas con palabras clave y prompts predefinidos. Haz clic en + para añadir.",
+    presetsSearch: "Buscar plantillas…",
+    presetsNoMatch: "Ninguna plantilla coincide con la búsqueda.",
+    presetsAlreadyAdded: "Ya añadido",
   },
   tabForm: {
     tabName: "Nombre de la pestaña",

@@ -127,6 +127,11 @@ const cs = {
     disable: "Deaktivovat kategorii",
     enable: "Aktivovat kategorii",
     invalidJson: "Neplatný soubor JSON",
+    presetsTitle: "Šablony kategorií",
+    presetsDesc: "Hotové kategorie s předvyplněnými klíčovými slovy a výzvami. Kliknutím na + je přidáte.",
+    presetsSearch: "Hledat šablony…",
+    presetsNoMatch: "Žádné šablony neodpovídají vyhledávání.",
+    presetsAlreadyAdded: "Již přidáno",
   },
   tabForm: {
     tabName: "Název záložky",

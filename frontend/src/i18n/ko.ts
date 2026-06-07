@@ -127,6 +127,11 @@ const ko = {
     disable: "카테고리 비활성화",
     enable: "카테고리 활성화",
     invalidJson: "유효하지 않은 JSON 파일",
+    presetsTitle: "카테고리 템플릿",
+    presetsDesc: "키워드와 프롬프트가 미리 입력된 카테고리입니다. +를 클릭하여 추가하세요.",
+    presetsSearch: "템플릿 검색…",
+    presetsNoMatch: "검색 결과에 맞는 템플릿이 없습니다.",
+    presetsAlreadyAdded: "이미 추가됨",
   },
   tabForm: {
     tabName: "탭 이름",

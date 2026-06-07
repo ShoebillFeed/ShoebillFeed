@@ -127,6 +127,11 @@ const it = {
     disable: "Disattiva categoria",
     enable: "Attiva categoria",
     invalidJson: "File JSON non valido",
+    presetsTitle: "Modelli di categorie",
+    presetsDesc: "Categorie pronte con parole chiave e prompt precompilati. Clicca + per aggiungere.",
+    presetsSearch: "Cerca modelli…",
+    presetsNoMatch: "Nessun modello corrisponde alla ricerca.",
+    presetsAlreadyAdded: "Già aggiunto",
   },
   tabForm: {
     tabName: "Nome scheda",

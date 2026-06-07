@@ -127,6 +127,11 @@ const hu = {
     disable: "Kategória deaktiválása",
     enable: "Kategória aktiválása",
     invalidJson: "Érvénytelen JSON-fájl",
+    presetsTitle: "Kategória-sablonok",
+    presetsDesc: "Kész kategóriák előre kitöltött kulcsszavakkal és promptokkal. Kattints a + gombra a hozzáadáshoz.",
+    presetsSearch: "Sablonok keresése…",
+    presetsNoMatch: "Nincs a keresésnek megfelelő sablon.",
+    presetsAlreadyAdded: "Már hozzáadva",
   },
   tabForm: {
     tabName: "Lap neve",

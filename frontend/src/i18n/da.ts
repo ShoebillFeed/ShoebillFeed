@@ -127,6 +127,11 @@ const da = {
     disable: "Deaktiver kategori",
     enable: "Aktivér kategori",
     invalidJson: "Ugyldig JSON-fil",
+    presetsTitle: "Kategori-skabeloner",
+    presetsDesc: "Færdige kategorier med forudfyldte nøgleord og prompter. Klik på + for at tilføje.",
+    presetsSearch: "Søg i skabeloner…",
+    presetsNoMatch: "Ingen skabeloner matcher søgningen.",
+    presetsAlreadyAdded: "Allerede tilføjet",
   },
   tabForm: {
     tabName: "Fanenavn",

@@ -127,6 +127,11 @@ const de = {
     disable: "Kategorie deaktivieren",
     enable: "Kategorie aktivieren",
     invalidJson: "Ungültige JSON-Datei",
+    presetsTitle: "Kategorie-Vorlagen",
+    presetsDesc: "Fertige Kategorien mit vorausgefüllten Stichwörtern und Prompts. Klicke auf +, um sie hinzuzufügen.",
+    presetsSearch: "Vorlagen suchen…",
+    presetsNoMatch: "Keine Vorlagen gefunden.",
+    presetsAlreadyAdded: "Bereits hinzugefügt",
   },
   tabForm: {
     tabName: "Tab-Name",

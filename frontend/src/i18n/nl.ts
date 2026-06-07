@@ -127,6 +127,11 @@ const nl = {
     disable: "Categorie deactiveren",
     enable: "Categorie activeren",
     invalidJson: "Ongeldig JSON-bestand",
+    presetsTitle: "Categoriesjablonen",
+    presetsDesc: "Kant-en-klare categorieën met vooraf ingevulde trefwoorden en prompts. Klik op + om toe te voegen.",
+    presetsSearch: "Sjablonen zoeken…",
+    presetsNoMatch: "Geen sjablonen gevonden voor deze zoekopdracht.",
+    presetsAlreadyAdded: "Al toegevoegd",
   },
   tabForm: {
     tabName: "Tabbladnaam",

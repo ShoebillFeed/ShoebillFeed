@@ -127,6 +127,11 @@ const fr = {
     disable: "Désactiver la catégorie",
     enable: "Activer la catégorie",
     invalidJson: "Fichier JSON invalide",
+    presetsTitle: "Modèles de catégories",
+    presetsDesc: "Catégories prêtes à l'emploi avec mots-clés et invites préremplis. Cliquez sur + pour ajouter.",
+    presetsSearch: "Rechercher des modèles…",
+    presetsNoMatch: "Aucun modèle ne correspond à la recherche.",
+    presetsAlreadyAdded: "Déjà ajouté",
   },
   tabForm: {
     tabName: "Nom de l'onglet",

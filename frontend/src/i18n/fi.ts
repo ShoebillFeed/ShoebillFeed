@@ -127,6 +127,11 @@ const fi = {
     disable: "Poista kategoria käytöstä",
     enable: "Ota kategoria käyttöön",
     invalidJson: "Virheellinen JSON-tiedosto",
+    presetsTitle: "Kategoriamalleja",
+    presetsDesc: "Valmiit kategoriat esiasetetuilla avainsanoilla ja vihjeillä. Lisää klikkaamalla +.",
+    presetsSearch: "Hae malleja…",
+    presetsNoMatch: "Hakua vastaavia malleja ei löydy.",
+    presetsAlreadyAdded: "Jo lisätty",
   },
   tabForm: {
     tabName: "Välilehden nimi",

@@ -127,6 +127,11 @@ const pl = {
     disable: "Dezaktywuj kategorię",
     enable: "Aktywuj kategorię",
     invalidJson: "Nieprawidłowy plik JSON",
+    presetsTitle: "Szablony kategorii",
+    presetsDesc: "Gotowe kategorie z wypełnionymi słowami kluczowymi i promptami. Kliknij +, aby dodać.",
+    presetsSearch: "Szukaj szablonów…",
+    presetsNoMatch: "Brak szablonów pasujących do wyszukiwania.",
+    presetsAlreadyAdded: "Już dodano",
   },
   tabForm: {
     tabName: "Nazwa karty",

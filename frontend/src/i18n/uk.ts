@@ -127,6 +127,11 @@ const uk = {
     disable: "Вимкнути категорію",
     enable: "Увімкнути категорію",
     invalidJson: "Невірний файл JSON",
+    presetsTitle: "Шаблони категорій",
+    presetsDesc: "Готові категорії з попередньо заповненими ключовими словами та підказками. Натисніть +, щоб додати.",
+    presetsSearch: "Пошук шаблонів…",
+    presetsNoMatch: "Шаблони не знайдено.",
+    presetsAlreadyAdded: "Вже додано",
   },
   tabForm: {
     tabName: "Назва вкладки",

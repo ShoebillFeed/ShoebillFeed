@@ -127,6 +127,11 @@ const sv = {
     disable: "Inaktivera kategori",
     enable: "Aktivera kategori",
     invalidJson: "Ogiltig JSON-fil",
+    presetsTitle: "Kategorimallar",
+    presetsDesc: "Färdiga kategorier med förifyllda nyckelord och uppmaningar. Klicka på + för att lägga till.",
+    presetsSearch: "Sök mallar…",
+    presetsNoMatch: "Inga mallar matchar sökningen.",
+    presetsAlreadyAdded: "Redan tillagd",
   },
   tabForm: {
     tabName: "Fliknamn",

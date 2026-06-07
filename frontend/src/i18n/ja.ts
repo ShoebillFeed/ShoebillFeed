@@ -127,6 +127,11 @@ const ja = {
     disable: "カテゴリを無効化",
     enable: "カテゴリを有効化",
     invalidJson: "無効な JSON ファイル",
+    presetsTitle: "カテゴリテンプレート",
+    presetsDesc: "キーワードとプロンプトが事前入力された既製カテゴリです。+ をクリックして追加できます。",
+    presetsSearch: "テンプレートを検索…",
+    presetsNoMatch: "テンプレートが見つかりません。",
+    presetsAlreadyAdded: "追加済み",
   },
   tabForm: {
     tabName: "タブ名",

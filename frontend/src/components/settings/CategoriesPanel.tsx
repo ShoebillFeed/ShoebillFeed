@@ -1,10 +1,11 @@
 import { useState, useRef } from "react";
-import { Plus, Trash2, Pencil, RotateCcw, Download, Upload } from "lucide-react";
+import { Plus, Trash2, Pencil, RotateCcw, Download, Upload, Search, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useCategories, useDeleteCategory, useResetWeights, useSetManualWeight, useImportCategories, useUpdateCategory } from "../../hooks/useCategories";
+import { useCategories, useDeleteCategory, useResetWeights, useSetManualWeight, useImportCategories, useUpdateCategory, useCreateCategory } from "../../hooks/useCategories";
 import { categoriesApi } from "../../api/categories";
 import CategoryForm from "./CategoryForm";
 import type { Category } from "../../types/category";
+import { CATEGORY_PRESETS } from "../../data/categoryPresets";
 
 function downloadJson(data: unknown, filename: string) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -22,8 +23,20 @@ export default function CategoriesPanel() {
   const deleteCategory = useDeleteCategory();
   const resetWeights = useResetWeights();
   const importCategories = useImportCategories();
+  const createCategory = useCreateCategory();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
+  const [presetSearch, setPresetSearch] = useState("");
+  const [addedPresets, setAddedPresets] = useState<Set<string>>(new Set());
+
+  const existingNames = new Set((categories ?? []).map((c) => c.name.toLowerCase()));
+
+  const handleAddPreset = (preset: typeof CATEGORY_PRESETS[number]) => {
+    createCategory.mutate(
+      { name: preset.name, color: preset.color, keywords: preset.keywords, prompt: preset.prompt },
+      { onSuccess: () => setAddedPresets((s) => new Set(s).add(preset.name)) },
+    );
+  };
 
   const handleExport = async () => {
     const data = await categoriesApi.export();
@@ -121,6 +134,59 @@ export default function CategoriesPanel() {
         {categories?.length === 0 && !isLoading && (
           <p className="text-sm text-gray-400 text-center py-8">{t("categories.empty")}</p>
         )}
+      </div>
+
+      <div className="mt-8">
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">{t("categories.presetsTitle")}</h3>
+            <span className="text-xs text-gray-400">{CATEGORY_PRESETS.length}</span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{t("categories.presetsDesc")}</p>
+          <div className="relative mb-3">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder={t("categories.presetsSearch")}
+              value={presetSearch}
+              onChange={(e) => setPresetSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto pr-1">
+            {CATEGORY_PRESETS
+              .filter((p) => p.label.toLowerCase().includes(presetSearch.toLowerCase()))
+              .map((preset) => {
+                const already = existingNames.has(preset.name.toLowerCase()) || addedPresets.has(preset.name);
+                return (
+                  <div
+                    key={preset.name}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
+                  >
+                    <span
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{ backgroundColor: preset.color }}
+                    />
+                    <span className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">{preset.label}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[200px] hidden sm:block">
+                      {preset.keywords.slice(0, 4).join(", ")}
+                    </span>
+                    <button
+                      title={already ? t("categories.presetsAlreadyAdded") : t("categories.addCategory")}
+                      onClick={() => !already && handleAddPreset(preset)}
+                      disabled={already || createCategory.isPending}
+                      className="p-1 rounded transition-colors shrink-0 disabled:cursor-default text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:hover:bg-transparent"
+                    >
+                      {already ? <Check size={14} /> : <Plus size={14} />}
+                    </button>
+                  </div>
+                );
+              })}
+            {CATEGORY_PRESETS.filter((p) => p.label.toLowerCase().includes(presetSearch.toLowerCase())).length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">{t("categories.presetsNoMatch")}</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

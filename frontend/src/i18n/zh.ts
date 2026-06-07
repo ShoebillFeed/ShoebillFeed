@@ -127,6 +127,11 @@ const zh = {
     disable: "禁用分类",
     enable: "启用分类",
     invalidJson: "无效的 JSON 文件",
+    presetsTitle: "类别模板",
+    presetsDesc: "预填关键词和提示词的现成类别。点击 + 即可添加。",
+    presetsSearch: "搜索模板…",
+    presetsNoMatch: "没有与搜索匹配的模板。",
+    presetsAlreadyAdded: "已添加",
   },
   tabForm: {
     tabName: "标签页名称",
