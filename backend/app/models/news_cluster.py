@@ -31,6 +31,8 @@ class NewsCluster(Base):
     is_relevant: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     read_later: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     llm_processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    llm_provider: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    llm_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_shown_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

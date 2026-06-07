@@ -156,6 +156,8 @@ class ProcessedResult:
     relevance_score: int
     impact_score: int
     generated_title: str | None = None
+    provider_name: str = ""
+    model_name: str = ""
 
 
 @dataclass
@@ -167,6 +169,8 @@ class ClusterResult:
     impact_score: int
     title: str | None = None
     source_summaries: dict[str, str] = field(default_factory=dict)
+    provider_name: str = ""
+    model_name: str = ""
 
 
 @dataclass
@@ -477,6 +481,9 @@ Return ONLY the classification prompt — no labels, no reasoning, no extra text
 
 
 class LLMProvider(ABC):
+    provider_name: str = ""
+    model_name: str = ""
+
     @abstractmethod
     def process_item(
         self,
@@ -499,7 +506,10 @@ class LLMProvider(ABC):
         system = SHORT_ITEM_SYSTEM_PROMPT.format(categories_json=json.dumps(categories, ensure_ascii=False))
         user = f"Title: {title}\nContent: {content}" if content.strip() else f"Title: {title}"
         text = self._complete(system=system, user=user, max_tokens=256)
-        return parse_short_llm_response(text, known)
+        result = parse_short_llm_response(text, known)
+        result.provider_name = self.provider_name
+        result.model_name = self.model_name
+        return result
 
     @abstractmethod
     def process_cluster(

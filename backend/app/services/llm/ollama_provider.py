@@ -10,9 +10,12 @@ from app.services.llm.base import (
 
 
 class OllamaProvider(LLMProvider):
+    provider_name = "ollama"
+
     def __init__(self, base_url: str, model: str = "qwen2.5:0.5b", timeout: int = 120):
         self.base_url = base_url.rstrip("/")
         self.model = model
+        self.model_name = model
         self.client = httpx.Client(timeout=float(timeout))
 
     def _complete(self, system: str, user: str, max_tokens: int = 512) -> str:
@@ -43,7 +46,10 @@ class OllamaProvider(LLMProvider):
         }
         resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
         resp.raise_for_status()
-        return parse_llm_response(resp.json()["response"], known, social_post=social_post)
+        result = parse_llm_response(resp.json()["response"], known, social_post=social_post)
+        result.provider_name = self.provider_name
+        result.model_name = self.model_name
+        return result
 
     def process_cluster(self, items, categories, max_content_chars=800, output_language=None) -> ClusterResult:
         known = [c["name"] for c in categories]
@@ -63,7 +69,10 @@ class OllamaProvider(LLMProvider):
         }
         resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
         resp.raise_for_status()
-        return parse_cluster_response(resp.json()["response"], len(items), known)
+        result = parse_cluster_response(resp.json()["response"], len(items), known)
+        result.provider_name = self.provider_name
+        result.model_name = self.model_name
+        return result
 
     def extract_newsletter_items(self, content: str, categories: list[dict], output_language=None) -> NewsletterResult:
         known = [c["name"] for c in categories]

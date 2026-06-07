@@ -31,6 +31,8 @@ class NewsItemOut(BaseModel):
     relevance_score: int | None
     impact_score: int | None
     llm_processed: bool
+    llm_provider: str | None = None
+    llm_model: str | None = None
     is_read: bool
     is_relevant: bool
     read_later: bool
@@ -50,6 +52,8 @@ class ClusterItemOut(BaseModel):
     source_summary: str | None
     fetched_at: datetime
     source: SourceSummary | None = None
+    llm_provider: str | None = None
+    llm_model: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -67,6 +71,8 @@ class NewsClusterOut(BaseModel):
     is_relevant: bool
     read_later: bool
     llm_processed: bool
+    llm_provider: str | None = None
+    llm_model: str | None = None
     published_at: datetime | None
     categories: list[CategorySummary] = []
     items: list[ClusterItemOut] = []

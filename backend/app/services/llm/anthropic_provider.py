@@ -12,9 +12,12 @@ from app.services.llm.base import (
 
 
 class AnthropicProvider(LLMProvider):
+    provider_name = "anthropic"
+
     def __init__(self, api_key: str, model: str = "claude-haiku-4-5"):
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
+        self.model_name = model
 
     def _complete(self, system: str, user: str, max_tokens: int = 512) -> str:
         message = self.client.messages.create(
@@ -43,7 +46,10 @@ class AnthropicProvider(LLMProvider):
             system=self._cached_system(system),
             messages=[{"role": "user", "content": user}],
         )
-        return parse_llm_response(message.content[0].text, known, social_post=social_post)
+        result = parse_llm_response(message.content[0].text, known, social_post=social_post)
+        result.provider_name = self.provider_name
+        result.model_name = self.model_name
+        return result
 
     def process_cluster(self, items, categories, max_content_chars=800, output_language=None) -> ClusterResult:
         known = [c["name"] for c in categories]
@@ -60,7 +66,10 @@ class AnthropicProvider(LLMProvider):
             system=self._cached_system(system),
             messages=[{"role": "user", "content": "\n\n".join(parts)}],
         )
-        return parse_cluster_response(message.content[0].text, len(items), known)
+        result = parse_cluster_response(message.content[0].text, len(items), known)
+        result.provider_name = self.provider_name
+        result.model_name = self.model_name
+        return result
 
     def extract_newsletter_items(self, content: str, categories: list[dict], output_language=None) -> NewsletterResult:
         known = [c["name"] for c in categories]

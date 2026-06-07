@@ -197,6 +197,8 @@ def process_news_item(self, news_item_id: str) -> None:
         item.relevance_score = result.relevance_score
         item.impact_score = result.impact_score
         item.llm_processed = True
+        item.llm_provider = result.provider_name or None
+        item.llm_model = result.model_name or None
 
         if result.category_names:
             cats = db.scalars(
@@ -286,6 +288,8 @@ def process_cluster(self, cluster_id: str) -> None:
         cluster.relevance_score = result.relevance_score
         cluster.impact_score = result.impact_score
         cluster.llm_processed = True
+        cluster.llm_provider = result.provider_name or None
+        cluster.llm_model = result.model_name or None
 
         if result.category_names:
             cats = db.scalars(
@@ -382,7 +386,7 @@ def poll_llm_batches() -> None:
 
                 if batch_info.processing_status == "ended":
                     results = list(anthropic.client.messages.batches.results(llm_batch.anthropic_batch_id))
-                    applied = apply_batch_results(db, llm_batch, results)
+                    applied = apply_batch_results(db, llm_batch, results, anthropic)
 
                     if llm_batch.status == "cancelling":
                         _dispatch_fallback(llm_batch, applied)

@@ -21,6 +21,8 @@ export interface NewsItem {
   relevance_score: number | null;
   impact_score: number | null;
   llm_processed: boolean;
+  llm_provider: string | null;
+  llm_model: string | null;
   is_read: boolean;
   is_relevant: boolean;
   read_later: boolean;
@@ -39,6 +41,8 @@ export interface ClusterItem {
   source_summary: string | null;
   fetched_at: string;
   source: SourceSummary | null;
+  llm_provider: string | null;
+  llm_model: string | null;
 }
 
 export interface NewsCluster {
@@ -54,6 +58,8 @@ export interface NewsCluster {
   is_relevant: boolean;
   read_later: boolean;
   llm_processed: boolean;
+  llm_provider: string | null;
+  llm_model: string | null;
   published_at: string | null;
   last_shown_at: string | null;
   categories: CategorySummary[];

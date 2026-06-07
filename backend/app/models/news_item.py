@@ -39,6 +39,8 @@ class NewsItem(Base):
     relevance_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     impact_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     llm_processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    llm_provider: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    llm_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_relevant: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     read_later: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

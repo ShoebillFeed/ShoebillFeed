@@ -12,6 +12,7 @@ import {
 } from "../../hooks/useNews";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 import { sourceTypeIcon } from "../../lib/sourceTypeIcon";
+import { LLMInfoIcon } from "./LLMInfoIcon";
 
 function uniqueSources(items: NewsCluster["items"]) {
   const seen = new Set<string>();
@@ -125,7 +126,17 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
             </span>
           ))}
         </div>
-        <span className={cn("text-xs shrink-0 mt-0.5", hasImage ? "text-white/60" : "text-gray-400")}>{timeAgo}</span>
+        <span className={cn("inline-flex items-center gap-1 text-xs shrink-0 mt-0.5", hasImage ? "text-white/60" : "text-gray-400")}>
+          {timeAgo}
+          {cluster.llm_processed && (
+            <LLMInfoIcon
+              provider={cluster.llm_provider}
+              model={cluster.llm_model}
+              fields="Abstract · Keywords · Categories"
+              hasImage={hasImage}
+            />
+          )}
+        </span>
       </div>
 
       {/* Title */}
@@ -243,10 +254,16 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
                         </a>
                         {item.source_summary && (
                           <p className={cn(
-                            "text-xs mt-0.5 leading-relaxed",
+                            "inline-flex items-center gap-1 text-xs mt-0.5 leading-relaxed",
                             hasImage ? "text-white/50" : "text-gray-500 dark:text-gray-400"
                           )}>
                             {item.source_summary}
+                            <LLMInfoIcon
+                              provider={cluster.llm_provider}
+                              model={cluster.llm_model}
+                              fields="Source summary"
+                              hasImage={hasImage}
+                            />
                           </p>
                         )}
                       </div>

@@ -154,10 +154,12 @@ def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "L
     return llm_batch
 
 
-def apply_batch_results(db: Session, llm_batch: LLMBatch, results) -> set[str]:
+def apply_batch_results(db: Session, llm_batch: LLMBatch, results, provider=None) -> set[str]:
     """Write LLM results to DB. Returns the set of successfully applied custom_ids."""
     meta_by_id = {r["custom_id"]: r for r in llm_batch.requests}
     applied: set[str] = set()
+    provider_name = getattr(provider, "provider_name", "") or ""
+    model_name = getattr(provider, "model_name", "") or ""
 
     for result in results:
         cid = result.custom_id
@@ -170,9 +172,9 @@ def apply_batch_results(db: Session, llm_batch: LLMBatch, results) -> set[str]:
         text = result.result.message.content[0].text
         try:
             if meta["item_type"] == "news_item_group":
-                _apply_item_group_result(db, meta, text)
+                _apply_item_group_result(db, meta, text, provider_name, model_name)
             else:
-                _apply_cluster_result(db, meta, text)
+                _apply_cluster_result(db, meta, text, provider_name, model_name)
             applied.add(cid)
         except Exception:
             logger.exception("Failed to apply result for %s", cid)
@@ -181,7 +183,7 @@ def apply_batch_results(db: Session, llm_batch: LLMBatch, results) -> set[str]:
     return applied
 
 
-def _apply_item_group_result(db: Session, meta: dict, text: str) -> None:
+def _apply_item_group_result(db: Session, meta: dict, text: str, provider_name: str = "", model_name: str = "") -> None:
     group_type = meta["group_type"]
     is_short = group_type == "short"
     is_social = group_type == "social"
@@ -220,6 +222,8 @@ def _apply_item_group_result(db: Session, meta: dict, text: str) -> None:
         item.relevance_score = result.relevance_score
         item.impact_score = result.impact_score
         item.llm_processed = True
+        item.llm_provider = provider_name or None
+        item.llm_model = model_name or None
 
         if result.category_names:
             cats = db.scalars(
@@ -231,7 +235,7 @@ def _apply_item_group_result(db: Session, meta: dict, text: str) -> None:
             item.categories = list(cats)
 
 
-def _apply_cluster_result(db: Session, meta: dict, text: str) -> None:
+def _apply_cluster_result(db: Session, meta: dict, text: str, provider_name: str = "", model_name: str = "") -> None:
     cluster = db.get(NewsCluster, meta["item_id"])
     if not cluster or cluster.llm_processed:
         return
@@ -248,6 +252,8 @@ def _apply_cluster_result(db: Session, meta: dict, text: str) -> None:
     cluster.relevance_score = result.relevance_score
     cluster.impact_score = result.impact_score
     cluster.llm_processed = True
+    cluster.llm_provider = provider_name or None
+    cluster.llm_model = model_name or None
 
     if result.category_names:
         cats = db.scalars(

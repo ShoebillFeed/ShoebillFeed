@@ -12,6 +12,7 @@ import {
 } from "../../hooks/useNews";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 import { sourceTypeIcon } from "../../lib/sourceTypeIcon";
+import { LLMInfoIcon } from "./LLMInfoIcon";
 
 export default function NewsCard({ item }: { item: NewsItem }) {
   const { t } = useTranslation();
@@ -116,10 +117,17 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             ))}
           </div>
           <span className={cn(
-            "text-xs shrink-0 mt-0.5",
+            "inline-flex items-center gap-1 text-xs shrink-0 mt-0.5",
             hasImage ? "text-white/60" : "text-gray-400"
           )}>
             {timeAgo}
+            {item.llm_processed && (
+              <LLMInfoIcon
+                provider={item.llm_provider}
+                model={item.llm_model}
+                hasImage={hasImage}
+              />
+            )}
           </span>
         </div>
 
