@@ -66,7 +66,6 @@ function ScoreSlider({
   value: number;
   onChange: (v: number) => void;
 }) {
-  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3 w-48">
       <input

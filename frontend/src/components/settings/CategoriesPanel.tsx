@@ -155,8 +155,8 @@ export default function CategoriesPanel() {
           </div>
           <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto pr-1">
             {CATEGORY_PRESETS
-              .filter((p) => p.label.toLowerCase().includes(presetSearch.toLowerCase()))
-              .map((preset) => {
+              .filter((p: typeof CATEGORY_PRESETS[number]) => p.label.toLowerCase().includes(presetSearch.toLowerCase()))
+              .map((preset: typeof CATEGORY_PRESETS[number]) => {
                 const already = existingNames.has(preset.name.toLowerCase()) || addedPresets.has(preset.name);
                 return (
                   <div
@@ -182,7 +182,7 @@ export default function CategoriesPanel() {
                   </div>
                 );
               })}
-            {CATEGORY_PRESETS.filter((p) => p.label.toLowerCase().includes(presetSearch.toLowerCase())).length === 0 && (
+            {CATEGORY_PRESETS.filter((p: typeof CATEGORY_PRESETS[number]) => p.label.toLowerCase().includes(presetSearch.toLowerCase())).length === 0 && (
               <p className="text-sm text-gray-400 text-center py-4">{t("categories.presetsNoMatch")}</p>
             )}
           </div>
