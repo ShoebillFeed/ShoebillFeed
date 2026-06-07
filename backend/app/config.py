@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     # Set to a remote host to use Ollama on another machine, e.g. http://192.168.1.10:11434
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:14b"
-    ollama_timeout: int = 120  # seconds; increase for remote/slow hosts
+    ollama_timeout: int = 300  # seconds; increase for remote/slow hosts
 
     reddit_client_id: str = ""
     reddit_client_secret: str = ""

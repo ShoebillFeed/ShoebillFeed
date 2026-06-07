@@ -1,11 +1,18 @@
 import logging
+import time
+
 from app.services.llm.base import LLMProvider, ProcessedResult, ClusterResult, NewsletterResult
 
 logger = logging.getLogger(__name__)
 
+# Attempts per provider before moving to the next one.
+# 2 = one retry: try once, wait, try again, then fall through.
+_ATTEMPTS_PER_PROVIDER = 2
+_RETRY_DELAY_S = 5.0
+
 
 class FallbackProvider(LLMProvider):
-    """Tries each provider in order, falling back to the next on any exception."""
+    """Tries each provider in order, retrying once before falling back to the next."""
 
     def __init__(self, providers: list[LLMProvider]):
         self._providers = providers
@@ -13,14 +20,23 @@ class FallbackProvider(LLMProvider):
     def _try(self, method: str, *args, **kwargs):
         last_exc: Exception | None = None
         for provider in self._providers:
-            try:
-                return getattr(provider, method)(*args, **kwargs)
-            except Exception as exc:
-                logger.warning(
-                    "LLM provider %s failed on %s (%s), trying next",
-                    type(provider).__name__, method, exc,
-                )
-                last_exc = exc
+            name = type(provider).__name__
+            for attempt in range(1, _ATTEMPTS_PER_PROVIDER + 1):
+                try:
+                    return getattr(provider, method)(*args, **kwargs)
+                except Exception as exc:
+                    last_exc = exc
+                    if attempt < _ATTEMPTS_PER_PROVIDER:
+                        logger.warning(
+                            "LLM %s failed on %s (attempt %d/%d): %s — retrying in %.0fs",
+                            name, method, attempt, _ATTEMPTS_PER_PROVIDER, exc, _RETRY_DELAY_S,
+                        )
+                        time.sleep(_RETRY_DELAY_S)
+                    else:
+                        logger.warning(
+                            "LLM %s failed on %s after %d attempt(s): %s — trying next provider",
+                            name, method, attempt, exc,
+                        )
         raise last_exc  # type: ignore[misc]
 
     def _complete(self, system: str, user: str, max_tokens: int = 512) -> str:
