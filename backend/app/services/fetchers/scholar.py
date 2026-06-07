@@ -6,7 +6,7 @@ from urllib.parse import quote_plus
 import feedparser
 from bs4 import BeautifulSoup
 
-from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher
+from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher, socket_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,8 @@ class ScholarFetcher(NewsFetcher):
         url = url_template.format(query=quote_plus(query))
         logger.debug("Fetching arXiv Atom feed: %s", url)
 
-        feed = feedparser.parse(url, request_headers={"User-Agent": "ShoebillFeed/1.0 (academic RSS reader)"})
+        with socket_timeout(30):
+            feed = feedparser.parse(url, request_headers={"User-Agent": "ShoebillFeed/1.0 (academic RSS reader)"})
         status = feed.get("status")
         logger.debug("arXiv feed status=%s bozo=%s entries=%d", status, feed.get("bozo"), len(feed.entries))
         if status == 429:

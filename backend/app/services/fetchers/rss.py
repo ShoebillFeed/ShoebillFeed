@@ -7,9 +7,11 @@ import feedparser
 import httpx
 from bs4 import BeautifulSoup
 
-from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher
+from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher, socket_timeout
 
 logger = logging.getLogger(__name__)
+
+_FEEDPARSER_TIMEOUT = 30
 
 
 @register_fetcher("rss")
@@ -19,12 +21,14 @@ class RSSFetcher(NewsFetcher):
         if not url:
             raise ValueError("RSS source missing 'url' in config")
 
-        feed = feedparser.parse(url)
+        with socket_timeout(_FEEDPARSER_TIMEOUT):
+            feed = feedparser.parse(url)
         if feed.get("bozo") and not feed.entries:
             discovered = self._autodiscover_feed(url)
             if discovered:
                 logger.info("Autodiscovered feed %s from %s", discovered, url)
-                feed = feedparser.parse(discovered)
+                with socket_timeout(_FEEDPARSER_TIMEOUT):
+                    feed = feedparser.parse(discovered)
             else:
                 raise ValueError(
                     f"{url!r} is not a valid RSS/Atom feed and no feed link was found on the page. "

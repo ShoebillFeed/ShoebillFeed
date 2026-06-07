@@ -201,9 +201,10 @@ class EmailIMAPFetcher(NewsFetcher):
             raise ValueError("Email source missing imap_host, username, or password in config")
 
         items: list[RawNewsItem] = []
+        conn = None
 
         try:
-            conn = imaplib.IMAP4_SSL(host, port)
+            conn = imaplib.IMAP4_SSL(host, port, timeout=30)
             conn.login(username, password)
             conn.select(folder)
 
@@ -243,8 +244,13 @@ class EmailIMAPFetcher(NewsFetcher):
                 except Exception:
                     logger.exception("Error processing email message %s", msg_id)
 
-            conn.logout()
         except Exception:
             logger.exception("Error connecting to IMAP server %s", host)
+        finally:
+            if conn is not None:
+                try:
+                    conn.logout()
+                except Exception:
+                    pass
 
         return items

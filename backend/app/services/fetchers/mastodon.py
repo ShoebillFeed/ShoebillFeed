@@ -5,7 +5,7 @@ from email.utils import parsedate_to_datetime
 import feedparser
 from bs4 import BeautifulSoup
 
-from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher
+from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher, socket_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,8 @@ class MastodonFetcher(NewsFetcher):
             raise ValueError(f"Unknown Mastodon feed_type: {feed_type!r}. Use 'user', 'hashtag', or 'local'.")
 
         logger.debug("Fetching Mastodon RSS from %s", url)
-        feed = feedparser.parse(url)
+        with socket_timeout(30):
+            feed = feedparser.parse(url)
         if feed.get("bozo") and not feed.entries:
             raise ValueError(f"Could not parse Mastodon RSS feed at {url!r}")
 

@@ -5,7 +5,7 @@ import httpx
 import praw
 
 from app.config import get_settings
-from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher
+from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher, socket_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,8 @@ class RedditFetcher(NewsFetcher):
         items: list[RawNewsItem] = []
 
         try:
-            listing = getattr(subreddit, sort)(limit=limit)
+            with socket_timeout(60):
+                listing = list(getattr(subreddit, sort)(limit=limit))
             for submission in listing:
                 content = submission.selftext or submission.title
                 items.append(RawNewsItem(

@@ -1,6 +1,19 @@
+import socket
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
+
+
+@contextmanager
+def socket_timeout(seconds: int):
+    """Temporarily set the global socket timeout for blocking I/O (feedparser, imaplib, praw)."""
+    old = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(seconds)
+    try:
+        yield
+    finally:
+        socket.setdefaulttimeout(old)
 
 
 @dataclass
