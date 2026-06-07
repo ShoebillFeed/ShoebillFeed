@@ -9,5 +9,6 @@ from app.models.news_cluster import NewsCluster
 from app.models.news_item import NewsItem
 from app.models.user_tab import UserTab
 from app.models.llm_batch import LLMBatch
+from app.models.push_subscription import PushSubscription
 
-__all__ = ["User", "UserSettings", "Category", "CategoryWeight", "CategoryWeightSnapshot", "KeywordWeight", "Source", "NewsCluster", "NewsItem", "UserTab", "LLMBatch"]
+__all__ = ["User", "UserSettings", "Category", "CategoryWeight", "CategoryWeightSnapshot", "KeywordWeight", "Source", "NewsCluster", "NewsItem", "UserTab", "LLMBatch", "PushSubscription"]

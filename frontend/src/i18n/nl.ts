@@ -304,6 +304,7 @@ const nl = {
     categories: "Categorieën",
     llm: "LLM",
     advanced: "Geavanceerd",
+    notifications: "Notifications",
     statistics: "Statistieken",
     users: "Gebruikers",
     about: "Over",

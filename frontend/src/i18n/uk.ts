@@ -304,6 +304,7 @@ const uk = {
     categories: "Категорії",
     llm: "LLM",
     advanced: "Розширені",
+    notifications: "Notifications",
     statistics: "Статистика",
     users: "Користувачі",
     about: "Про проєкт",

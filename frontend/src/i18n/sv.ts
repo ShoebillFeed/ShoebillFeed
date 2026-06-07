@@ -304,6 +304,7 @@ const sv = {
     categories: "Kategorier",
     llm: "LLM",
     advanced: "Avancerat",
+    notifications: "Notifications",
     statistics: "Statistik",
     users: "Användare",
     about: "Om",

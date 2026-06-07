@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     admin_username: str = ""
     admin_password: str = ""
 
+    # Web Push (VAPID) — generate keys with: python -c "from pywebpush import Vapid; v=Vapid(); v.generate_keys(); print('VAPID_PRIVATE_KEY='+v.private_key); print('VAPID_PUBLIC_KEY='+v.public_key)"
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:admin@localhost"
+
 
     @property
     def llm_provider(self) -> str:

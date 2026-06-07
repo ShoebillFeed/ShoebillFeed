@@ -180,6 +180,28 @@ def apply_batch_results(db: Session, llm_batch: LLMBatch, results, provider=None
             logger.exception("Failed to apply result for %s", cid)
 
     db.commit()
+
+    # Send push notifications for items/clusters processed in this batch
+    try:
+        from app.services.push_service import notify_item, notify_cluster
+        from app.models import NewsCluster
+        for cid in applied:
+            meta = meta_by_id[cid]
+            if meta["item_type"] == "news_item_group":
+                for item_id in meta.get("item_ids", []):
+                    item = db.get(NewsItem, item_id)
+                    if item:
+                        notify_item(db, item)
+            elif meta["item_type"] == "cluster":
+                import uuid as _uuid
+                from sqlalchemy import select as _select
+                cluster = db.get(NewsCluster, _uuid.UUID(meta["item_id"]))
+                if cluster:
+                    items = db.scalars(_select(NewsItem).where(NewsItem.cluster_id == cluster.id)).all()
+                    notify_cluster(db, cluster, list(items))
+    except Exception:
+        logger.exception("Push notification dispatch failed after batch apply")
+
     return applied
 
 

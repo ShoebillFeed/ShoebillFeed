@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy import Boolean, Float, Integer, String, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
@@ -24,3 +24,10 @@ class UserSettings(Base):
     mark_shown_delay_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
     learning_window_days: Mapped[int] = mapped_column(Integer, nullable=False, default=90)
     ignore_penalty_weight: Mapped[float] = mapped_column(Float, nullable=False, default=0.1)
+    push_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    push_min_relevance: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
+    push_all_categories: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    push_category_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    push_all_sources: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    push_source_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    push_cluster_per_source: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

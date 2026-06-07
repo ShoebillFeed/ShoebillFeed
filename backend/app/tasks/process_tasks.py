@@ -212,6 +212,12 @@ def process_news_item(self, news_item_id: str) -> None:
         db.commit()
         logger.info("Processed news item %s", news_item_id)
 
+        try:
+            from app.services.push_service import notify_item
+            notify_item(db, item)
+        except Exception:
+            logger.exception("Push notification failed for item %s", news_item_id)
+
         # Second-pass keyword clustering for standalone items
         if item.cluster_id is None:
             cluster_id = recluster_processed_item(db, item)
@@ -307,6 +313,12 @@ def process_cluster(self, cluster_id: str) -> None:
 
         db.commit()
         logger.info("Processed cluster %s (%d items)", cluster_id, len(items))
+
+        try:
+            from app.services.push_service import notify_cluster
+            notify_cluster(db, cluster, list(items))
+        except Exception:
+            logger.exception("Push notification failed for cluster %s", cluster_id)
 
     except anthropic_sdk.RateLimitError as exc:
         db.rollback()

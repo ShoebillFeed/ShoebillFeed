@@ -304,6 +304,7 @@ const ja = {
     categories: "カテゴリ",
     llm: "LLM",
     advanced: "詳細",
+    notifications: "Notifications",
     statistics: "統計",
     users: "ユーザー",
     about: "について",

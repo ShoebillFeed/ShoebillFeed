@@ -304,6 +304,7 @@ const zh = {
     categories: "分类",
     llm: "LLM",
     advanced: "高级",
+    notifications: "Notifications",
     statistics: "统计",
     users: "用户",
     about: "关于",

@@ -304,6 +304,7 @@ const fi = {
     categories: "Kategoriat",
     llm: "LLM",
     advanced: "Lisäasetukset",
+    notifications: "Notifications",
     statistics: "Tilastot",
     users: "Käyttäjät",
     about: "Tietoja",

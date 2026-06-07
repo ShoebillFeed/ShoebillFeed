@@ -304,6 +304,7 @@ const hu = {
     categories: "Kategóriák",
     llm: "LLM",
     advanced: "Speciális",
+    notifications: "Notifications",
     statistics: "Statisztikák",
     users: "Felhasználók",
     about: "Névjegy",

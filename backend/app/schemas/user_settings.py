@@ -14,6 +14,13 @@ class UserSettingsOut(BaseModel):
     mark_shown_delay_seconds: int = 5
     learning_window_days: int = 90
     ignore_penalty_weight: float = 0.1
+    push_enabled: bool = False
+    push_min_relevance: int = 7
+    push_all_categories: bool = True
+    push_category_ids: list[str] = []
+    push_all_sources: bool = True
+    push_source_ids: list[str] = []
+    push_cluster_per_source: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -31,3 +38,10 @@ class UserSettingsUpdate(BaseModel):
     mark_shown_delay_seconds: int | None = Field(None, ge=1, le=60)
     learning_window_days: int | None = Field(None, ge=0, le=3650)
     ignore_penalty_weight: float | None = Field(None, ge=0.0, le=5.0)
+    push_enabled: bool | None = None
+    push_min_relevance: int | None = Field(None, ge=1, le=10)
+    push_all_categories: bool | None = None
+    push_category_ids: list[str] | None = None
+    push_all_sources: bool | None = None
+    push_source_ids: list[str] | None = None
+    push_cluster_per_source: bool | None = None

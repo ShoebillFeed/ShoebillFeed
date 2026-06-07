@@ -304,6 +304,7 @@ const fr = {
     categories: "Catégories",
     llm: "LLM",
     advanced: "Avancé",
+    notifications: "Notifications",
     statistics: "Statistiques",
     users: "Utilisateurs",
     about: "À propos",

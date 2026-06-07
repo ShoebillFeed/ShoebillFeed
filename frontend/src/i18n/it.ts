@@ -304,6 +304,7 @@ const it = {
     categories: "Categorie",
     llm: "LLM",
     advanced: "Avanzato",
+    notifications: "Notifications",
     statistics: "Statistiche",
     users: "Utenti",
     about: "Informazioni",

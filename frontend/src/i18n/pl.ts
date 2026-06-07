@@ -304,6 +304,7 @@ const pl = {
     categories: "Kategorie",
     llm: "LLM",
     advanced: "Zaawansowane",
+    notifications: "Notifications",
     statistics: "Statystyki",
     users: "Użytkownicy",
     about: "O aplikacji",

@@ -304,6 +304,7 @@ const pt = {
     categories: "Categorias",
     llm: "LLM",
     advanced: "Avançado",
+    notifications: "Notifications",
     statistics: "Estatísticas",
     users: "Utilizadores",
     about: "Sobre",

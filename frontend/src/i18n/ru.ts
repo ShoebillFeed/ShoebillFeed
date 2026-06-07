@@ -304,6 +304,7 @@ const ru = {
     categories: "Категории",
     llm: "LLM",
     advanced: "Расширенные",
+    notifications: "Notifications",
     statistics: "Статистика",
     users: "Пользователи",
     about: "О проекте",

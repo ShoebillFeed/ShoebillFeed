@@ -304,6 +304,7 @@ const ko = {
     categories: "카테고리",
     llm: "LLM",
     advanced: "고급",
+    notifications: "Notifications",
     statistics: "통계",
     users: "사용자",
     about: "정보",

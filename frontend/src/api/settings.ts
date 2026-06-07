@@ -13,6 +13,13 @@ export interface UserSettings {
   mark_shown_delay_seconds: number;
   learning_window_days: number;
   ignore_penalty_weight: number;
+  push_enabled: boolean;
+  push_min_relevance: number;
+  push_all_categories: boolean;
+  push_category_ids: string[];
+  push_all_sources: boolean;
+  push_source_ids: string[];
+  push_cluster_per_source: boolean;
 }
 
 export interface UserSettingsUpdate {
@@ -28,6 +35,13 @@ export interface UserSettingsUpdate {
   mark_shown_delay_seconds?: number;
   learning_window_days?: number;
   ignore_penalty_weight?: number;
+  push_enabled?: boolean;
+  push_min_relevance?: number;
+  push_all_categories?: boolean;
+  push_category_ids?: string[];
+  push_all_sources?: boolean;
+  push_source_ids?: string[];
+  push_cluster_per_source?: boolean;
 }
 
 export const settingsApi = {

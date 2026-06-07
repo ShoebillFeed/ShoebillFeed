@@ -304,6 +304,7 @@ const nb = {
     categories: "Kategorier",
     llm: "LLM",
     advanced: "Avansert",
+    notifications: "Notifications",
     statistics: "Statistikk",
     users: "Brukere",
     about: "Om",

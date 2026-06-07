@@ -39,6 +39,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ["/push-sw.js"],
         runtimeCaching: [
           {
             // Cache API responses with NetworkFirst — serve stale feed if offline

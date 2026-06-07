@@ -304,6 +304,7 @@ const ro = {
     categories: "Categorii",
     llm: "LLM",
     advanced: "Avansat",
+    notifications: "Notifications",
     statistics: "Statistici",
     users: "Utilizatori",
     about: "Despre",

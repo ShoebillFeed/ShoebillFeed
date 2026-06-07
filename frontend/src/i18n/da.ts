@@ -304,6 +304,7 @@ const da = {
     categories: "Kategorier",
     llm: "LLM",
     advanced: "Avanceret",
+    notifications: "Notifications",
     statistics: "Statistik",
     users: "Brugere",
     about: "Om",

@@ -304,6 +304,7 @@ const tr = {
     categories: "Kategoriler",
     llm: "LLM",
     advanced: "Gelişmiş",
+    notifications: "Notifications",
     statistics: "İstatistikler",
     users: "Kullanıcılar",
     about: "Hakkında",

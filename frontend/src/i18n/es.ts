@@ -304,6 +304,7 @@ const es = {
     categories: "Categorías",
     llm: "LLM",
     advanced: "Avanzado",
+    notifications: "Notifications",
     statistics: "Estadísticas",
     users: "Usuarios",
     about: "Acerca de",

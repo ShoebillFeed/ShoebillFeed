@@ -304,6 +304,7 @@ const cs = {
     categories: "Kategorie",
     llm: "LLM",
     advanced: "Pokročilé",
+    notifications: "Notifications",
     statistics: "Statistiky",
     users: "Uživatelé",
     about: "O aplikaci",
