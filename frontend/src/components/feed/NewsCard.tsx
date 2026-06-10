@@ -70,7 +70,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
   return (
     <article
       className={cn(
-        "relative rounded-lg border overflow-hidden transition-opacity",
+        "relative rounded-lg border transition-opacity",
         hasImage ? "min-h-48 border-transparent" : "p-4 bg-white dark:bg-gray-900",
         !hasImage && (item.is_read
           ? "border-gray-100 dark:border-gray-800"
@@ -79,7 +79,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
       )}
     >
       {hasImage && (
-        <>
+        <div className="absolute inset-0 overflow-hidden rounded-lg">
           <img
             src={item.image_url!}
             alt=""
@@ -88,7 +88,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             onError={() => setHasImage(false)}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/15" />
-        </>
+        </div>
       )}
 
       <div className={cn("relative z-10 flex flex-col h-full", hasImage && "p-4")}>
