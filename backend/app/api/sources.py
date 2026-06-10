@@ -1,6 +1,7 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
@@ -103,6 +104,26 @@ def import_sources(
         created.append(source)
     db.commit()
     return [_with_count(db, s) for s in created]
+
+
+class ScraperSuggestRequest(BaseModel):
+    url: str
+
+
+@router.post("/scraper/suggest")
+def suggest_scraper_config(payload: ScraperSuggestRequest, _: User = Depends(get_current_user)):
+    """Fetch a page and use the configured LLM to suggest CSS selectors for
+    its article list, so non-experts don't have to inspect HTML by hand."""
+    url = payload.url.strip()
+    if not url:
+        raise HTTPException(status_code=422, detail="URL is required")
+
+    from app.services.scraper_assist import suggest_scraper_config as _suggest
+
+    try:
+        return _suggest(url)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Could not analyze page: {exc}") from exc
 
 
 @router.get("/{source_id}", response_model=SourceOut)

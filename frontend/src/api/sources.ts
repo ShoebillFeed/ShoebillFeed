@@ -12,4 +12,18 @@ export const sourcesApi = {
   fetchAll: () => client.post("/sources/fetch-all").then((r) => r.data),
   export: () => client.get<SourceCreate[]>("/sources/export").then((r) => r.data),
   import: (data: SourceCreate[]) => client.post<Source[]>("/sources/import", data).then((r) => r.data),
+  suggestScraperConfig: (url: string) =>
+    client.post<ScraperSuggestion>("/sources/scraper/suggest", { url }).then((r) => r.data),
 };
+
+export interface ScraperSuggestion {
+  config: {
+    url: string;
+    item_selector: string;
+    title_selector: string;
+    link_selector: string;
+    content_selector: string;
+  };
+  preview: { title: string; url: string }[];
+  item_count: number;
+}

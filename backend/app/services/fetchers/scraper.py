@@ -18,6 +18,10 @@ _SESSION_VALUE_RE = re.compile(
 )
 
 
+DEFAULT_TITLE_SELECTOR = "h1,h2,h3"
+DEFAULT_LINK_SELECTOR = "a"
+
+
 def _scrub_url(url: str) -> str:
     """Strip query params whose values look like random session tokens.
 
@@ -36,6 +40,79 @@ def _scrub_url(url: str) -> str:
     return urlunparse(parsed._replace(query=urlencode(sorted(clean.items()), doseq=True)))
 
 
+def fetch_html(url: str, timeout: float = 15) -> str:
+    """Fetch a page's HTML. Raises on network/HTTP errors (caller decides how to handle)."""
+    resp = httpx.get(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; ShoebillFeed/1.0)"},
+        timeout=timeout,
+        follow_redirects=True,
+    )
+    resp.raise_for_status()
+    return resp.text
+
+
+def parse_scraper_items(
+    html: str,
+    base_url: str,
+    item_selector: str,
+    title_selector: str = DEFAULT_TITLE_SELECTOR,
+    link_selector: str = DEFAULT_LINK_SELECTOR,
+    content_selector: str | None = None,
+) -> list[RawNewsItem]:
+    """Extract items from HTML using the given CSS selectors. Returns [] on
+    invalid selectors or if nothing matches, rather than raising."""
+    soup = BeautifulSoup(html, "lxml")
+
+    try:
+        elements = soup.select(item_selector)
+    except Exception:
+        logger.exception("Invalid item_selector %r", item_selector)
+        return []
+
+    items: list[RawNewsItem] = []
+    for element in elements:
+        try:
+            title_el = element.select_one(title_selector)
+            if not title_el:
+                continue
+            title = title_el.get_text(strip=True)
+            if not title:
+                continue
+
+            # Prefer explicit link selector; fall back to title element if it is an <a>
+            link_el = element.select_one(link_selector)
+            href = (link_el.get("href") or "").strip() if link_el else ""
+            if not href and title_el.name == "a":
+                href = (title_el.get("href") or "").strip()
+            if not href:
+                continue
+
+            full_url = urljoin(base_url, href)
+            if urlparse(full_url).scheme not in ("http", "https"):
+                continue
+            full_url = _scrub_url(full_url)
+
+            content = ""
+            if content_selector:
+                content_el = element.select_one(content_selector)
+                if content_el:
+                    content = content_el.get_text(separator=" ", strip=True)
+            if not content:
+                content = element.get_text(separator=" ", strip=True)
+
+            items.append(RawNewsItem(
+                title=title,
+                url=full_url,
+                raw_content=content,
+                published_at=None,
+            ))
+        except Exception:
+            logger.exception("Error parsing scraped item")
+
+    return items
+
+
 @register_fetcher("scraper")
 class WebScraperFetcher(NewsFetcher):
     """Generic CSS-selector-based web scraper for sites without feeds.
@@ -52,9 +129,9 @@ class WebScraperFetcher(NewsFetcher):
     def fetch(self) -> list[RawNewsItem]:
         url = self.config.get("url", "").strip()
         item_selector = self.config.get("item_selector", "").strip()
-        title_selector = self.config.get("title_selector", "h1,h2,h3").strip()
-        link_selector = self.config.get("link_selector", "a").strip()
-        content_selector = self.config.get("content_selector", "").strip()
+        title_selector = self.config.get("title_selector", DEFAULT_TITLE_SELECTOR).strip()
+        link_selector = self.config.get("link_selector", DEFAULT_LINK_SELECTOR).strip()
+        content_selector = self.config.get("content_selector", "").strip() or None
         base_url = self.config.get("base_url", url).strip() or url
 
         if not url:
@@ -63,57 +140,9 @@ class WebScraperFetcher(NewsFetcher):
             raise ValueError("Web scraper source missing 'item_selector'")
 
         try:
-            resp = httpx.get(
-                url,
-                headers={"User-Agent": "Mozilla/5.0 (compatible; ShoebillFeed/1.0)"},
-                timeout=15,
-                follow_redirects=True,
-            )
-            resp.raise_for_status()
+            html = fetch_html(url)
         except Exception:
             logger.exception("Error fetching scraper URL %s", url)
             return []
 
-        soup = BeautifulSoup(resp.text, "lxml")
-        items: list[RawNewsItem] = []
-
-        for element in soup.select(item_selector):
-            try:
-                title_el = element.select_one(title_selector)
-                if not title_el:
-                    continue
-                title = title_el.get_text(strip=True)
-                if not title:
-                    continue
-
-                # Prefer explicit link selector; fall back to title element if it is an <a>
-                link_el = element.select_one(link_selector)
-                href = (link_el.get("href") or "").strip() if link_el else ""
-                if not href and title_el.name == "a":
-                    href = (title_el.get("href") or "").strip()
-                if not href:
-                    continue
-
-                full_url = urljoin(base_url, href)
-                if urlparse(full_url).scheme not in ("http", "https"):
-                    continue
-                full_url = _scrub_url(full_url)
-
-                content = ""
-                if content_selector:
-                    content_el = element.select_one(content_selector)
-                    if content_el:
-                        content = content_el.get_text(separator=" ", strip=True)
-                if not content:
-                    content = element.get_text(separator=" ", strip=True)
-
-                items.append(RawNewsItem(
-                    title=title,
-                    url=full_url,
-                    raw_content=content,
-                    published_at=None,
-                ))
-            except Exception:
-                logger.exception("Error parsing scraped item")
-
-        return items
+        return parse_scraper_items(html, base_url, item_selector, title_selector, link_selector, content_selector)

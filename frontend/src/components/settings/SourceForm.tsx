@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ChevronDown, ChevronRight, Wand2 } from "lucide-react";
 import type { Source, SourceCreate, SourceType } from "../../types/source";
 import { useCreateSource, useUpdateSource } from "../../hooks/useSources";
+import { sourcesApi } from "../../api/sources";
 import { cn } from "../../lib/utils";
 
 const SOURCE_TYPES: { id: SourceType; label: string }[] = [
@@ -44,12 +46,18 @@ export default function SourceForm({ source, onClose }: Props) {
   });
   const [interval, setInterval] = useState(source?.fetch_interval ?? 3600);
   const [isActive, setIsActive] = useState(source?.is_active ?? true);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const setConfigField = (key: string, value: string) =>
     setConfig((prev) => ({ ...prev, [key]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+    if (type === "scraper" && !(config["item_selector"] ?? "").trim()) {
+      setFormError(t("sourceForm.scraperConfigRequired"));
+      return;
+    }
     const parsedConfig = Object.fromEntries(
       Object.entries(config).filter(([, v]) => v.trim() !== "")
     );
@@ -122,6 +130,8 @@ export default function SourceForm({ source, onClose }: Props) {
         />
         {t("sourceForm.active")}
       </label>
+
+      {formError && <p className="text-sm text-red-500">{formError}</p>}
 
       <div className="flex gap-2 mt-2">
         <button type="button" onClick={onClose} className={cn(btnClass, "flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300")}>
@@ -273,17 +283,111 @@ function ConfigFields({
   if (type === "telegram") return (
     <Field label={t("sourceForm.telegramChannel")} field="channel" config={config} onChange={onChange} placeholder="bbcnews" required />
   );
-  if (type === "scraper") return (
+  if (type === "scraper") return <ScraperConfigFields config={config} onChange={onChange} />;
+  return null;
+}
+
+function ScraperConfigFields({
+  config,
+  onChange,
+}: {
+  config: Record<string, string>;
+  onChange: (k: string, v: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [advancedOpen, setAdvancedOpen] = useState(Boolean(config["item_selector"]));
+  const [detecting, setDetecting] = useState(false);
+  const [detectError, setDetectError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ title: string; url: string }[] | null>(null);
+  const [itemCount, setItemCount] = useState<number | null>(null);
+
+  const url = (config["url"] ?? "").trim();
+
+  const handleDetect = async () => {
+    if (!url || detecting) return;
+    setDetecting(true);
+    setDetectError(null);
+    setPreview(null);
+    setItemCount(null);
+    try {
+      const result = await sourcesApi.suggestScraperConfig(url);
+      onChange("item_selector", result.config.item_selector);
+      onChange("title_selector", result.config.title_selector);
+      onChange("link_selector", result.config.link_selector);
+      onChange("content_selector", result.config.content_selector);
+      setPreview(result.preview);
+      setItemCount(result.item_count);
+      if (result.item_count === 0) setAdvancedOpen(true);
+    } catch {
+      setDetectError(t("sourceForm.scraperDetectError"));
+      setAdvancedOpen(true);
+    } finally {
+      setDetecting(false);
+    }
+  };
+
+  return (
     <>
       <Field label={t("sourceForm.scraperUrl")} field="url" config={config} onChange={onChange} placeholder="https://example.com/news" required />
-      <Field label={t("sourceForm.scraperItemSelector")} field="item_selector" config={config} onChange={onChange} placeholder="article.post" required />
-      <Field label={t("sourceForm.scraperTitleSelector")} field="title_selector" config={config} onChange={onChange} placeholder="h2.title" />
-      <Field label={t("sourceForm.scraperLinkSelector")} field="link_selector" config={config} onChange={onChange} placeholder="a.read-more" />
-      <Field label={t("sourceForm.scraperContentSelector")} field="content_selector" config={config} onChange={onChange} placeholder="p.summary" />
-      <p className="text-xs text-gray-400 dark:text-gray-500 -mt-2">{t("sourceForm.scraperTip")}</p>
+
+      <div>
+        <button
+          type="button"
+          onClick={handleDetect}
+          disabled={!url || detecting}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded transition-colors",
+            !url || detecting
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600"
+              : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400 dark:hover:bg-indigo-900"
+          )}
+        >
+          <Wand2 size={14} className={detecting ? "animate-pulse" : ""} />
+          {detecting ? t("sourceForm.scraperDetecting") : t("sourceForm.scraperDetect")}
+        </button>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">{t("sourceForm.scraperDetectHint")}</p>
+      </div>
+
+      {detectError && <p className="text-xs text-red-500">{detectError}</p>}
+
+      {itemCount !== null && itemCount > 0 && preview && (
+        <div className="rounded border border-gray-200 dark:border-gray-700 p-2.5">
+          <p className="text-xs font-medium mb-1.5 text-gray-600 dark:text-gray-300">
+            {t("sourceForm.scraperFoundItems", { count: itemCount })}
+          </p>
+          <ul className="flex flex-col gap-1">
+            {preview.slice(0, 5).map((item, i) => (
+              <li key={i} className="truncate text-xs text-gray-500 dark:text-gray-400">{item.title}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {itemCount === 0 && (
+        <p className="text-xs text-amber-500">{t("sourceForm.scraperNoItemsFound")}</p>
+      )}
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setAdvancedOpen((v) => !v)}
+          className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        >
+          {advancedOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          {t("sourceForm.scraperAdvanced")}
+        </button>
+        {advancedOpen && (
+          <div className="flex flex-col gap-3 mt-2">
+            <Field label={t("sourceForm.scraperItemSelector")} field="item_selector" config={config} onChange={onChange} placeholder="article.post" />
+            <Field label={t("sourceForm.scraperTitleSelector")} field="title_selector" config={config} onChange={onChange} placeholder="h2.title" />
+            <Field label={t("sourceForm.scraperLinkSelector")} field="link_selector" config={config} onChange={onChange} placeholder="a.read-more" />
+            <Field label={t("sourceForm.scraperContentSelector")} field="content_selector" config={config} onChange={onChange} placeholder="p.summary" />
+            <p className="text-xs text-gray-400 dark:text-gray-500">{t("sourceForm.scraperTip")}</p>
+          </div>
+        )}
+      </div>
     </>
   );
-  return null;
 }
 
 function Field({

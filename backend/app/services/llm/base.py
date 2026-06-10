@@ -448,6 +448,39 @@ def parse_newsletter_response(text: str, known_categories: list[str]) -> Newslet
     return NewsletterResult(items=items)
 
 
+def parse_scraper_selector_response(text: str) -> dict:
+    """Parse an LLM response suggesting CSS selectors for the web scraper.
+    Raises ValueError if no usable item_selector was returned."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = json.loads(repair_json(text))
+
+    if not isinstance(data, dict):
+        raise ValueError("Expected a JSON object")
+
+    item_selector = str(data.get("item_selector") or "").strip()
+    if not item_selector:
+        raise ValueError("LLM response is missing item_selector")
+
+    title_selector = str(data.get("title_selector") or "").strip() or "h1,h2,h3"
+    link_selector = str(data.get("link_selector") or "").strip() or "a"
+    content_selector = data.get("content_selector")
+    content_selector = str(content_selector).strip() or None if content_selector else None
+
+    return {
+        "item_selector": item_selector,
+        "title_selector": title_selector,
+        "link_selector": link_selector,
+        "content_selector": content_selector,
+    }
+
+
 def dedup_cluster_payload(
     items: list[dict],
     max_content_chars: int = 800,
@@ -474,6 +507,27 @@ def dedup_cluster_payload(
             dedup_items.append(item)
 
     return dedup_items, orig_to_dedup
+
+
+SCRAPER_SELECTOR_PROMPT = """You are configuring a web scraper for a news aggregator. Below is a simplified version of a webpage's HTML — scripts, styles, and most attributes have been removed, and text has been shortened, so you can focus on the structure.
+
+Page URL: {url}
+
+Simplified HTML:
+{html}
+
+Find the repeated structural pattern used for each article/post/link in a list of items on this page. Return a JSON object with exactly these fields:
+- "item_selector": a CSS selector that matches EACH item container (must match multiple elements on this page)
+- "title_selector": a CSS selector, relative to the item container, for the element holding the item's title/headline
+- "link_selector": a CSS selector, relative to the item container, for the <a> element linking to the full article
+- "content_selector": a CSS selector, relative to the item container, for an element with a summary/description/snippet, or null if there isn't one
+
+Rules:
+- Selectors must be valid CSS and should work with Python's BeautifulSoup `select()`.
+- Avoid class names containing characters that need escaping in CSS (colons, slashes, etc. — common in utility-class frameworks like Tailwind, e.g. "hover:bg-gray-100" or "lg:w-1/2"). Prefer tag names, simple class names, or attribute selectors instead.
+- Prefer selectors based on semantic, repeated patterns rather than brittle deep positional paths.
+
+Respond ONLY with valid JSON. No markdown fences, no extra text."""
 
 
 CATEGORY_TOPICS_PROMPT = """What topics, themes, subtopics, and related keywords typically appear in news coverage under the category "{name}"?{keywords_hint}
@@ -542,6 +596,16 @@ class LLMProvider(ABC):
 
     @abstractmethod
     def _complete(self, system: str, user: str, max_tokens: int = 512) -> str: ...
+
+    def suggest_scraper_selectors(self, url: str, html: str, feedback: str | None = None) -> str:
+        user = SCRAPER_SELECTOR_PROMPT.format(url=url, html=html)
+        if feedback:
+            user += f"\n\n{feedback}"
+        return self._complete(
+            system="You are a precise web scraping configuration assistant. Respond only with JSON.",
+            user=user,
+            max_tokens=300,
+        )
 
     def generate_category_prompt(self, name: str, keywords: list[str], max_chars: int = 500) -> str:
         keywords_hint = (
