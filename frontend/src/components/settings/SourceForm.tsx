@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Wand2 } from "lucide-react";
+import { isAxiosError } from "axios";
 import type { Source, SourceCreate, SourceType } from "../../types/source";
 import { useCreateSource, useUpdateSource } from "../../hooks/useSources";
 import { sourcesApi } from "../../api/sources";
@@ -318,8 +319,12 @@ function ScraperConfigFields({
       setPreview(result.preview);
       setItemCount(result.item_count);
       if (result.item_count === 0) setAdvancedOpen(true);
-    } catch {
-      setDetectError(t("sourceForm.scraperDetectError"));
+    } catch (err) {
+      const message =
+        isAxiosError(err) && err.response?.status === 403
+          ? t("sourceForm.scraperRobotsDisallowed")
+          : t("sourceForm.scraperDetectError");
+      setDetectError(message);
       setAdvancedOpen(true);
     } finally {
       setDetecting(false);

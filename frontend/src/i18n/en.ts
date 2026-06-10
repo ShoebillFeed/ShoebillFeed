@@ -192,6 +192,7 @@ const en = {
     scraperDetecting: "Analyzing page…",
     scraperDetectHint: "Enter the page URL, then click Detect — AI will figure out the right settings automatically.",
     scraperDetectError: "Couldn't analyze this page. You can configure the selectors manually below.",
+    scraperRobotsDisallowed: "This site's robots.txt disallows automated scraping.",
     scraperFoundItems_one: "Found {{count}} item on this page",
     scraperFoundItems_other: "Found {{count}} items on this page",
     scraperNoItemsFound: "No items found automatically. Adjust the selectors below.",

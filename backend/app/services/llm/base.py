@@ -8,7 +8,7 @@ from typing import Optional
 
 SYSTEM_PROMPT = """You are a news analyst. Given a news article title and content, return a JSON object with exactly these fields:
 - "abstract": string, 1-3 sentence summary of the article.
-- "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent the article's topic (e.g. ["llm", "openai", "reasoning models"])
+- "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the article's language) that best represent the article's topic (e.g. ["llm", "openai", "reasoning models"])
 - "categories": array of category names from the provided list that fit this article (can be empty [], can have multiple matches)
 - "relevance_score": integer 1-10, how relevant this is to the matched categories' keywords (5 if no category matched)
 - "impact_score": integer 1-10, how broadly impactful this news is (10 = global significance, 1 = minor local event)
@@ -21,7 +21,7 @@ Respond ONLY with valid JSON. No markdown fences, no extra text."""
 SOCIAL_SYSTEM_PROMPT = """You are a news analyst. Given a social media post, return a JSON object with exactly these fields:
 - "headline": string, a short punchy headline (max 12 words) that captures the core topic of the post.
 - "abstract": string, 1-2 sentence summary of the post.
-- "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent the post's topic.
+- "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the post's language) that best represent the post's topic.
 - "categories": array of category names from the provided list that fit this post (can be empty [], can have multiple matches)
 - "relevance_score": integer 1-10, how relevant this is to the matched categories' keywords (5 if no category matched)
 - "impact_score": integer 1-10, how broadly impactful this post is (10 = global significance, 1 = minor personal post)
@@ -35,7 +35,7 @@ Respond ONLY with valid JSON. No markdown fences, no extra text."""
 SHORT_ITEM_SYSTEM_PROMPT = """You are a news classifier. The news item below is very short — do not rewrite or summarise it. Extract metadata only.
 
 Return a JSON object with exactly these fields:
-- "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent the topic
+- "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the item's language) that best represent the topic
 - "categories": array of category names from the provided list that fit this item (can be empty [])
 - "relevance_score": integer 1-10, how relevant this is to the matched categories' keywords (5 if no category matched)
 - "impact_score": integer 1-10, how broadly impactful this is (10 = global significance, 1 = minor local event)
@@ -51,7 +51,7 @@ MULTI_ITEM_SYSTEM_PROMPT = """You are a news analyst. Analyse each news item bel
 Each object must contain:
 - "id": the item identifier exactly as given
 - "abstract": string, 1-3 sentence summary
-- "keywords": array of 3-7 short lowercase keywords or keyphrases
+- "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the item's language)
 - "categories": array of matching category names from the list (can be [])
 - "relevance_score": integer 1-10, how relevant to matched categories (5 if none matched)
 - "impact_score": integer 1-10, how broadly impactful (10 = global significance, 1 = minor local event)
@@ -66,7 +66,7 @@ MULTI_SHORT_ITEM_SYSTEM_PROMPT = """You are a news classifier. For each item bel
 
 Return a JSON array — one object per item — each containing:
 - "id": the item identifier exactly as given
-- "keywords": array of 3-7 short lowercase keywords or keyphrases
+- "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the item's language)
 - "categories": array of matching category names (can be [])
 - "relevance_score": integer 1-10 (5 if none matched)
 - "impact_score": integer 1-10
@@ -82,7 +82,7 @@ Each object must contain:
 - "id": the item identifier exactly as given
 - "headline": short punchy headline (max 12 words) capturing the core topic
 - "abstract": string, 1-2 sentence summary
-- "keywords": array of 3-7 short lowercase keywords or keyphrases
+- "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the item's language)
 - "categories": array of matching category names (can be [])
 - "relevance_score": integer 1-10 (5 if none matched)
 - "impact_score": integer 1-10
@@ -95,7 +95,7 @@ Respond ONLY with a valid JSON array. No markdown fences, no extra text."""
 CLUSTER_SYSTEM_PROMPT = """You are a news analyst. Multiple sources have covered the same event. Return a JSON object with exactly these fields:
 - "title": string, a short headline (max 10 words) that captures the core event.
 - "unified_abstract": string, 1-3 sentence summary that synthesises all sources into one coherent account.
-- "keywords": array of 3-7 short lowercase keywords or keyphrases that best represent this event (e.g. ["trade war", "tariffs", "eu"])
+- "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of source language) that best represent this event (e.g. ["trade war", "tariffs", "eu"])
 - "categories": array of category names from the provided list that fit this event (can be empty [], can have multiple matches)
 - "relevance_score": integer 1-10
 - "impact_score": integer 1-10, how broadly impactful this event is
@@ -399,7 +399,7 @@ For each article, return one object with:
 - "headline": the article title (max 15 words)
 - "url": the article URL (tracking/redirect URLs are fine; set null only if truly absent)
 - "summary": 1-3 sentence summary
-- "keywords": array of 3-5 lowercase keywords
+- "keywords": array of 3-5 lowercase keywords in English (regardless of the article's language)
 - "categories": array of matching category names from the list (can be [])
 - "relevance_score": integer 1-10
 - "impact_score": integer 1-10

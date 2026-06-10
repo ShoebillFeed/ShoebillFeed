@@ -118,10 +118,13 @@ def suggest_scraper_config(payload: ScraperSuggestRequest, _: User = Depends(get
     if not url:
         raise HTTPException(status_code=422, detail="URL is required")
 
+    from app.services.fetchers.scraper import RobotsDisallowedError
     from app.services.scraper_assist import suggest_scraper_config as _suggest
 
     try:
         return _suggest(url)
+    except RobotsDisallowedError:
+        raise HTTPException(status_code=403, detail="This site's robots.txt disallows automated scraping")
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Could not analyze page: {exc}") from exc
 

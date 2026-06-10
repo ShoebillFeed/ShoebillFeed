@@ -1,6 +1,7 @@
 import logging
 import re
 from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
+from urllib.robotparser import RobotFileParser
 
 import httpx
 from bs4 import BeautifulSoup
@@ -8,6 +9,12 @@ from bs4 import BeautifulSoup
 from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher
 
 logger = logging.getLogger(__name__)
+
+USER_AGENT = "Mozilla/5.0 (compatible; ShoebillFeed/1.0)"
+
+
+class RobotsDisallowedError(Exception):
+    """Raised when a site's robots.txt disallows fetching the given URL."""
 
 # Values that are overwhelmingly session tokens rather than article identifiers:
 # 16+ hex chars (MD5 halves, random hex) or standard UUIDs.
@@ -40,11 +47,40 @@ def _scrub_url(url: str) -> str:
     return urlunparse(parsed._replace(query=urlencode(sorted(clean.items()), doseq=True)))
 
 
+def _robots_allowed(url: str, timeout: float = 10) -> bool:
+    """Check the host's robots.txt for permission to fetch `url`.
+
+    Fails open (returns True) if robots.txt is missing or can't be fetched,
+    since absence of a robots.txt means no restrictions apply.
+    """
+    parsed = urlparse(url)
+    robots_url = urlunparse((parsed.scheme, parsed.netloc, "/robots.txt", "", "", ""))
+    parser = RobotFileParser()
+    try:
+        resp = httpx.get(
+            robots_url,
+            headers={"User-Agent": USER_AGENT},
+            timeout=timeout,
+            follow_redirects=True,
+        )
+        if resp.status_code >= 400:
+            return True
+        parser.parse(resp.text.splitlines())
+    except Exception:
+        logger.warning("Could not fetch robots.txt at %s, allowing by default", robots_url)
+        return True
+    return parser.can_fetch(USER_AGENT, url)
+
+
 def fetch_html(url: str, timeout: float = 15) -> str:
-    """Fetch a page's HTML. Raises on network/HTTP errors (caller decides how to handle)."""
+    """Fetch a page's HTML. Raises on network/HTTP errors, or RobotsDisallowedError
+    if the site's robots.txt disallows fetching this URL."""
+    if not _robots_allowed(url):
+        raise RobotsDisallowedError(f"Scraping disallowed by robots.txt: {url}")
+
     resp = httpx.get(
         url,
-        headers={"User-Agent": "Mozilla/5.0 (compatible; ShoebillFeed/1.0)"},
+        headers={"User-Agent": USER_AGENT},
         timeout=timeout,
         follow_redirects=True,
     )
@@ -141,6 +177,9 @@ class WebScraperFetcher(NewsFetcher):
 
         try:
             html = fetch_html(url)
+        except RobotsDisallowedError:
+            logger.warning("Skipping scraper source %s: disallowed by robots.txt", url)
+            return []
         except Exception:
             logger.exception("Error fetching scraper URL %s", url)
             return []

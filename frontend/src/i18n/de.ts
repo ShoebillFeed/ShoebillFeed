@@ -192,6 +192,7 @@ const de = {
     scraperDetecting: "Seite wird analysiert…",
     scraperDetectHint: "Seiten-URL eingeben und auf „Erkennen“ klicken — die KI ermittelt die richtigen Einstellungen automatisch.",
     scraperDetectError: "Diese Seite konnte nicht analysiert werden. Du kannst die Selektoren unten manuell konfigurieren.",
+    scraperRobotsDisallowed: "Die robots.txt dieser Seite verbietet automatisiertes Scraping.",
     scraperFoundItems_one: "{{count}} Eintrag auf dieser Seite gefunden",
     scraperFoundItems_other: "{{count}} Einträge auf dieser Seite gefunden",
     scraperNoItemsFound: "Automatisch wurden keine Einträge gefunden. Passe die Selektoren unten an.",
