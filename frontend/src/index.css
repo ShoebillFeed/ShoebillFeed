@@ -57,3 +57,15 @@ html {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* 100vh on mobile browsers (notably Firefox Android) includes the area
+   covered by the collapsible toolbar, making the feed taller than the
+   visible viewport. Use the dynamic viewport unit where supported. */
+.feed-scroll-height {
+  height: calc(100vh - 200px);
+}
+@supports (height: 100dvh) {
+  .feed-scroll-height {
+    height: calc(100dvh - 200px);
+  }
+}

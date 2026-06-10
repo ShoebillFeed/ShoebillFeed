@@ -254,7 +254,7 @@ export default function NewsFeed({
         Scroll container is always in the DOM so parentRef stays stable across
         tab switches and loading states. Event listeners never need re-attaching.
       */}
-      <div ref={parentRef} className="overflow-auto" style={{ height: "calc(100vh - 200px)" }}>
+      <div ref={parentRef} className="overflow-auto feed-scroll-height">
         {isLoading ? (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 5 }).map((_, i) => (
