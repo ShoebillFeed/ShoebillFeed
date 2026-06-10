@@ -50,7 +50,7 @@ export function LLMInfoIcon({ provider, model, fields = "Abstract · Keywords ·
         <Info size={11} />
       </button>
       <span className={cn(
-        "pointer-events-none absolute z-50 bottom-full right-0 mb-1.5",
+        "pointer-events-none absolute z-50 top-full right-0 mt-1.5",
         "w-max max-w-52 rounded-md px-2.5 py-1.5 text-xs shadow-lg",
         "bg-gray-900 text-white dark:bg-gray-700",
         "transition-opacity duration-150",
