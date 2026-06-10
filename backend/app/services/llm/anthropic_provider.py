@@ -37,7 +37,7 @@ class AnthropicProvider(LLMProvider):
         truncated = (content or title)[:max_content_chars]
         known = [c["name"] for c in categories]
         prompt_template = SOCIAL_SYSTEM_PROMPT if social_post else SYSTEM_PROMPT
-        system = prompt_template.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
+        system = prompt_template.format(categories_json=json.dumps(categories)) + language_suffix(output_language, translate_title=not social_post)
         user = f"Post: {truncated}" if social_post else f"Title: {title}\n\nContent: {truncated}"
 
         message = self.client.messages.create(
@@ -101,7 +101,7 @@ class AnthropicProvider(LLMProvider):
         else:
             truncated = (content or title)[:max_content_chars]
             prompt_template = SOCIAL_SYSTEM_PROMPT if social_post else SYSTEM_PROMPT
-            system = prompt_template.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
+            system = prompt_template.format(categories_json=json.dumps(categories)) + language_suffix(output_language, translate_title=not social_post)
             user = f"Post: {truncated}" if social_post else f"Title: {title}\n\nContent: {truncated}"
             max_tokens = 1024
         return {
@@ -131,7 +131,7 @@ class AnthropicProvider(LLMProvider):
             system = MULTI_SOCIAL_SYSTEM_PROMPT.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
             max_tokens = min(len(items) * 400, 4096)
         else:
-            system = MULTI_ITEM_SYSTEM_PROMPT.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
+            system = MULTI_ITEM_SYSTEM_PROMPT.format(categories_json=json.dumps(categories)) + language_suffix(output_language, translate_title=True)
             max_tokens = min(len(items) * 400, 4096)
 
         parts = []

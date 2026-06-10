@@ -150,8 +150,9 @@ def process_news_item(self, news_item_id: str) -> None:
 
         word_count = len((item.title + " " + (item.raw_content or "")).split())
         is_short = word_count <= min_word_count
+        translating = output_language is not None
 
-        if is_short:
+        if is_short and not translating:
             # E: items below llm_min_word_count get classify-only, no abstract generation
             result = provider.process_short_item(
                 title=item.title,
@@ -172,6 +173,18 @@ def process_news_item(self, news_item_id: str) -> None:
                 item.abstract = item.raw_content or ""
             else:
                 item.abstract = result.abstract
+        elif translating:
+            # Translation mode: always run full processing so abstract + title get translated,
+            # skipping the cost shortcuts below that would otherwise leave items untranslated.
+            result = provider.process_item(
+                title=item.title,
+                content=item.raw_content or "",
+                categories=categories_payload,
+                output_language=output_language,
+            )
+            item.abstract = result.abstract
+            if result.generated_title:
+                item.title = result.generated_title
         else:
             # A: two-stage pipeline for regular articles
             # Stage 1 — cheap classify-only with 200-char excerpt; no abstract requested

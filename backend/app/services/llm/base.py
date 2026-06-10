@@ -133,7 +133,7 @@ LANGUAGE_NAMES: dict[str, str] = {
 }
 
 
-def language_suffix(output_language: str | None) -> str:
+def language_suffix(output_language: str | None, translate_title: bool = False) -> str:
     """Return a prompt suffix controlling output language for all generated text fields."""
     fields = "(title, abstract, unified_abstract, headline, summary, source_summaries)"
     if not output_language:
@@ -142,10 +142,13 @@ def language_suffix(output_language: str | None) -> str:
             f"MUST be written in the same language as the source article(s). Do not translate."
         )
     name = LANGUAGE_NAMES.get(output_language, output_language)
-    return (
+    suffix = (
         f"\n\nIMPORTANT: All generated text fields {fields} "
         f"MUST be written in {name}, regardless of the article's original language."
     )
+    if translate_title:
+        suffix += f'\nAlso include a "translated_title" field: the article title translated into {name}.'
+    return suffix
 
 
 @dataclass
@@ -224,7 +227,10 @@ def parse_llm_response(text: str, known_categories: list[str], social_post: bool
     abstract = str(data.get("abstract", "")).strip() or "No abstract available."
     raw_cats = data.get("categories", data.get("category"))
     category_names = _parse_categories(raw_cats, known_categories)
-    generated_title = str(data["headline"]).strip() if social_post and data.get("headline") else None
+    if social_post:
+        generated_title = str(data["headline"]).strip() if data.get("headline") else None
+    else:
+        generated_title = str(data["translated_title"]).strip() if data.get("translated_title") else None
 
     return ProcessedResult(
         abstract=abstract,
@@ -358,13 +364,17 @@ def parse_multi_item_response(
                 impact_score=_clamp(entry.get("impact_score"), 5),
             )
         else:
+            if is_social:
+                generated_title = str(entry["headline"]).strip() if entry.get("headline") else None
+            else:
+                generated_title = str(entry["translated_title"]).strip() if entry.get("translated_title") else None
             result = ProcessedResult(
                 abstract=str(entry.get("abstract", "")).strip() or "No abstract available.",
                 keywords=_parse_keywords(entry.get("keywords")),
                 category_names=category_names,
                 relevance_score=_clamp(entry.get("relevance_score"), 5),
                 impact_score=_clamp(entry.get("impact_score"), 5),
-                generated_title=str(entry["headline"]).strip() if is_social and entry.get("headline") else None,
+                generated_title=generated_title,
             )
         results[item_id] = result
     return results

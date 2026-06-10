@@ -34,7 +34,7 @@ class OllamaProvider(LLMProvider):
         truncated = (content or title)[:max_content_chars]
         known = [c["name"] for c in categories]
         prompt_template = SOCIAL_SYSTEM_PROMPT if social_post else SYSTEM_PROMPT
-        system = prompt_template.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
+        system = prompt_template.format(categories_json=json.dumps(categories)) + language_suffix(output_language, translate_title=not social_post)
         user = f"Post: {truncated}" if social_post else f"Title: {title}\n\nContent: {truncated}"
 
         payload = {

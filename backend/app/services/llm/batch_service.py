@@ -66,7 +66,7 @@ def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "L
         uid = str(item.user_id)
         is_social = source is not None and source.source_type == "mastodon"
         word_count = len((item.title + " " + (item.raw_content or "")).split())
-        is_short = word_count <= user_min_words[uid]
+        is_short = word_count <= user_min_words[uid] and not user_langs[uid]
         group_type = "social" if is_social else ("short" if is_short else "full")
 
         groups.setdefault((uid, group_type), []).append({
@@ -239,6 +239,8 @@ def _apply_item_group_result(db: Session, meta: dict, text: str, provider_name: 
             item.abstract = item.raw_content or ""
         else:
             item.abstract = result.abstract
+            if result.generated_title:
+                item.title = result.generated_title
 
         item.extracted_keywords = result.keywords or None
         item.relevance_score = result.relevance_score
