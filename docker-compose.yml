@@ -13,7 +13,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks: [phoenix]
+    networks: [shoebill_internal]
     restart: unless-stopped
 
   redis:
@@ -26,35 +26,35 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks: [phoenix]
+    networks: [shoebill_internal]
     restart: unless-stopped
 
-  ollama:
-    image: ollama/ollama
-    command: serve
-    environment:
-      OLLAMA_KEEP_ALIVE: "-1"
-    volumes:
-      - ./data/ollama:/root/.ollama
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks: [phoenix]
-    restart: unless-stopped
+#  ollama:
+#    image: ollama/ollama
+#    command: serve
+#    environment:
+#      OLLAMA_KEEP_ALIVE: "-1"
+#    volumes:
+#      - ./data/ollama:/root/.ollama
+#    healthcheck:
+#      test: ["CMD", "ollama", "list"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#      start_period: 10s
+#    networks: [shoebill_internal]
+#    restart: unless-stopped
 
-  ollama-init:
-    image: ollama/ollama
-    command: pull ${OLLAMA_MODEL:-qwen3:8b}
-    environment:
-      OLLAMA_HOST: http://ollama:11434
-    depends_on:
-      ollama:
-        condition: service_healthy
-    networks: [phoenix]
-    restart: on-failure
+#  ollama-init:
+#    image: ollama/ollama
+#    command: pull ${OLLAMA_MODEL:-qwen2.5:3b}
+#    environment:
+#      OLLAMA_HOST: http://ollama:11434
+#    depends_on:
+#      ollama:
+#        condition: service_healthy
+#    networks: [shoebill_internal]
+#    restart: on-failure
 
   backend:
     build:
@@ -91,9 +91,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      ollama:
-        condition: service_healthy
-    networks: [phoenix]
+#      ollama:
+#        condition: service_healthy
+    networks: [shoebill_internal]
     restart: unless-stopped
 
   celery-worker:
@@ -121,9 +121,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      ollama:
-        condition: service_healthy
-    networks: [phoenix]
+#      ollama:
+#        condition: service_healthy
+    networks: [shoebill_internal]
     restart: unless-stopped
 
   celery-beat:
@@ -137,19 +137,27 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    networks: [phoenix]
+    networks: [shoebill_internal]
     restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "80:80"
-    networks: [phoenix]
+    networks: [shoebill_internal, shoebill]
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.shoebill.rule=Host(`shoebill.s-hoose.de`)"
+      - "traefik.http.routers.shoebill.entrypoints=web"
+      - "traefik.http.routers.shoebill-secure.rule=Host(`shoebill.s-hoose.de`)"
+      - "traefik.http.routers.shoebill-secure.entrypoints=web-secure"
+      - "traefik.http.routers.shoebill-secure.tls=true"
+      - "traefik.http.routers.shoebill-secure.tls.certresolver=letsencrypt"
 
 networks:
-  phoenix:
+  shoebill_internal:
     driver: bridge
+  shoebill:
+    external: true
 
