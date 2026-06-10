@@ -92,7 +92,7 @@ LLM_PROVIDERS             # anthropic | ollama | ollama,anthropic (ordered, firs
 ANTHROPIC_API_KEY
 ANTHROPIC_MODEL           # default: claude-haiku-4-5
 OLLAMA_BASE_URL
-OLLAMA_MODEL              # default: qwen2.5:14b
+OLLAMA_MODEL              # default: qwen3:8b
 REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET
 YOUTUBE_API_KEY
 ```

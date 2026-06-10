@@ -12,7 +12,7 @@ from app.services.llm.base import (
 class OllamaProvider(LLMProvider):
     provider_name = "ollama"
 
-    def __init__(self, base_url: str, model: str = "qwen2.5:0.5b", timeout: int = 120):
+    def __init__(self, base_url: str, model: str = "qwen3:8b", timeout: int = 120):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.model_name = model
