@@ -9,6 +9,7 @@ from app.models.news_cluster import NewsCluster
 from app.models.news_item import NewsItem
 
 KEYWORD_SIMILARITY_THRESHOLD = 0.25
+MIN_SHARED_KEYWORDS = 2
 
 STOP_WORDS = frozenset({
     "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
@@ -16,8 +17,18 @@ STOP_WORDS = frozenset({
     "had", "will", "would", "could", "should", "may", "might", "its", "this",
     "that", "as", "by", "from", "it", "not", "no", "so", "if", "their",
     "after", "over", "new", "says", "say", "said", "report", "us",
+    # Generic news boilerplate that recurs across unrelated stories on the
+    # same broad topic and adds little distinguishing signal.
+    "plan", "plans", "deal", "deals", "talks", "talk", "war", "amid",
+    "calls", "call", "called", "announces", "announce", "announced",
+    "set", "sets", "more", "most", "than", "what", "when", "where", "who",
+    "why", "how", "all", "out", "up", "down", "off", "now", "just", "can",
+    "two", "three", "first", "second", "year", "years", "world", "latest",
+    "news", "while", "during", "into", "still", "back", "make", "makes",
+    "made",
 })
 SIMILARITY_THRESHOLD = 0.3
+MIN_SHARED_WORDS = 2
 LOOKBACK_HOURS = 48
 
 
@@ -30,7 +41,7 @@ def _keyword_set(item: "NewsItem") -> frozenset[str]:
 def _title_words(title: str) -> frozenset[str]:
     return frozenset(
         w for w in re.sub(r"[^\w\s]", "", title.lower()).split()
-        if w not in STOP_WORDS and len(w) > 2
+        if w not in STOP_WORDS and len(w) > 2 and not w.isdigit()
     )
 
 
@@ -38,6 +49,22 @@ def _jaccard(a: frozenset, b: frozenset) -> float:
     if not a or not b:
         return 0.0
     return len(a & b) / len(a | b)
+
+
+def _matches(a: frozenset, b: frozenset, threshold: float, min_shared: int) -> bool:
+    """
+    Jaccard similarity check with a minimum absolute-overlap requirement.
+    Without this, one or two coincidentally-shared generic terms (e.g. a
+    recurring entity name, or a leftover year/number) can push the ratio
+    over threshold for small word/keyword sets even when the items are
+    about unrelated stories.
+    """
+    if not a or not b:
+        return False
+    shared = a & b
+    if len(shared) < min_shared:
+        return False
+    return len(shared) / len(a | b) >= threshold
 
 
 def cluster_new_items(db: Session, new_item_ids: list[uuid.UUID]) -> dict[uuid.UUID, uuid.UUID | None]:
@@ -90,6 +117,17 @@ def _cluster_for_user(
     all_items = new_items + recent_items
     words = {item.id: _title_words(item.title) for item in all_items}
 
+    # Combined title-word vocabulary per existing cluster among recent_items.
+    # A new item must fit a cluster's overall vocabulary, not just match one
+    # (possibly tangential) member, to avoid transitively "drifting" into a
+    # long-running cluster via a single weak link.
+    cluster_anchor_words: dict[uuid.UUID, frozenset[str]] = {}
+    for item in recent_items:
+        if item.cluster_id is not None:
+            cluster_anchor_words[item.cluster_id] = (
+                cluster_anchor_words.get(item.cluster_id, frozenset()) | words[item.id]
+            )
+
     # Union-find over all items
     parent: dict[uuid.UUID, uuid.UUID] = {item.id: item.id for item in all_items}
 
@@ -102,13 +140,18 @@ def _cluster_for_user(
     # Compare new items pairwise
     for i, a in enumerate(new_items):
         for b in new_items[i + 1:]:
-            if _jaccard(words[a.id], words[b.id]) >= SIMILARITY_THRESHOLD:
+            if _matches(words[a.id], words[b.id], SIMILARITY_THRESHOLD, MIN_SHARED_WORDS):
                 parent[find(a.id)] = find(b.id)
 
     # Compare each new item against recent items from other sources
     for new_item in new_items:
         for recent in recent_items:
-            if _jaccard(words[new_item.id], words[recent.id]) >= SIMILARITY_THRESHOLD:
+            if recent.cluster_id is not None:
+                anchor = cluster_anchor_words[recent.cluster_id]
+                matched = _matches(words[new_item.id], anchor, SIMILARITY_THRESHOLD, MIN_SHARED_WORDS)
+            else:
+                matched = _matches(words[new_item.id], words[recent.id], SIMILARITY_THRESHOLD, MIN_SHARED_WORDS)
+            if matched:
                 parent[find(new_item.id)] = find(recent.id)
 
     # Build root → group mapping (only groups that contain at least one new item)
@@ -195,8 +238,11 @@ def recluster_processed_item(db: Session, item: NewsItem) -> uuid.UUID | None:
     best: NewsItem | None = None
     best_score = 0.0
     for candidate in candidates:
-        score = _jaccard(item_kws, _keyword_set(candidate))
-        if score >= KEYWORD_SIMILARITY_THRESHOLD and score > best_score:
+        cand_kws = _keyword_set(candidate)
+        if not _matches(item_kws, cand_kws, KEYWORD_SIMILARITY_THRESHOLD, MIN_SHARED_KEYWORDS):
+            continue
+        score = _jaccard(item_kws, cand_kws)
+        if score > best_score:
             best_score = score
             best = candidate
 
@@ -210,6 +256,16 @@ def recluster_processed_item(db: Session, item: NewsItem) -> uuid.UUID | None:
         cluster = db.get(NewsCluster, best.cluster_id)
         if cluster is None:
             return None
+
+        # Drift guard: the item must also fit the cluster's overall keyword
+        # vocabulary, not just this single member, before joining. Otherwise
+        # an item could keep extending a long-running cluster via a single
+        # weakly-related member while sharing nothing with the rest of it.
+        members = db.scalars(select(NewsItem).where(NewsItem.cluster_id == cluster.id)).all()
+        anchor = frozenset().union(*(_keyword_set(m) for m in members))
+        if not _matches(item_kws, anchor, KEYWORD_SIMILARITY_THRESHOLD, MIN_SHARED_KEYWORDS):
+            return None
+
         cluster.llm_processed = False
         cluster.unified_abstract = None
         cluster.title = None
