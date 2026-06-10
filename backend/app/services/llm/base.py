@@ -190,6 +190,8 @@ class NewsletterItem:
 @dataclass
 class NewsletterResult:
     items: list[NewsletterItem]
+    provider_name: str = ""
+    model_name: str = ""
 
 
 def _clamp(v, default: int = 5) -> int:

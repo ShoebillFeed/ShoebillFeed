@@ -91,7 +91,10 @@ class OllamaProvider(LLMProvider):
             timeout=600.0,
         )
         resp.raise_for_status()
-        return parse_newsletter_response(resp.json()["response"], known)
+        result = parse_newsletter_response(resp.json()["response"], known)
+        result.provider_name = self.provider_name
+        result.model_name = self.model_name
+        return result
 
     def health_check(self) -> bool:
         try:

@@ -80,7 +80,10 @@ class AnthropicProvider(LLMProvider):
             system=self._cached_system(system),
             messages=[{"role": "user", "content": f"Newsletter content:\n\n{content[:4000]}"}],
         )
-        return parse_newsletter_response(message.content[0].text, known)
+        result = parse_newsletter_response(message.content[0].text, known)
+        result.provider_name = self.provider_name
+        result.model_name = self.model_name
+        return result
 
     def build_item_request(
         self,

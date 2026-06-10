@@ -48,6 +48,8 @@ def _expand_newsletter(db, email_item: "NewsItem", source: "Source", categories_
         logger.exception("Newsletter extraction failed for item %s, falling back to normal processing", email_item.id)
         # Fall back: treat it like a regular article
         email_item.llm_processed = True
+        email_item.llm_provider = provider.provider_name or None
+        email_item.llm_model = provider.model_name or None
         return
 
     logger.info("Newsletter extraction for %s: LLM returned %d items", email_item.id, len(result.items))
@@ -55,6 +57,8 @@ def _expand_newsletter(db, email_item: "NewsItem", source: "Source", categories_
     if not result.items:
         logger.warning("Newsletter extraction returned 0 items for %s, falling back", email_item.id)
         email_item.llm_processed = True
+        email_item.llm_provider = provider.provider_name or None
+        email_item.llm_model = provider.model_name or None
         return
 
     cat_objects = {
@@ -91,6 +95,8 @@ def _expand_newsletter(db, email_item: "NewsItem", source: "Source", categories_
             relevance_score=ni.relevance_score,
             impact_score=ni.impact_score,
             llm_processed=True,
+            llm_provider=result.provider_name or None,
+            llm_model=result.model_name or None,
         )
         if ni.category_names:
             new_item.categories = [cat_objects[n] for n in ni.category_names if n in cat_objects]

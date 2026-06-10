@@ -34,18 +34,21 @@ export function LLMInfoIcon({ provider, model, fields = "Abstract · Keywords ·
 
   return (
     <span ref={ref} className="relative group/llm inline-flex items-center">
-      <Info
-        size={11}
+      <button
+        type="button"
+        aria-label="LLM info"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
           setOpen((v) => !v);
         }}
         className={cn(
-          "cursor-pointer",
+          "inline-flex items-center cursor-pointer",
           hasImage ? "text-white/40 group-hover/llm:text-white/70" : "text-gray-400 dark:text-gray-500 group-hover/llm:text-gray-500 dark:group-hover/llm:text-gray-400"
         )}
-      />
+      >
+        <Info size={11} />
+      </button>
       <span className={cn(
         "pointer-events-none absolute z-50 bottom-full right-0 mb-1.5",
         "w-max max-w-52 rounded-md px-2.5 py-1.5 text-xs shadow-lg",
