@@ -62,11 +62,19 @@ export default function SourceForm({ source, onClose }: Props) {
     const parsedConfig = Object.fromEntries(
       Object.entries(config).filter(([, v]) => v.trim() !== "")
     );
-    if (isEdit && source) {
-      await update.mutateAsync({ id: source.id, data: { name, config: parsedConfig, is_active: isActive, fetch_interval: interval } });
-    } else {
-      const payload: SourceCreate = { name, source_type: type, config: parsedConfig, is_active: isActive, fetch_interval: interval };
-      await create.mutateAsync(payload);
+    try {
+      if (isEdit && source) {
+        await update.mutateAsync({ id: source.id, data: { name, config: parsedConfig, is_active: isActive, fetch_interval: interval } });
+      } else {
+        const payload: SourceCreate = { name, source_type: type, config: parsedConfig, is_active: isActive, fetch_interval: interval };
+        await create.mutateAsync(payload);
+      }
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 403) {
+        setFormError(t("sourceForm.scraperRobotsDisallowed"));
+        return;
+      }
+      throw err;
     }
     onClose();
   };

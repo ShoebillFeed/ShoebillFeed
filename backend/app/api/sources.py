@@ -28,8 +28,24 @@ def list_sources(db: Session = Depends(get_db), current_user: User = Depends(get
     return [_with_count(db, s) for s in sources]
 
 
+def _check_scraper_robots(config: dict) -> None:
+    """Raise if a scraper source's URL is disallowed by the site's robots.txt."""
+    url = (config.get("url") or "").strip()
+    if not url:
+        return
+    from app.services.fetchers.scraper import robots_allowed
+
+    if not robots_allowed(url):
+        raise HTTPException(
+            status_code=403,
+            detail="This site's robots.txt disallows automated scraping. This source cannot be added.",
+        )
+
+
 @router.post("", response_model=SourceOut, status_code=201)
 def create_source(payload: SourceCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if payload.source_type == "scraper":
+        _check_scraper_robots(payload.config)
     source = Source(**payload.model_dump(), user_id=current_user.id)
     db.add(source)
     db.commit()
@@ -98,6 +114,11 @@ def import_sources(
         )
         if existing:
             continue
+        if item.source_type == "scraper":
+            try:
+                _check_scraper_robots(item.config)
+            except HTTPException:
+                continue
         source = Source(**item.model_dump(), user_id=current_user.id)
         db.add(source)
         db.flush()
@@ -142,6 +163,8 @@ def update_source(source_id: uuid.UUID, payload: SourceUpdate, db: Session = Dep
     source = db.scalar(select(Source).where(Source.id == source_id, Source.user_id == current_user.id))
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
+    if source.source_type == "scraper" and payload.config is not None:
+        _check_scraper_robots(payload.config)
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(source, field, value)
     db.commit()

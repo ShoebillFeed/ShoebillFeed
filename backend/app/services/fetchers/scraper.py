@@ -47,7 +47,7 @@ def _scrub_url(url: str) -> str:
     return urlunparse(parsed._replace(query=urlencode(sorted(clean.items()), doseq=True)))
 
 
-def _robots_allowed(url: str, timeout: float = 10) -> bool:
+def robots_allowed(url: str, timeout: float = 10) -> bool:
     """Check the host's robots.txt for permission to fetch `url`.
 
     Fails open (returns True) if robots.txt is missing or can't be fetched,
@@ -75,7 +75,7 @@ def _robots_allowed(url: str, timeout: float = 10) -> bool:
 def fetch_html(url: str, timeout: float = 15) -> str:
     """Fetch a page's HTML. Raises on network/HTTP errors, or RobotsDisallowedError
     if the site's robots.txt disallows fetching this URL."""
-    if not _robots_allowed(url):
+    if not robots_allowed(url):
         raise RobotsDisallowedError(f"Scraping disallowed by robots.txt: {url}")
 
     resp = httpx.get(
