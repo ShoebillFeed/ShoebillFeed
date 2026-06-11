@@ -14,10 +14,10 @@ const SOURCE_TYPES: { id: SourceType; label: string }[] = [
   { id: "mastodon", label: "Mastodon" },
   { id: "arxiv", label: "arXiv" },
   { id: "lemmy", label: "Lemmy (experimental)" },
-  { id: "github", label: "GitHub (experimental)" },
+  { id: "github", label: "GitHub" },
   { id: "bluesky", label: "Bluesky (experimental)" },
-  { id: "telegram", label: "Telegram (experimental)" },
-  { id: "scraper", label: "Web Scraper (experimental)" },
+  { id: "telegram", label: "Telegram" },
+  { id: "scraper", label: "Web Scraper" },
 ];
 
 const DEFAULT_INTERVALS = [
