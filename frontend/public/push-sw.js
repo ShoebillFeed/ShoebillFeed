@@ -22,6 +22,7 @@ self.addEventListener("push", function (event) {
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
   var url = (event.notification.data && event.notification.data.url) || "/";
+  var targetUrl = new URL(url, self.location.origin).href;
 
   event.waitUntil(
     clients
@@ -30,11 +31,18 @@ self.addEventListener("notificationclick", function (event) {
         for (var i = 0; i < clientList.length; i++) {
           var client = clientList[i];
           if ("focus" in client) {
-            return client.focus();
+            return client
+              .navigate(targetUrl)
+              .then(function (navigated) {
+                return (navigated || client).focus();
+              })
+              .catch(function () {
+                return client.focus();
+              });
           }
         }
         if (clients.openWindow) {
-          return clients.openWindow(url);
+          return clients.openWindow(targetUrl);
         }
       })
   );

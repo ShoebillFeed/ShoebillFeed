@@ -26,6 +26,7 @@ class UserSettings(Base):
     ignore_penalty_weight: Mapped[float] = mapped_column(Float, nullable=False, default=0.1)
     push_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     push_min_relevance: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
+    push_top_category_percent: Mapped[float] = mapped_column(Float, nullable=False, default=100.0)
     push_all_categories: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     push_category_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     push_all_sources: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

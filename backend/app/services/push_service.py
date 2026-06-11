@@ -1,6 +1,8 @@
 import json
 import logging
+import math
 import uuid
+from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -9,6 +11,8 @@ from app.models.user_settings import UserSettings
 from app.models.user_tab import UserTab
 from app.models.news_item import NewsItem
 from app.models.news_cluster import NewsCluster
+from app.models.category import Category
+from app.models.category_weight import CategoryWeight
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +52,62 @@ def _dispatch(db: Session, user_id, payload: dict) -> None:
         _send_to_subscription(sub, payload)
 
 
+def _category_allowed(s: UserSettings, categories) -> bool:
+    """Global category filter: True if the user hasn't restricted notifications
+    to specific categories, or if `categories` includes one of the allowed ones."""
+    if s.push_all_categories:
+        return True
+    allowed = {uuid.UUID(str(cid)) for cid in (s.push_category_ids or [])}
+    if not allowed:
+        return False
+    item_cats = {c.id for c in (categories or [])}
+    return bool(allowed & item_cats)
+
+
+def _source_allowed(s: UserSettings, source_ids) -> bool:
+    """Global source filter: True if the user hasn't restricted notifications
+    to specific sources, or if `source_ids` (a single UUID or iterable of UUIDs)
+    includes one of the allowed ones."""
+    if s.push_all_sources:
+        return True
+    allowed = {uuid.UUID(str(sid)) for sid in (s.push_source_ids or [])}
+    if not allowed:
+        return False
+    if isinstance(source_ids, uuid.UUID):
+        source_ids = {source_ids}
+    return bool(allowed & set(source_ids))
+
+
+def _category_percentile_allowed(s: UserSettings, categories, db: Session) -> bool:
+    """Top-X% category filter: an item/cluster passes if at least one of its
+    categories ranks among the user's top `push_top_category_percent` percent
+    of categories by learned weight (weight * manual_weight). Categories
+    without any learned weight yet use the neutral baseline of 1.0."""
+    percent = s.push_top_category_percent
+    if percent is None or percent >= 100:
+        return True
+    if percent <= 0:
+        return False
+
+    rows = db.execute(
+        select(Category.id, CategoryWeight.weight, CategoryWeight.manual_weight)
+        .outerjoin(CategoryWeight, CategoryWeight.category_id == Category.id)
+        .where(Category.user_id == s.user_id, Category.is_active == True)  # noqa: E712
+    ).all()
+    if not rows:
+        return False
+
+    weight_map = {row.id: (row.weight or 1.0) * (row.manual_weight or 1.0) for row in rows}
+    cutoff = max(1, math.ceil(len(weight_map) * percent / 100))
+    threshold = sorted(weight_map.values(), reverse=True)[cutoff - 1]
+
+    cat_ids = {c.id for c in (categories or [])}
+    if not cat_ids:
+        return 1.0 >= threshold
+    effective = max((weight_map.get(cid, 1.0) for cid in cat_ids), default=1.0)
+    return effective >= threshold
+
+
 def _tab_matches_item(tab: UserTab, item: NewsItem, min_score: int) -> bool:
     """Return True if item would appear in the given custom tab at the threshold."""
     if tab.sort == "newest":
@@ -67,6 +127,12 @@ def _tab_matches_item(tab: UserTab, item: NewsItem, min_score: int) -> bool:
 
 def _item_eligible(s: UserSettings, item: NewsItem, db: Session) -> bool:
     if not s.push_enabled:
+        return False
+    if not _category_allowed(s, item.categories):
+        return False
+    if not _source_allowed(s, item.source_id):
+        return False
+    if not _category_percentile_allowed(s, item.categories, db):
         return False
 
     selected = [str(x) for x in (s.push_tab_ids or [])] if not s.push_all_tabs else None
@@ -98,6 +164,12 @@ def _item_eligible(s: UserSettings, item: NewsItem, db: Session) -> bool:
 
 def _cluster_eligible(s: UserSettings, cluster: NewsCluster, items: list, db: Session) -> bool:
     if not s.push_enabled:
+        return False
+    if not _category_allowed(s, cluster.categories):
+        return False
+    if not _source_allowed(s, {i.source_id for i in items if i.source_id}):
+        return False
+    if not _category_percentile_allowed(s, cluster.categories, db):
         return False
 
     selected = [str(x) for x in (s.push_tab_ids or [])] if not s.push_all_tabs else None
@@ -139,7 +211,7 @@ def _cluster_eligible(s: UserSettings, cluster: NewsCluster, items: list, db: Se
 
 
 def notify_item(db: Session, item: NewsItem) -> None:
-    if not item.user_id:
+    if not item.user_id or item.notified_at is not None:
         return
     s = db.scalar(select(UserSettings).where(UserSettings.user_id == item.user_id))
     if not s or not _item_eligible(s, item, db):
@@ -151,11 +223,21 @@ def notify_item(db: Session, item: NewsItem) -> None:
         "tag": f"item-{item.id}",
     }
     _dispatch(db, item.user_id, payload)
+    item.notified_at = datetime.now(timezone.utc)
+    db.commit()
 
 
 def notify_cluster(db: Session, cluster: NewsCluster, items: list) -> None:
     if not cluster.user_id:
         return
+
+    # Items already individually notified (or covered by an earlier cluster
+    # notification) shouldn't trigger another push when the cluster is
+    # reprocessed after gaining new members.
+    pending = [i for i in items if i.notified_at is None]
+    if not pending:
+        return
+
     s = db.scalar(select(UserSettings).where(UserSettings.user_id == cluster.user_id))
     if not s or not _cluster_eligible(s, cluster, items, db):
         return
@@ -165,7 +247,7 @@ def notify_cluster(db: Session, cluster: NewsCluster, items: list) -> None:
             {uuid.UUID(str(x)) for x in (s.push_source_ids or [])}
             if not s.push_all_sources else None
         )
-        for item in items:
+        for item in pending:
             if allowed_sources and item.source_id not in allowed_sources:
                 continue
             source_name = item.source.name if item.source else "Unknown"
@@ -186,3 +268,8 @@ def notify_cluster(db: Session, cluster: NewsCluster, items: list) -> None:
             "tag": f"cluster-{cluster.id}",
         }
         _dispatch(db, cluster.user_id, payload)
+
+    now = datetime.now(timezone.utc)
+    for item in pending:
+        item.notified_at = now
+    db.commit()

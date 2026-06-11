@@ -48,6 +48,7 @@ class NewsItem(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_shown_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     show_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     source: Mapped["Source"] = relationship("Source", back_populates="news_items")
     categories: Mapped[list["Category"]] = relationship("Category", secondary=news_item_categories, lazy="selectin")

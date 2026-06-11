@@ -15,6 +15,7 @@ export interface UserSettings {
   ignore_penalty_weight: number;
   push_enabled: boolean;
   push_min_relevance: number;
+  push_top_category_percent: number;
   push_all_categories: boolean;
   push_category_ids: string[];
   push_all_sources: boolean;
@@ -39,6 +40,7 @@ export interface UserSettingsUpdate {
   ignore_penalty_weight?: number;
   push_enabled?: boolean;
   push_min_relevance?: number;
+  push_top_category_percent?: number;
   push_all_categories?: boolean;
   push_category_ids?: string[];
   push_all_sources?: boolean;

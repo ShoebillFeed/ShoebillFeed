@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { useUserTabs } from "../../hooks/useTabs";
+import { useCategories } from "../../hooks/useCategories";
+import { useSources } from "../../hooks/useSources";
 import {
   useVapidPublicKey,
   subscribeToPush,
@@ -77,12 +79,16 @@ function ScoreSlider({ value, onChange }: { value: number; onChange: (v: number)
   );
 }
 
+const TOP_CATEGORY_PERCENT_OPTIONS = [100, 75, 50, 25, 10, 5];
+
 export default function NotificationsPanel() {
   const { t } = useTranslation();
   const { data: settings, isLoading } = useAdvancedSettings();
   const updateSettings = useUpdateAdvancedSettings();
   const { data: vapid } = useVapidPublicKey();
   const { data: userTabs = [] } = useUserTabs();
+  const { data: categories = [] } = useCategories();
+  const { data: sources = [] } = useSources();
   const saveSub = useSavePushSubscription();
   const deleteSub = useDeletePushSubscription();
 
@@ -140,6 +146,18 @@ export default function NotificationsPanel() {
     const current = Array.isArray(settings.push_tab_ids) ? settings.push_tab_ids : [];
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
     save({ push_tab_ids: next });
+  };
+
+  const toggleCategory = (id: string) => {
+    const current = Array.isArray(settings.push_category_ids) ? settings.push_category_ids : [];
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+    save({ push_category_ids: next });
+  };
+
+  const toggleSource = (id: string) => {
+    const current = Array.isArray(settings.push_source_ids) ? settings.push_source_ids : [];
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+    save({ push_source_ids: next });
   };
 
   const notConfigured = vapid && !vapid.configured;
@@ -203,6 +221,93 @@ export default function NotificationsPanel() {
                 onChange={(v) => save({ push_min_relevance: v })}
               />
             </Field>
+
+            <Field label={t("notifications.topCategoryPercent")} description={t("notifications.topCategoryPercentDesc")}>
+              <select
+                value={settings.push_top_category_percent}
+                onChange={(e) => save({ push_top_category_percent: Number(e.target.value) })}
+                className="px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {TOP_CATEGORY_PERCENT_OPTIONS.map((p) => (
+                  <option key={p} value={p}>
+                    {p === 100 ? t("notifications.topCategoryPercentAll") : t("notifications.topCategoryPercentOption", { percent: p })}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </Section>
+
+          <Section title={t("notifications.categories")} description={t("notifications.categoriesDesc")}>
+            <Field label={t("notifications.allCategories")} description="">
+              <Toggle
+                checked={settings.push_all_categories}
+                onChange={(v) => save({ push_all_categories: v })}
+              />
+            </Field>
+
+            {!settings.push_all_categories && (
+              <div className="flex flex-wrap gap-2 mt-1">
+                {categories.filter((c) => c.is_active).map((cat) => {
+                  const selected = settings.push_category_ids?.includes(cat.id) ?? false;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => toggleCategory(cat.id)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                        selected
+                          ? "text-white border-transparent"
+                          : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400",
+                      )}
+                      style={selected ? { backgroundColor: cat.color, borderColor: cat.color } : undefined}
+                    >
+                      {selected && <Check size={10} />}
+                      {cat.name}
+                    </button>
+                  );
+                })}
+                {categories.filter((c) => c.is_active).length === 0 && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t("notifications.noCategories")}</p>
+                )}
+              </div>
+            )}
+          </Section>
+
+          <Section title={t("notifications.sources")} description={t("notifications.sourcesDesc")}>
+            <Field label={t("notifications.allSources")} description="">
+              <Toggle
+                checked={settings.push_all_sources}
+                onChange={(v) => save({ push_all_sources: v })}
+              />
+            </Field>
+
+            {!settings.push_all_sources && (
+              <div className="flex flex-wrap gap-2 mt-1">
+                {sources.filter((s) => s.is_active).map((source) => {
+                  const selected = settings.push_source_ids?.includes(source.id) ?? false;
+                  return (
+                    <button
+                      key={source.id}
+                      type="button"
+                      onClick={() => toggleSource(source.id)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                        selected
+                          ? "bg-indigo-600 text-white border-transparent"
+                          : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400",
+                      )}
+                    >
+                      {selected && <Check size={10} />}
+                      {source.name}
+                    </button>
+                  );
+                })}
+                {sources.filter((s) => s.is_active).length === 0 && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t("notifications.noSources")}</p>
+                )}
+              </div>
+            )}
           </Section>
 
           <Section title={t("notifications.feedTabs")} description={t("notifications.feedTabsDesc")}>
