@@ -193,10 +193,12 @@ def process_news_item(self, news_item_id: str) -> None:
                 item.title = result.generated_title
         else:
             # A: two-stage pipeline for regular articles
-            # Stage 1 — cheap classify-only with 200-char excerpt; no abstract requested
+            # Stage 1 — cheap classify-only with a longer excerpt; no abstract requested.
+            # 200 chars was too short and risked missing the article's actual topic,
+            # causing false negatives that skipped Stage 2 entirely.
             stage1 = provider.process_short_item(
                 title=item.title,
-                content=(item.raw_content or "")[:200],
+                content=(item.raw_content or "")[:600],
                 categories=categories_payload,
             )
             if stage1.category_names or not categories_payload:

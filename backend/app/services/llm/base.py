@@ -1,49 +1,72 @@
 import json
+import logging
 import re
 from abc import ABC, abstractmethod
 from json_repair import repair_json
 from dataclasses import dataclass, field
 from typing import Optional
 
+logger = logging.getLogger(__name__)
+
+
+# Shared field descriptions and category-matching guidance, reused across all
+# classification prompts so wording stays consistent and changes apply everywhere.
+CATEGORIES_FIELD = (
+    '- "categories": array of category names from the provided list whose subject this '
+    'item is genuinely about (can be empty [], can have multiple matches)'
+)
+
+RELEVANCE_FIELD = (
+    '- "relevance_score": integer 1-10 — how central a matched category\'s subject is '
+    'to this item: 10 = the item is principally about that subject, 1 = the subject is '
+    'only briefly or tangentially mentioned. Use 5 if no category matched.'
+)
+
+CATEGORY_GUIDANCE = """Available categories: {categories_json}
+Each category has a name, optional "keywords" (signals for its topic, not phrases that must appear verbatim) and optionally a "description". When a description is present, weigh it more heavily than the keywords. Judge fit by the item's overall subject, not incidental keyword overlap — only include a category if the item's main topic genuinely falls within it, even if a keyword appears only in passing."""
+
 
 SYSTEM_PROMPT = """You are a news analyst. Given a news article title and content, return a JSON object with exactly these fields:
 - "abstract": string, 1-3 sentence summary of the article.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the article's language) that best represent the article's topic (e.g. ["llm", "openai", "reasoning models"])
-- "categories": array of category names from the provided list that fit this article (can be empty [], can have multiple matches)
-- "relevance_score": integer 1-10, how relevant this is to the matched categories' keywords (5 if no category matched)
+{categories_field}
+{relevance_field}
 - "impact_score": integer 1-10, how broadly impactful this news is (10 = global significance, 1 = minor local event)
 
-Available categories: {categories_json}
-Each category has a name and keywords. If a description field is present, use it to judge whether the article fits that category. Include all categories that genuinely apply.
+{category_guidance}
 
-Respond ONLY with valid JSON. No markdown fences, no extra text."""
+Respond ONLY with valid JSON. No markdown fences, no extra text.""".format(
+    categories_field=CATEGORIES_FIELD, relevance_field=RELEVANCE_FIELD, category_guidance=CATEGORY_GUIDANCE,
+)
 
 SOCIAL_SYSTEM_PROMPT = """You are a news analyst. Given a social media post, return a JSON object with exactly these fields:
 - "headline": string, a short punchy headline (max 12 words) that captures the core topic of the post.
 - "abstract": string, 1-2 sentence summary of the post.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the post's language) that best represent the post's topic.
-- "categories": array of category names from the provided list that fit this post (can be empty [], can have multiple matches)
-- "relevance_score": integer 1-10, how relevant this is to the matched categories' keywords (5 if no category matched)
+{categories_field}
+{relevance_field}
 - "impact_score": integer 1-10, how broadly impactful this post is (10 = global significance, 1 = minor personal post)
 
-Available categories: {categories_json}
-Each category has a name and keywords. If a description field is present, use it to judge whether the post fits that category. Include all categories that genuinely apply.
+{category_guidance}
 
-Respond ONLY with valid JSON. No markdown fences, no extra text."""
+Respond ONLY with valid JSON. No markdown fences, no extra text.""".format(
+    categories_field=CATEGORIES_FIELD, relevance_field=RELEVANCE_FIELD, category_guidance=CATEGORY_GUIDANCE,
+)
 
 
 SHORT_ITEM_SYSTEM_PROMPT = """You are a news classifier. The news item below is very short — do not rewrite or summarise it. Extract metadata only.
 
 Return a JSON object with exactly these fields:
 - "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the item's language) that best represent the topic
-- "categories": array of category names from the provided list that fit this item (can be empty [])
-- "relevance_score": integer 1-10, how relevant this is to the matched categories' keywords (5 if no category matched)
+{categories_field}
+{relevance_field}
 - "impact_score": integer 1-10, how broadly impactful this is (10 = global significance, 1 = minor local event)
 
-Available categories: {categories_json}
-Each category has a name and keywords. If a description field is present, use it to judge whether the article fits that category.
+{category_guidance}
 
-Respond ONLY with valid JSON. No markdown fences, no extra text."""
+Respond ONLY with valid JSON. No markdown fences, no extra text.""".format(
+    categories_field=CATEGORIES_FIELD, relevance_field=RELEVANCE_FIELD, category_guidance=CATEGORY_GUIDANCE,
+)
 
 
 MULTI_ITEM_SYSTEM_PROMPT = """You are a news analyst. Analyse each news item below and return a JSON array — one object per item.
@@ -52,14 +75,15 @@ Each object must contain:
 - "id": the item identifier exactly as given
 - "abstract": string, 1-3 sentence summary
 - "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the item's language)
-- "categories": array of matching category names from the list (can be [])
-- "relevance_score": integer 1-10, how relevant to matched categories (5 if none matched)
+{categories_field}
+{relevance_field}
 - "impact_score": integer 1-10, how broadly impactful (10 = global significance, 1 = minor local event)
 
-Available categories: {categories_json}
-Each category has a name and keywords. If a description is present, use it to judge fit. Include all categories that genuinely apply.
+{category_guidance}
 
-Respond ONLY with a valid JSON array. No markdown fences, no extra text."""
+Respond ONLY with a valid JSON array. No markdown fences, no extra text.""".format(
+    categories_field=CATEGORIES_FIELD, relevance_field=RELEVANCE_FIELD, category_guidance=CATEGORY_GUIDANCE,
+)
 
 
 MULTI_SHORT_ITEM_SYSTEM_PROMPT = """You are a news classifier. For each item below, extract metadata only — do not summarise.
@@ -67,13 +91,15 @@ MULTI_SHORT_ITEM_SYSTEM_PROMPT = """You are a news classifier. For each item bel
 Return a JSON array — one object per item — each containing:
 - "id": the item identifier exactly as given
 - "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the item's language)
-- "categories": array of matching category names (can be [])
-- "relevance_score": integer 1-10 (5 if none matched)
+{categories_field}
+{relevance_field}
 - "impact_score": integer 1-10
 
-Available categories: {categories_json}
+{category_guidance}
 
-Respond ONLY with a valid JSON array. No markdown fences, no extra text."""
+Respond ONLY with a valid JSON array. No markdown fences, no extra text.""".format(
+    categories_field=CATEGORIES_FIELD, relevance_field=RELEVANCE_FIELD, category_guidance=CATEGORY_GUIDANCE,
+)
 
 
 MULTI_SOCIAL_SYSTEM_PROMPT = """You are a news analyst. For each social media post below, return a JSON array — one object per post.
@@ -83,28 +109,31 @@ Each object must contain:
 - "headline": short punchy headline (max 12 words) capturing the core topic
 - "abstract": string, 1-2 sentence summary
 - "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the item's language)
-- "categories": array of matching category names (can be [])
-- "relevance_score": integer 1-10 (5 if none matched)
+{categories_field}
+{relevance_field}
 - "impact_score": integer 1-10
 
-Available categories: {categories_json}
+{category_guidance}
 
-Respond ONLY with a valid JSON array. No markdown fences, no extra text."""
+Respond ONLY with a valid JSON array. No markdown fences, no extra text.""".format(
+    categories_field=CATEGORIES_FIELD, relevance_field=RELEVANCE_FIELD, category_guidance=CATEGORY_GUIDANCE,
+)
 
 
 CLUSTER_SYSTEM_PROMPT = """You are a news analyst. Multiple sources have covered the same event. Return a JSON object with exactly these fields:
 - "title": string, a short headline (max 10 words) that captures the core event.
 - "unified_abstract": string, 1-3 sentence summary that synthesises all sources into one coherent account.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of source language) that best represent this event (e.g. ["trade war", "tariffs", "eu"])
-- "categories": array of category names from the provided list that fit this event (can be empty [], can have multiple matches)
-- "relevance_score": integer 1-10
+{categories_field}
+{relevance_field}
 - "impact_score": integer 1-10, how broadly impactful this event is
 - "source_summaries": object where each key is "item_0", "item_1", etc. Set a key to null if that item's content is identical or near-identical to another item. Otherwise write a telegraphic phrase (max 12 words) stating only what is unique to that source — no preamble words like "This source", "Unlike others", "This article", "Focuses on", "Reports that".
 
-Available categories: {categories_json}
-Each category has a name and keywords. If a description field is present, use it to judge whether the article fits that category. Include all categories that genuinely apply.
+{category_guidance}
 
-Respond ONLY with valid JSON. No markdown fences, no extra text."""
+Respond ONLY with valid JSON. No markdown fences, no extra text.""".format(
+    categories_field=CATEGORIES_FIELD, relevance_field=RELEVANCE_FIELD, category_guidance=CATEGORY_GUIDANCE,
+)
 
 
 LANGUAGE_NAMES: dict[str, str] = {
@@ -212,7 +241,19 @@ def _parse_categories(raw, known_categories: list[str]) -> list[str]:
         raw = [raw]
     if not isinstance(raw, list):
         return []
-    return [name for name in (str(n).strip() for n in raw) if name in known_categories]
+    lookup = {name.casefold(): name for name in known_categories}
+    result = []
+    for n in raw:
+        name = str(n).strip()
+        if not name:
+            continue
+        match = lookup.get(name.casefold())
+        if match is None:
+            logger.warning("LLM returned unrecognised category %r (known: %s)", name, known_categories)
+            continue
+        if match not in result:
+            result.append(match)
+    return result
 
 
 def parse_llm_response(text: str, known_categories: list[str], social_post: bool = False) -> ProcessedResult:
@@ -400,19 +441,21 @@ For each article, return one object with:
 - "url": the article URL (tracking/redirect URLs are fine; set null only if truly absent)
 - "summary": 1-3 sentence summary
 - "keywords": array of 3-5 lowercase keywords in English (regardless of the article's language)
-- "categories": array of matching category names from the list (can be [])
-- "relevance_score": integer 1-10
+{categories_field}
+{relevance_field}
 - "impact_score": integer 1-10
 
-Return: {{"items": [...]}}
+Wrap the results in a JSON object with a single key "items" containing the array described above.
 
-Available categories: {categories_json}
+{category_guidance}
 
 Rules:
 - Skip ads, sponsored content, navigation, footer items, and subscription prompts
 - Process every TITLE block — do not skip any
 
-Respond ONLY with valid JSON. No markdown fences, no extra text."""
+Respond ONLY with valid JSON. No markdown fences, no extra text.""".format(
+    categories_field=CATEGORIES_FIELD, relevance_field=RELEVANCE_FIELD, category_guidance=CATEGORY_GUIDANCE,
+)
 
 
 def parse_newsletter_response(text: str, known_categories: list[str]) -> NewsletterResult:
