@@ -22,6 +22,7 @@ class OllamaProvider(LLMProvider):
         payload = {
             "model": self.model,
             "stream": False,
+            "think": False,
             "system": system,
             "prompt": user,
             "options": {"num_predict": max_tokens},
@@ -40,9 +41,11 @@ class OllamaProvider(LLMProvider):
         payload = {
             "model": self.model,
             "stream": False,
+            "think": False,
             "format": "json",
             "system": system,
             "prompt": user,
+            "options": {"num_predict": 1024},
         }
         resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
         resp.raise_for_status()
@@ -63,9 +66,11 @@ class OllamaProvider(LLMProvider):
         payload = {
             "model": self.model,
             "stream": False,
+            "think": False,
             "format": "json",
             "system": system,
             "prompt": "\n\n".join(parts),
+            "options": {"num_predict": 2048},
         }
         resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
         resp.raise_for_status()
@@ -80,6 +85,7 @@ class OllamaProvider(LLMProvider):
         payload = {
             "model": self.model,
             "stream": False,
+            "think": False,
             "format": "json",
             "system": system,
             "prompt": f"Newsletter content:\n\n{content[:8000]}",
