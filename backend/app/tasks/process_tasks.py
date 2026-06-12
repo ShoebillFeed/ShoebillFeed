@@ -356,7 +356,7 @@ def process_cluster(self, cluster_id: str) -> None:
 
 
 @celery_app.task(name="app.tasks.process_tasks.batch_process_unprocessed", queue="process")
-def batch_process_unprocessed(limit: int = 50) -> int:
+def batch_process_unprocessed(limit: int = 150) -> int:
     settings = get_settings()
     db = SessionLocal()
     try:

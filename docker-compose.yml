@@ -100,7 +100,40 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=4 -Q fetch,process,default
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=4 -Q fetch,default
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-phoenix}
+      REDIS_URL: redis://redis:6379/0
+      LLM_PROVIDERS: ${LLM_PROVIDERS:-${LLM_PROVIDER:-ollama}}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
+      REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID:-}
+      REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
+      REDDIT_USER_AGENT: ${REDDIT_USER_AGENT:-ShoebillFeed/1.0}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+#      ollama:
+#        condition: service_healthy
+    networks: [shoebill_internal]
+    restart: unless-stopped
+
+  celery-worker-process:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    # Dedicated single-concurrency worker for the `process` queue: Ollama serializes
+    # LLM calls on one GPU, so concurrency>1 here just causes FIFO queue spikes
+    # (one Celery task waiting behind 3 others' LLM calls) without any throughput gain.
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=1 -Q process
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-phoenix}
       REDIS_URL: redis://redis:6379/0
