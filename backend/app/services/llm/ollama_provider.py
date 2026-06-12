@@ -12,6 +12,11 @@ from app.services.llm.base import (
 class OllamaProvider(LLMProvider):
     provider_name = "ollama"
 
+    # Keep the model resident in VRAM between requests so the ~2-3s weight-load
+    # cost isn't paid again on the first call of each processing batch (default
+    # Ollama keep_alive is 5 minutes, shorter than the 15-minute process schedule).
+    KEEP_ALIVE = "30m"
+
     def __init__(self, base_url: str, model: str = "qwen3:8b", timeout: int = 120):
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -23,6 +28,7 @@ class OllamaProvider(LLMProvider):
             "model": self.model,
             "stream": False,
             "think": False,
+            "keep_alive": self.KEEP_ALIVE,
             "system": system,
             "prompt": user,
             "options": {"num_predict": max_tokens},
@@ -42,6 +48,7 @@ class OllamaProvider(LLMProvider):
             "model": self.model,
             "stream": False,
             "think": False,
+            "keep_alive": self.KEEP_ALIVE,
             "format": "json",
             "system": system,
             "prompt": user,
@@ -67,6 +74,7 @@ class OllamaProvider(LLMProvider):
             "model": self.model,
             "stream": False,
             "think": False,
+            "keep_alive": self.KEEP_ALIVE,
             "format": "json",
             "system": system,
             "prompt": "\n\n".join(parts),
@@ -86,6 +94,7 @@ class OllamaProvider(LLMProvider):
             "model": self.model,
             "stream": False,
             "think": False,
+            "keep_alive": self.KEEP_ALIVE,
             "format": "json",
             "system": system,
             "prompt": f"Newsletter content:\n\n{content[:8000]}",
