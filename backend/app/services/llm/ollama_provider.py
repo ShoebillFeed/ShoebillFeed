@@ -29,6 +29,7 @@ class OllamaProvider(LLMProvider):
             "stream": False,
             "think": False,
             "keep_alive": self.KEEP_ALIVE,
+            "format": "json",
             "system": system,
             "prompt": user,
             "options": {"num_predict": max_tokens},
