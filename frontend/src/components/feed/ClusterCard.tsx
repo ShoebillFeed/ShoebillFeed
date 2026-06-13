@@ -231,41 +231,43 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
                           href={item.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="group inline-flex items-start gap-1"
+                          className="group block"
                           onClick={() => !cluster.is_read && markRead()}
                         >
-                          <span className={cn(
-                            "text-xs font-medium transition-colors leading-snug",
-                            hasImage
-                              ? "text-white/80 group-hover:text-indigo-300"
-                              : "text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                          )}>
-                            {item.source && (
-                              <span className={cn(
-                                "mr-1",
-                                hasImage ? "text-white/40" : "text-gray-400 dark:text-gray-500"
-                              )}>
-                                {sourceTypeIcon(item.source.source_type)} {item.source.name} —
-                              </span>
-                            )}
-                            {item.title}
-                          </span>
-                          <ExternalLink size={10} className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-60 transition-opacity text-indigo-400" />
+                          <div className="inline-flex items-start gap-1">
+                            <span className={cn(
+                              "text-xs font-medium transition-colors leading-snug",
+                              hasImage
+                                ? "text-white/80 group-hover:text-indigo-300"
+                                : "text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                            )}>
+                              {item.source && (
+                                <span className={cn(
+                                  "mr-1",
+                                  hasImage ? "text-white/40" : "text-gray-400 dark:text-gray-500"
+                                )}>
+                                  {sourceTypeIcon(item.source.source_type)} {item.source.name} —
+                                </span>
+                              )}
+                              {item.title}
+                            </span>
+                            <ExternalLink size={10} className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-60 transition-opacity text-indigo-400" />
+                          </div>
+                          {item.source_summary && (
+                            <p className={cn(
+                              "inline-flex items-center gap-1 text-xs mt-0.5 leading-relaxed",
+                              hasImage ? "text-white/50" : "text-gray-500 dark:text-gray-400"
+                            )}>
+                              {item.source_summary}
+                              <LLMInfoIcon
+                                provider={cluster.llm_provider}
+                                model={cluster.llm_model}
+                                fields="Source summary"
+                                hasImage={hasImage}
+                              />
+                            </p>
+                          )}
                         </a>
-                        {item.source_summary && (
-                          <p className={cn(
-                            "inline-flex items-center gap-1 text-xs mt-0.5 leading-relaxed",
-                            hasImage ? "text-white/50" : "text-gray-500 dark:text-gray-400"
-                          )}>
-                            {item.source_summary}
-                            <LLMInfoIcon
-                              provider={cluster.llm_provider}
-                              model={cluster.llm_model}
-                              fields="Source summary"
-                              hasImage={hasImage}
-                            />
-                          </p>
-                        )}
                       </div>
                     </div>
                   </li>

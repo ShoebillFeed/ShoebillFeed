@@ -136,34 +136,36 @@ export default function NewsCard({ item }: { item: NewsItem }) {
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="group inline-flex items-start gap-1"
+          className="group block"
           onClick={() => !item.is_read && markRead()}
         >
-          <h3 className={cn(
-            "text-sm font-semibold leading-snug transition-colors",
-            hasImage
-              ? "text-white group-hover:text-indigo-300"
-              : cn(
-                  "group-hover:text-indigo-600 dark:group-hover:text-indigo-400",
-                  item.is_read ? "text-gray-500 dark:text-gray-400" : "text-gray-900 dark:text-gray-100"
-                )
-          )}>
-            {item.title}
-          </h3>
-          <ExternalLink size={12} className={cn(
-            "shrink-0 mt-1 opacity-0 group-hover:opacity-60 transition-opacity",
-            hasImage ? "text-white" : "text-indigo-500"
-          )} />
-        </a>
+          <div className="inline-flex items-start gap-1">
+            <h3 className={cn(
+              "text-sm font-semibold leading-snug transition-colors",
+              hasImage
+                ? "text-white group-hover:text-indigo-300"
+                : cn(
+                    "group-hover:text-indigo-600 dark:group-hover:text-indigo-400",
+                    item.is_read ? "text-gray-500 dark:text-gray-400" : "text-gray-900 dark:text-gray-100"
+                  )
+            )}>
+              {item.title}
+            </h3>
+            <ExternalLink size={12} className={cn(
+              "shrink-0 mt-1 opacity-0 group-hover:opacity-60 transition-opacity",
+              hasImage ? "text-white" : "text-indigo-500"
+            )} />
+          </div>
 
-        {item.abstract && (
-          <p className={cn(
-            "mt-1.5 text-sm leading-relaxed",
-            hasImage ? "text-white/75" : "text-gray-600 dark:text-gray-400"
-          )}>
-            {item.abstract}
-          </p>
-        )}
+          {item.abstract && (
+            <p className={cn(
+              "mt-1.5 text-sm leading-relaxed",
+              hasImage ? "text-white/75" : "text-gray-600 dark:text-gray-400"
+            )}>
+              {item.abstract}
+            </p>
+          )}
+        </a>
 
         {item.extracted_keywords && item.extracted_keywords.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1">
