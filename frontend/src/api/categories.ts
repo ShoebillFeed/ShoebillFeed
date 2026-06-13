@@ -21,7 +21,7 @@ export const categoriesApi = {
   resetWeights: () => client.post("/categories/reset-weights").then((r) => r.data),
   generatePrompt: (name: string, keywords: string[], max_chars = 500) =>
     client
-      .post<{ prompt: string }>("/categories/generate-prompt", { name, keywords, max_chars })
+      .post<{ prompt: string }>("/categories/generate-prompt", { name, keywords, max_chars }, { timeout: 120_000 })
       .then((r) => r.data.prompt),
   setManualWeight: (id: string, manual_weight: number) =>
     client.patch<Category>(`/categories/${id}/weight`, { manual_weight }).then((r) => r.data),

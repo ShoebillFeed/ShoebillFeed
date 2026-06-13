@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { isAxiosError } from "axios";
 import { ShoebillIcon } from "../components/icons/ShoebillIcon";
 import { useLogin, useMe } from "../hooks/useAuth";
 
@@ -66,7 +67,11 @@ export default function LoginPage() {
           </div>
 
           {login.error && (
-            <p className="text-sm text-red-500">{t("login.error")}</p>
+            <p className="text-sm text-red-500">
+              {isAxiosError(login.error) && login.error.response?.status === 401
+                ? t("login.error")
+                : t("login.networkError")}
+            </p>
           )}
 
           <button

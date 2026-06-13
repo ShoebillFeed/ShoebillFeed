@@ -10,6 +10,8 @@ const cs = {
     create: "Vytvořit",
     add: "Přidat",
     check: "Zkontrolovat",
+    retry: "Zkusit znovu",
+    connectionError: "Server není dostupný. Zkontrolujte připojení.",
   },
   login: {
     title: "Přihlaste se ke svému účtu",
@@ -18,6 +20,7 @@ const cs = {
     submit: "Přihlásit se",
     submitting: "Přihlašování…",
     error: "Neplatné uživatelské jméno nebo heslo.",
+    networkError: "Server není dostupný. Zkuste to znovu.",
   },
   header: {
     feed: "Zdroj",

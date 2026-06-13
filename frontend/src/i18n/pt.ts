@@ -10,6 +10,8 @@ const pt = {
     create: "Criar",
     add: "Adicionar",
     check: "Verificar",
+    retry: "Tentar novamente",
+    connectionError: "Não foi possível contactar o servidor. Verifique a sua ligação.",
   },
   login: {
     title: "Inicie sessão na sua conta",
@@ -18,6 +20,7 @@ const pt = {
     submit: "Iniciar sessão",
     submitting: "A iniciar sessão…",
     error: "Nome de utilizador ou palavra-passe inválidos.",
+    networkError: "Não foi possível contactar o servidor. Tente novamente.",
   },
   header: {
     feed: "Feed",

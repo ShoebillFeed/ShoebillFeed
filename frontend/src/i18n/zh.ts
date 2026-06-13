@@ -10,6 +10,8 @@ const zh = {
     create: "创建",
     add: "添加",
     check: "检查",
+    retry: "重试",
+    connectionError: "无法连接到服务器,请检查您的网络连接。",
   },
   login: {
     title: "登录您的账户",
@@ -18,6 +20,7 @@ const zh = {
     submit: "登录",
     submitting: "登录中…",
     error: "用户名或密码无效。",
+    networkError: "无法连接到服务器,请重试。",
   },
   header: {
     feed: "动态",

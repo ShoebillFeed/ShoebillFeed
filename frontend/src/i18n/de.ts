@@ -10,6 +10,8 @@ const de = {
     create: "Erstellen",
     add: "Hinzufügen",
     check: "Prüfen",
+    retry: "Erneut versuchen",
+    connectionError: "Server nicht erreichbar. Bitte überprüfe deine Verbindung.",
   },
   login: {
     title: "Bei deinem Konto anmelden",
@@ -18,6 +20,7 @@ const de = {
     submit: "Anmelden",
     submitting: "Anmelden…",
     error: "Ungültiger Benutzername oder Passwort.",
+    networkError: "Server nicht erreichbar. Bitte versuche es erneut.",
   },
   header: {
     feed: "Feed",

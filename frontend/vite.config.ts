@@ -42,6 +42,12 @@ export default defineConfig({
         importScripts: ["/push-sw.js"],
         runtimeCaching: [
           {
+            // Auth state must always reflect the live session/cookie — never serve
+            // a stale cached /auth/me or /auth/login response.
+            urlPattern: /^\/api\/auth\//,
+            handler: "NetworkOnly",
+          },
+          {
             // Cache API responses with NetworkFirst — serve stale feed if offline
             urlPattern: /^\/api\//,
             handler: "NetworkFirst",

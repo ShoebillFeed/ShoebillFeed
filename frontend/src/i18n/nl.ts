@@ -10,6 +10,8 @@ const nl = {
     create: "Aanmaken",
     add: "Toevoegen",
     check: "Controleren",
+    retry: "Opnieuw proberen",
+    connectionError: "Kan de server niet bereiken. Controleer je verbinding.",
   },
   login: {
     title: "Aanmelden bij uw account",
@@ -18,6 +20,7 @@ const nl = {
     submit: "Aanmelden",
     submitting: "Aanmelden…",
     error: "Ongeldige gebruikersnaam of wachtwoord.",
+    networkError: "Kan de server niet bereiken. Probeer het opnieuw.",
   },
   header: {
     feed: "Feed",

@@ -13,7 +13,7 @@ export const sourcesApi = {
   export: () => client.get<SourceCreate[]>("/sources/export").then((r) => r.data),
   import: (data: SourceCreate[]) => client.post<Source[]>("/sources/import", data).then((r) => r.data),
   suggestScraperConfig: (url: string) =>
-    client.post<ScraperSuggestion>("/sources/scraper/suggest", { url }).then((r) => r.data),
+    client.post<ScraperSuggestion>("/sources/scraper/suggest", { url }, { timeout: 120_000 }).then((r) => r.data),
 };
 
 export interface ScraperSuggestion {

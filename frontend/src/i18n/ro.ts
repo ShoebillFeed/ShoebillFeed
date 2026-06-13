@@ -10,6 +10,8 @@ const ro = {
     create: "Creare",
     add: "Adăugare",
     check: "Verificare",
+    retry: "Reîncearcă",
+    connectionError: "Serverul nu poate fi contactat. Verificați conexiunea.",
   },
   login: {
     title: "Conectați-vă la contul dvs.",
@@ -18,6 +20,7 @@ const ro = {
     submit: "Conectare",
     submitting: "Conectare…",
     error: "Nume de utilizator sau parolă incorectă.",
+    networkError: "Serverul nu a putut fi contactat. Încercați din nou.",
   },
   header: {
     feed: "Feed",

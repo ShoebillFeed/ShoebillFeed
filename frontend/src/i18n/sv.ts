@@ -10,6 +10,8 @@ const sv = {
     create: "Skapa",
     add: "Lägg till",
     check: "Kontrollera",
+    retry: "Försök igen",
+    connectionError: "Kan inte nå servern. Kontrollera din anslutning.",
   },
   login: {
     title: "Logga in på ditt konto",
@@ -18,6 +20,7 @@ const sv = {
     submit: "Logga in",
     submitting: "Loggar in…",
     error: "Ogiltigt användarnamn eller lösenord.",
+    networkError: "Kunde inte nå servern. Försök igen.",
   },
   header: {
     feed: "Flöde",

@@ -10,6 +10,8 @@ const fr = {
     create: "Créer",
     add: "Ajouter",
     check: "Vérifier",
+    retry: "Réessayer",
+    connectionError: "Impossible de joindre le serveur. Vérifiez votre connexion.",
   },
   login: {
     title: "Connectez-vous à votre compte",
@@ -18,6 +20,7 @@ const fr = {
     submit: "Se connecter",
     submitting: "Connexion…",
     error: "Nom d'utilisateur ou mot de passe incorrect.",
+    networkError: "Impossible de joindre le serveur. Veuillez réessayer.",
   },
   header: {
     feed: "Fil",

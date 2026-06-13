@@ -10,6 +10,8 @@ const fi = {
     create: "Luo",
     add: "Lisää",
     check: "Tarkista",
+    retry: "Yritä uudelleen",
+    connectionError: "Palvelimeen ei saada yhteyttä. Tarkista yhteytesi.",
   },
   login: {
     title: "Kirjaudu tilillesi",
@@ -18,6 +20,7 @@ const fi = {
     submit: "Kirjaudu",
     submitting: "Kirjaudutaan…",
     error: "Virheellinen käyttäjänimi tai salasana.",
+    networkError: "Palvelimeen ei saatu yhteyttä. Yritä uudelleen.",
   },
   header: {
     feed: "Syöte",

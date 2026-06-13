@@ -10,6 +10,8 @@ const da = {
     create: "Opret",
     add: "Tilføj",
     check: "Kontroller",
+    retry: "Forsøg igen",
+    connectionError: "Kan ikke nå serveren. Kontroller din forbindelse.",
   },
   login: {
     title: "Log ind på din konto",
@@ -18,6 +20,7 @@ const da = {
     submit: "Log ind",
     submitting: "Logger ind…",
     error: "Ugyldigt brugernavn eller adgangskode.",
+    networkError: "Kunne ikke nå serveren. Prøv igen.",
   },
   header: {
     feed: "Feed",

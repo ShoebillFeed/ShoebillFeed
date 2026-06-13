@@ -10,6 +10,8 @@ const hu = {
     create: "Létrehozás",
     add: "Hozzáadás",
     check: "Ellenőrzés",
+    retry: "Újra",
+    connectionError: "A szerver nem érhető el. Ellenőrizd a kapcsolatot.",
   },
   login: {
     title: "Bejelentkezés a fiókba",
@@ -18,6 +20,7 @@ const hu = {
     submit: "Bejelentkezés",
     submitting: "Bejelentkezés…",
     error: "Érvénytelen felhasználónév vagy jelszó.",
+    networkError: "A szerver nem érhető el. Próbáld újra.",
   },
   header: {
     feed: "Hírfolyam",

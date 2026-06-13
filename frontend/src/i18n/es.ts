@@ -10,6 +10,8 @@ const es = {
     create: "Crear",
     add: "Añadir",
     check: "Verificar",
+    retry: "Reintentar",
+    connectionError: "No se puede conectar con el servidor. Comprueba tu conexión.",
   },
   login: {
     title: "Inicia sesión en tu cuenta",
@@ -18,6 +20,7 @@ const es = {
     submit: "Iniciar sesión",
     submitting: "Iniciando sesión…",
     error: "Usuario o contraseña incorrectos.",
+    networkError: "No se pudo conectar con el servidor. Inténtalo de nuevo.",
   },
   header: {
     feed: "Feed",

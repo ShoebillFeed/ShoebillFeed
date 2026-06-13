@@ -4,6 +4,7 @@ const client = axios.create({
   baseURL: "/api",
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
+  timeout: 15_000,
   paramsSerializer: {
     serialize: (params: Record<string, unknown>) => {
       const parts: string[] = [];

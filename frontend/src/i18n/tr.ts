@@ -10,6 +10,8 @@ const tr = {
     create: "Oluştur",
     add: "Ekle",
     check: "Kontrol et",
+    retry: "Yeniden dene",
+    connectionError: "Sunucuya bağlanılamıyor. Bağlantınızı kontrol edin.",
   },
   login: {
     title: "Hesabınıza giriş yapın",
@@ -18,6 +20,7 @@ const tr = {
     submit: "Giriş yap",
     submitting: "Giriş yapılıyor…",
     error: "Geçersiz kullanıcı adı veya şifre.",
+    networkError: "Sunucuya bağlanılamadı. Lütfen tekrar deneyin.",
   },
   header: {
     feed: "Akış",

@@ -10,6 +10,8 @@ const nb = {
     create: "Opprett",
     add: "Legg til",
     check: "Sjekk",
+    retry: "Prøv igjen",
+    connectionError: "Kan ikke nå serveren. Kontroller tilkoblingen.",
   },
   login: {
     title: "Logg inn på kontoen din",
@@ -18,6 +20,7 @@ const nb = {
     submit: "Logg inn",
     submitting: "Logger inn…",
     error: "Ugyldig brukernavn eller passord.",
+    networkError: "Kunne ikke nå serveren. Prøv igjen.",
   },
   header: {
     feed: "Feed",

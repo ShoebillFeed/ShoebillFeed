@@ -10,6 +10,8 @@ const pl = {
     create: "Utwórz",
     add: "Dodaj",
     check: "Sprawdź",
+    retry: "Spróbuj ponownie",
+    connectionError: "Nie można połączyć się z serwerem. Sprawdź połączenie.",
   },
   login: {
     title: "Zaloguj się do swojego konta",
@@ -18,6 +20,7 @@ const pl = {
     submit: "Zaloguj się",
     submitting: "Logowanie…",
     error: "Nieprawidłowa nazwa użytkownika lub hasło.",
+    networkError: "Nie udało się połączyć z serwerem. Spróbuj ponownie.",
   },
   header: {
     feed: "Kanał",

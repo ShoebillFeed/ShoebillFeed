@@ -10,6 +10,8 @@ const it = {
     create: "Crea",
     add: "Aggiungi",
     check: "Verifica",
+    retry: "Riprova",
+    connectionError: "Impossibile contattare il server. Controlla la connessione.",
   },
   login: {
     title: "Accedi al tuo account",
@@ -18,6 +20,7 @@ const it = {
     submit: "Accedi",
     submitting: "Accesso in corso…",
     error: "Nome utente o password non validi.",
+    networkError: "Impossibile contattare il server. Riprova.",
   },
   header: {
     feed: "Feed",

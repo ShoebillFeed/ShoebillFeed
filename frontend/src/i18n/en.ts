@@ -10,6 +10,8 @@ const en = {
     create: "Create",
     add: "Add",
     check: "Check",
+    retry: "Retry",
+    connectionError: "Can't reach the server. Please check your connection.",
   },
   login: {
     title: "Sign in to your account",
@@ -18,6 +20,7 @@ const en = {
     submit: "Sign in",
     submitting: "Signing in…",
     error: "Invalid username or password.",
+    networkError: "Could not reach the server. Please try again.",
   },
   header: {
     feed: "Feed",

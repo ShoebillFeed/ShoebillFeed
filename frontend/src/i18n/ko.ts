@@ -10,6 +10,8 @@ const ko = {
     create: "만들기",
     add: "추가",
     check: "확인",
+    retry: "다시 시도",
+    connectionError: "서버에 연결할 수 없습니다. 연결을 확인하세요.",
   },
   login: {
     title: "계정에 로그인",
@@ -18,6 +20,7 @@ const ko = {
     submit: "로그인",
     submitting: "로그인 중…",
     error: "사용자 이름 또는 비밀번호가 올바르지 않습니다.",
+    networkError: "서버에 연결할 수 없습니다. 다시 시도해 주세요.",
   },
   header: {
     feed: "피드",

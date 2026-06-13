@@ -10,6 +10,8 @@ const ja = {
     create: "作成",
     add: "追加",
     check: "確認",
+    retry: "再試行",
+    connectionError: "サーバーに接続できません。接続を確認してください。",
   },
   login: {
     title: "アカウントにサインイン",
@@ -18,6 +20,7 @@ const ja = {
     submit: "サインイン",
     submitting: "サインイン中…",
     error: "ユーザー名またはパスワードが正しくありません。",
+    networkError: "サーバーに接続できませんでした。再試行してください。",
   },
   header: {
     feed: "フィード",
