@@ -15,7 +15,7 @@ export default defineConfig({
         short_name: "Shoebill",
         description: "Self-hosted news aggregator with LLM-powered categorization",
         theme_color: "#4f46e5",
-        background_color: "#ffffff",
+        background_color: "#000000",
         display: "standalone",
         start_url: "/",
         icons: [
