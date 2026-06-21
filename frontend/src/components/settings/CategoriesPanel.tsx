@@ -236,12 +236,16 @@ function CategoryRow({
             <span className={`text-sm font-medium ${inactive ? "text-gray-400 dark:text-gray-500" : ""}`}>
               {cat.name}
             </span>
-            {cat.taxonomy_id && (
+            {cat.taxonomy_id ? (
               <span
                 className="text-[10px] font-medium px-1 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 leading-none"
                 title={taxonomyNode ? `IPTC: ${taxonomyNode.name} (${cat.taxonomy_id})` : `IPTC ${cat.taxonomy_id}`}
               >
                 Default
+              </span>
+            ) : (
+              <span className="text-[10px] font-medium px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 leading-none">
+                Custom
               </span>
             )}
           </div>
