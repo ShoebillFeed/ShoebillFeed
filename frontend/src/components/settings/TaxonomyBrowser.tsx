@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { ChevronRight, Plus, Check, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { IPTC_TAXONOMY, getNodeColor, flattenTaxonomy } from "../../data/iptcTaxonomy";
-import type { TaxonomyNode } from "../../data/iptcTaxonomy";
+import { IPTC_TAXONOMY, getNodeColor, flattenTaxonomy } from "./iptcTaxonomy";
+import type { TaxonomyNode } from "./iptcTaxonomy";
 import { cn } from "../../lib/utils";
 
 interface Props {

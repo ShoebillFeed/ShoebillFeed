@@ -6,8 +6,8 @@ import { categoriesApi } from "../../api/categories";
 import CategoryForm from "./CategoryForm";
 import TaxonomyBrowser from "./TaxonomyBrowser";
 import type { Category } from "../../types/category";
-import type { TaxonomyNode } from "../../data/iptcTaxonomy";
-import { findNode } from "../../data/iptcTaxonomy";
+import type { TaxonomyNode } from "./iptcTaxonomy";
+import { findNode } from "./iptcTaxonomy";
 
 type PendingNode = { node: TaxonomyNode; color: string };
 
