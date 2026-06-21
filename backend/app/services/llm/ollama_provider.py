@@ -32,7 +32,7 @@ class OllamaProvider(LLMProvider):
             "format": "json",
             "system": system,
             "prompt": user,
-            "options": {"num_predict": max_tokens},
+            "options": {"num_predict": max_tokens, "temperature": 0.2},
         }
         resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
         resp.raise_for_status()
@@ -48,12 +48,12 @@ class OllamaProvider(LLMProvider):
         payload = {
             "model": self.model,
             "stream": False,
-            "think": False,
+            "think": True,
             "keep_alive": self.KEEP_ALIVE,
             "format": "json",
             "system": system,
             "prompt": user,
-            "options": {"num_predict": 1024},
+            "options": {"num_predict": 1024, "temperature": 0.2},
         }
         resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
         resp.raise_for_status()
@@ -79,7 +79,7 @@ class OllamaProvider(LLMProvider):
             "format": "json",
             "system": system,
             "prompt": "\n\n".join(parts),
-            "options": {"num_predict": 2048},
+            "options": {"num_predict": 2048, "temperature": 0.2},
         }
         resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
         resp.raise_for_status()
@@ -99,7 +99,7 @@ class OllamaProvider(LLMProvider):
             "format": "json",
             "system": system,
             "prompt": f"Newsletter content:\n\n{content[:8000]}",
-            "options": {"num_predict": 4096},
+            "options": {"num_predict": 4096, "temperature": 0.2},
         }
         resp = self.client.post(
             f"{self.base_url}/api/generate",

@@ -27,7 +27,7 @@ Each category has a name, optional "keywords" (signals for its topic, not phrase
 
 
 SYSTEM_PROMPT = """You are a news analyst. Given a news article title and content, return a JSON object with exactly these fields:
-- "abstract": string, 1-3 sentence summary of the article.
+- "abstract": string, 1-3 sentence factual summary based strictly on the provided title and content. Do not add, infer, or embellish anything not explicitly stated in the source.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the article's language) that best represent the article's topic (e.g. ["llm", "openai", "reasoning models"])
 {categories_field}
 {relevance_field}
@@ -41,7 +41,7 @@ Respond ONLY with valid JSON. No markdown fences, no extra text.""".format(
 
 SOCIAL_SYSTEM_PROMPT = """You are a news analyst. Given a social media post, return a JSON object with exactly these fields:
 - "headline": string, a short punchy headline (max 12 words) that captures the core topic of the post.
-- "abstract": string, 1-2 sentence summary of the post.
+- "abstract": string, 1-2 sentence factual summary based strictly on the post content. Do not add, infer, or embellish anything not explicitly stated.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of the post's language) that best represent the post's topic.
 {categories_field}
 {relevance_field}
@@ -122,7 +122,7 @@ Respond ONLY with a valid JSON array. No markdown fences, no extra text.""".form
 
 CLUSTER_SYSTEM_PROMPT = """You are a news analyst. Multiple sources have covered the same event. Return a JSON object with exactly these fields:
 - "title": string, a short headline (max 10 words) that captures the core event.
-- "unified_abstract": string, 1-3 sentence summary that synthesises all sources into one coherent account.
+- "unified_abstract": string, 1-3 sentence factual summary that synthesises all sources into one coherent account, based strictly on the provided content. Do not add or infer anything not present in the sources.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of source language) that best represent this event (e.g. ["trade war", "tariffs", "eu"])
 {categories_field}
 {relevance_field}
