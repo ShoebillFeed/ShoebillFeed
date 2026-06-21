@@ -103,7 +103,7 @@ function TreeNode({
           disabled={isAdded || disabled}
           className={cn(
             "p-1 rounded shrink-0 transition-colors",
-            "opacity-0 group-hover:opacity-100 focus:opacity-100",
+            "opacity-50 group-hover:opacity-100 focus:opacity-100",
             isAdded
               ? "text-gray-300 dark:text-gray-600 cursor-default"
               : "text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30",

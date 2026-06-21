@@ -31,10 +31,14 @@ interface Props {
   taxonomyId?: string;
   /** Pre-selected color when coming from taxonomy */
   defaultColor?: string;
+  /** Pre-fill keywords from a taxonomy node (create mode only) */
+  defaultKeywords?: string[];
+  /** Pre-fill prompt from a taxonomy node (create mode only) */
+  defaultPrompt?: string;
   onClose: () => void;
 }
 
-export default function CategoryForm({ category, taxonomyName, taxonomyId, defaultColor, onClose }: Props) {
+export default function CategoryForm({ category, taxonomyName, taxonomyId, defaultColor, defaultKeywords, defaultPrompt, onClose }: Props) {
   const { t } = useTranslation();
   const isEdit = Boolean(category);
   const create = useCreateCategory();
@@ -42,16 +46,17 @@ export default function CategoryForm({ category, taxonomyName, taxonomyId, defau
 
   const initialName = category?.name ?? taxonomyName ?? "";
   const initialColor = category?.color ?? defaultColor ?? "#6366f1";
+  const initialKeywords = category?.keywords.join(", ") ?? (defaultKeywords ?? []).join(", ");
 
   const [name, setName] = useState(initialName);
   const [color, setColor] = useState(initialColor);
-  const [keywords, setKeywords] = useState(category?.keywords.join(", ") ?? "");
+  const [keywords, setKeywords] = useState(initialKeywords);
   const [prompt, setPrompt] = useState(
-    category?.prompt ?? buildFallbackPrompt(initialName, "")
+    category?.prompt ?? defaultPrompt ?? buildFallbackPrompt(initialName, initialKeywords)
   );
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
-  const promptManuallyEdited = useRef(Boolean(category?.prompt));
+  const promptManuallyEdited = useRef(Boolean(category?.prompt || defaultPrompt));
 
   useEffect(() => {
     if (!promptManuallyEdited.current) {

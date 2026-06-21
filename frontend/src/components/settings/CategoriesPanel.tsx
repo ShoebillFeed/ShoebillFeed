@@ -128,6 +128,8 @@ export default function CategoriesPanel() {
             taxonomyName={pendingNode.node.name}
             taxonomyId={pendingNode.node.id}
             defaultColor={pendingNode.color}
+            defaultKeywords={pendingNode.node.keywords}
+            defaultPrompt={pendingNode.node.prompt}
             onClose={() => setPendingNode(null)}
           />
         </div>
@@ -173,7 +175,7 @@ export default function CategoriesPanel() {
             {t("categories.taxonomyTitle")}
           </h3>
           <span className="text-xs text-gray-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded font-medium">
-            IPTC
+            Default
           </span>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
@@ -239,7 +241,7 @@ function CategoryRow({
                 className="text-[10px] font-medium px-1 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 leading-none"
                 title={taxonomyNode ? `IPTC: ${taxonomyNode.name} (${cat.taxonomy_id})` : `IPTC ${cat.taxonomy_id}`}
               >
-                IPTC
+                Default
               </span>
             )}
           </div>
