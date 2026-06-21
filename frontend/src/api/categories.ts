@@ -6,6 +6,7 @@ export interface CategoryExportItem {
   color: string;
   keywords: string[];
   prompt: string | null;
+  taxonomy_id?: string | null;
 }
 
 export const categoriesApi = {

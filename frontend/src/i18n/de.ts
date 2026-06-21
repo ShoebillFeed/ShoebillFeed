@@ -134,7 +134,7 @@ const de = {
     presetsDesc: "Fertige Kategorien mit vorausgefüllten Stichwörtern und Prompts. Klicke auf +, um sie hinzuzufügen.",
     presetsSearch: "Vorlagen suchen…",
     presetsNoMatch: "Keine Vorlagen gefunden.",
-    presetsAlreadyAdded: "Bereits hinzugefügt",
+    presetsAlreadyAdded: "Bereits hinzugefügt",\n    addCustom: "Eigene hinzufügen",\n    addFromTaxonomy: "Aus Taxonomie hinzufügen",\n    taxonomyTitle: "IPTC-Nachrichtentaxonomie durchsuchen",\n    taxonomyDesc: "Der IPTC Media Topics Standard umfasst 17 Oberthemen. Füge jedes Thema als Kategorie hinzu und passe Stichwörter an.",\n    taxonomySearch: "Taxonomie durchsuchen…",
   },
   tabForm: {
     tabName: "Tab-Name",

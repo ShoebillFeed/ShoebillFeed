@@ -25,20 +25,29 @@ function buildFallbackPrompt(name: string, keywords: string): string {
 
 interface Props {
   category?: Category;
+  /** Pre-fill name from a taxonomy node (create mode only) */
+  taxonomyName?: string;
+  /** IPTC taxonomy_id to attach on create */
+  taxonomyId?: string;
+  /** Pre-selected color when coming from taxonomy */
+  defaultColor?: string;
   onClose: () => void;
 }
 
-export default function CategoryForm({ category, onClose }: Props) {
+export default function CategoryForm({ category, taxonomyName, taxonomyId, defaultColor, onClose }: Props) {
   const { t } = useTranslation();
   const isEdit = Boolean(category);
   const create = useCreateCategory();
   const update = useUpdateCategory();
 
-  const [name, setName] = useState(category?.name ?? "");
-  const [color, setColor] = useState(category?.color ?? "#6366f1");
+  const initialName = category?.name ?? taxonomyName ?? "";
+  const initialColor = category?.color ?? defaultColor ?? "#6366f1";
+
+  const [name, setName] = useState(initialName);
+  const [color, setColor] = useState(initialColor);
   const [keywords, setKeywords] = useState(category?.keywords.join(", ") ?? "");
   const [prompt, setPrompt] = useState(
-    category?.prompt ?? buildFallbackPrompt(category?.name ?? "", category?.keywords.join(", ") ?? "")
+    category?.prompt ?? buildFallbackPrompt(initialName, "")
   );
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -79,7 +88,13 @@ export default function CategoryForm({ category, onClose }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const keywordList = keywords.split(",").map((k) => k.trim()).filter(Boolean);
-    const data: CategoryCreate = { name, color, keywords: keywordList, prompt: prompt || null };
+    const data: CategoryCreate = {
+      name,
+      color,
+      keywords: keywordList,
+      prompt: prompt || null,
+      taxonomy_id: taxonomyId ?? null,
+    };
     if (isEdit && category) {
       await update.mutateAsync({ id: category.id, data });
     } else {
@@ -90,6 +105,13 @@ export default function CategoryForm({ category, onClose }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {taxonomyId && (
+        <div className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-2.5 py-1.5">
+          <span className="font-medium">IPTC</span>
+          <span className="text-indigo-400 dark:text-indigo-500">·</span>
+          <span className="font-mono opacity-75">{taxonomyId}</span>
+        </div>
+      )}
       <div>
         <label className="block text-sm font-medium mb-1">{t("categoryForm.name")}</label>
         <input

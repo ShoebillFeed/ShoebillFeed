@@ -17,6 +17,7 @@ class Category(Base):
     color: Mapped[str] = mapped_column(String(7), nullable=False, default="#6366f1")
     keywords: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
     prompt: Mapped[str | None] = mapped_column(String, nullable=True)
+    taxonomy_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

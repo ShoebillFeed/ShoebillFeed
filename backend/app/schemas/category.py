@@ -11,7 +11,7 @@ class CategoryBase(BaseModel):
 
 
 class CategoryCreate(CategoryBase):
-    pass
+    taxonomy_id: str | None = None
 
 
 class CategoryUpdate(BaseModel):
@@ -33,6 +33,7 @@ class CategoryWeightOut(BaseModel):
 class CategoryOut(CategoryBase):
     id: uuid.UUID
     is_active: bool = True
+    taxonomy_id: str | None = None
     created_at: datetime
     updated_at: datetime
     weight: CategoryWeightOut | None = None

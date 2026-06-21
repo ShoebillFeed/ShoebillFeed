@@ -140,7 +140,7 @@ def export_categories(db: Session = Depends(get_db), current_user: User = Depend
         select(Category).where(Category.user_id == current_user.id).order_by(Category.name)
     ).all()
     data = [
-        {"name": c.name, "color": c.color, "keywords": c.keywords, "prompt": c.prompt}
+        {"name": c.name, "color": c.color, "keywords": c.keywords, "prompt": c.prompt, "taxonomy_id": c.taxonomy_id}
         for c in categories
     ]
     return JSONResponse(content=data, headers={"Content-Disposition": "attachment; filename=categories.json"})
@@ -151,6 +151,7 @@ class CategoryImportItem(BaseModel):
     color: str = Field(default="#6366f1", pattern=r"^#[0-9a-fA-F]{6}$")
     keywords: list[str] = Field(default_factory=list)
     prompt: str | None = None
+    taxonomy_id: str | None = None
 
 
 @router.post("/import", response_model=list[CategoryOut], status_code=201)
