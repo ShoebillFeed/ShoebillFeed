@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.news_cluster import NewsCluster
 from app.models.news_item import NewsItem
+from app.services.normalization import normalize_keyword
 
 KEYWORD_SIMILARITY_THRESHOLD = 0.25
 MIN_SHARED_KEYWORDS = 2
@@ -35,12 +36,13 @@ LOOKBACK_HOURS = 48
 def _keyword_set(item: "NewsItem") -> frozenset[str]:
     if not item.extracted_keywords:
         return frozenset()
-    return frozenset(kw.lower().strip() for kw in item.extracted_keywords if kw.strip())
+    return frozenset(normalize_keyword(kw) for kw in item.extracted_keywords if kw.strip())
 
 
 def _title_words(title: str) -> frozenset[str]:
     return frozenset(
-        w for w in re.sub(r"[^\w\s]", "", title.lower()).split()
+        normalize_keyword(w)
+        for w in re.sub(r"[^\w\s]", "", title.lower()).split()
         if w not in STOP_WORDS and len(w) > 2 and not w.isdigit()
     )
 

@@ -7,6 +7,7 @@ from app.models import NewsItem, CategoryWeight, KeywordWeight, Category
 from app.models.category_weight_snapshot import CategoryWeightSnapshot
 from app.models.news_item import news_item_categories
 from app.models.user_settings import UserSettings
+from app.services.normalization import normalize_keyword
 
 
 def update_category_weight(
@@ -81,12 +82,17 @@ def update_category_weight(
 
 
 def update_keyword_weights(db: Session, keywords: list[str], user_id) -> None:
+    seen: set[str] = set()
     for keyword in keywords:
-        kw = db.get(KeywordWeight, (user_id, keyword))
+        norm = normalize_keyword(keyword)
+        if not norm or norm in seen:
+            continue
+        seen.add(norm)
+        kw = db.get(KeywordWeight, (user_id, norm))
         if kw:
             kw.total_marked += 1
             kw.weight = 1.0 + math.log1p(kw.total_marked) * 0.5
         else:
-            db.add(KeywordWeight(user_id=user_id, keyword=keyword, weight=1.0 + math.log1p(1) * 0.5, total_marked=1))
+            db.add(KeywordWeight(user_id=user_id, keyword=norm, weight=1.0 + math.log1p(1) * 0.5, total_marked=1))
     if keywords:
         db.commit()

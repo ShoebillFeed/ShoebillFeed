@@ -17,6 +17,7 @@ from app.models.user_settings import UserSettings
 from app.schemas.news_item import NewsItemOut, NewsClusterOut, FeedEntry
 from app.schemas.pagination import Page
 from app.services.scoring import update_category_weight, update_keyword_weights
+from app.services.normalization import normalize_keyword
 
 router = APIRouter()
 
@@ -173,7 +174,7 @@ def _build_feed(
 
             keywords = e.extracted_keywords or []
             raw_kw = (
-                sum(kw_weights.get(k, 1.0) for k in keywords) / len(keywords)
+                sum(kw_weights.get(normalize_keyword(k), 1.0) for k in keywords) / len(keywords)
                 if keywords else 1.0
             )
             kw_factor = 1.0 + (raw_kw - 1.0) * learn_w
