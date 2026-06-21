@@ -13,6 +13,7 @@ from app.models.llm_batch import LLMBatch
 from app.models.user_settings import UserSettings
 from app.services.clustering import recluster_processed_item
 from app.services.deduplication import url_hash
+from app.services.embedding import generate_embedding
 from app.services.llm.base import dedup_cluster_payload
 from app.services.llm.factory import get_llm_provider, get_anthropic_provider
 from app.tasks.celery_app import celery_app
@@ -220,6 +221,10 @@ def process_news_item(self, news_item_id: str) -> None:
         item.llm_processed = True
         item.llm_provider = result.provider_name or None
         item.llm_model = result.model_name or None
+
+        embedding = generate_embedding(f"{item.title}\n{item.abstract or ''}")
+        if embedding is not None:
+            item.embedding = embedding
 
         if result.category_names:
             cats = db.scalars(

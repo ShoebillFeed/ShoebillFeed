@@ -1,3 +1,4 @@
+import logging
 import re
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -9,8 +10,11 @@ from app.models.news_cluster import NewsCluster
 from app.models.news_item import NewsItem
 from app.services.normalization import normalize_keyword
 
+logger = logging.getLogger(__name__)
+
 KEYWORD_SIMILARITY_THRESHOLD = 0.25
 MIN_SHARED_KEYWORDS = 2
+EMBEDDING_DISTANCE_THRESHOLD = 0.18  # cosine distance ≤ 0.18 ≈ cosine similarity ≥ 0.82
 
 STOP_WORDS = frozenset({
     "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
@@ -208,45 +212,71 @@ def _cluster_for_user(
 
 def recluster_processed_item(db: Session, item: NewsItem) -> uuid.UUID | None:
     """
-    Second-pass clustering using LLM-extracted keywords. Called after an item
-    has been individually processed and is still standalone (cluster_id is None).
+    Second-pass clustering after individual LLM processing. Called for standalone items
+    (cluster_id is None). Tries two strategies in order:
 
-    Searches recently-processed items (same user, last LOOKBACK_HOURS) for a
-    keyword-Jaccard match >= KEYWORD_SIMILARITY_THRESHOLD. On a match the item
-    is added to the matching item's cluster (if one exists) or a new two-item
-    cluster is created.
+    1. Embedding cosine distance (primary): queries pgvector for the nearest
+       already-processed item within EMBEDDING_DISTANCE_THRESHOLD. Fast and semantic.
+       Falls back to (2) if embedding is unavailable or no match is found.
+
+    2. Keyword Jaccard (fallback): scans recently-processed items for keyword overlap
+       >= KEYWORD_SIMILARITY_THRESHOLD with a drift guard against cluster vocabulary.
 
     Does NOT commit — caller must commit and dispatch process_cluster.
     Returns the cluster_id assigned, or None.
     """
-    if item.cluster_id is not None or not item.extracted_keywords:
-        return None
-
-    item_kws = _keyword_set(item)
-    if not item_kws:
+    if item.cluster_id is not None:
         return None
 
     cutoff = datetime.now(timezone.utc) - timedelta(hours=LOOKBACK_HOURS)
-    candidates = db.scalars(
-        select(NewsItem).where(
-            NewsItem.id != item.id,
-            NewsItem.user_id == item.user_id,
-            NewsItem.llm_processed == True,  # noqa: E712
-            NewsItem.fetched_at >= cutoff,
-            NewsItem.extracted_keywords.isnot(None),
-        )
-    ).all()
-
+    used_embedding = False
     best: NewsItem | None = None
-    best_score = 0.0
-    for candidate in candidates:
-        cand_kws = _keyword_set(candidate)
-        if not _matches(item_kws, cand_kws, KEYWORD_SIMILARITY_THRESHOLD, MIN_SHARED_KEYWORDS):
-            continue
-        score = _jaccard(item_kws, cand_kws)
-        if score > best_score:
-            best_score = score
-            best = candidate
+    item_kws: frozenset[str] = frozenset()
+
+    # --- Primary: embedding cosine distance ---
+    if item.embedding is not None:
+        try:
+            best = db.scalars(
+                select(NewsItem)
+                .where(
+                    NewsItem.id != item.id,
+                    NewsItem.user_id == item.user_id,
+                    NewsItem.llm_processed == True,  # noqa: E712
+                    NewsItem.fetched_at >= cutoff,
+                    NewsItem.embedding.isnot(None),
+                    NewsItem.embedding.cosine_distance(item.embedding) < EMBEDDING_DISTANCE_THRESHOLD,
+                )
+                .order_by(NewsItem.embedding.cosine_distance(item.embedding))
+                .limit(1)
+            ).first()
+            if best is not None:
+                used_embedding = True
+        except Exception:
+            logger.warning("Embedding recluster lookup failed", exc_info=True)
+
+    # --- Fallback: keyword Jaccard ---
+    if best is None and item.extracted_keywords:
+        item_kws = _keyword_set(item)
+        if item_kws:
+            candidates = db.scalars(
+                select(NewsItem).where(
+                    NewsItem.id != item.id,
+                    NewsItem.user_id == item.user_id,
+                    NewsItem.llm_processed == True,  # noqa: E712
+                    NewsItem.fetched_at >= cutoff,
+                    NewsItem.extracted_keywords.isnot(None),
+                )
+            ).all()
+
+            best_score = 0.0
+            for candidate in candidates:
+                cand_kws = _keyword_set(candidate)
+                if not _matches(item_kws, cand_kws, KEYWORD_SIMILARITY_THRESHOLD, MIN_SHARED_KEYWORDS):
+                    continue
+                score = _jaccard(item_kws, cand_kws)
+                if score > best_score:
+                    best_score = score
+                    best = candidate
 
     if best is None:
         return None
@@ -259,14 +289,14 @@ def recluster_processed_item(db: Session, item: NewsItem) -> uuid.UUID | None:
         if cluster is None:
             return None
 
-        # Drift guard: the item must also fit the cluster's overall keyword
-        # vocabulary, not just this single member, before joining. Otherwise
-        # an item could keep extending a long-running cluster via a single
-        # weakly-related member while sharing nothing with the rest of it.
-        members = db.scalars(select(NewsItem).where(NewsItem.cluster_id == cluster.id)).all()
-        anchor = frozenset().union(*(_keyword_set(m) for m in members))
-        if not _matches(item_kws, anchor, KEYWORD_SIMILARITY_THRESHOLD, MIN_SHARED_KEYWORDS):
-            return None
+        # Drift guard (keyword path only): item must fit the cluster's overall keyword
+        # vocabulary, not just the single matched member. The embedding path skips this
+        # because cosine distance already captures holistic content similarity.
+        if not used_embedding and item_kws:
+            members = db.scalars(select(NewsItem).where(NewsItem.cluster_id == cluster.id)).all()
+            anchor = frozenset().union(*(_keyword_set(m) for m in members))
+            if not _matches(item_kws, anchor, KEYWORD_SIMILARITY_THRESHOLD, MIN_SHARED_KEYWORDS):
+                return None
 
         cluster.llm_processed = False
         cluster.unified_abstract = None

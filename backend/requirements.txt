@@ -19,4 +19,5 @@ anthropic==0.52.0
 python-dotenv==1.1.0
 json-repair==0.30.3
 nltk>=3.9
+pgvector>=0.3
 pywebpush==2.0.0

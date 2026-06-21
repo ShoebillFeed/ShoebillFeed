@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import String, Text, Boolean, SmallInteger, DateTime, ForeignKey, Index, func, ARRAY, Table, Column, UniqueConstraint  # noqa: F401
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from pgvector.sqlalchemy import Vector
 from app.database import Base
 
 
@@ -34,6 +35,7 @@ class NewsItem(Base):
     raw_content: Mapped[str | None] = mapped_column(Text, nullable=True)
     abstract: Mapped[str | None] = mapped_column(Text, nullable=True)
     extracted_keywords: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
     source_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     relevance_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
