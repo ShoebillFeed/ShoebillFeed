@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from app.models import NewsItem, CategoryWeight, KeywordWeight, Category
+from app.models.category_keyword_weight import CategoryKeywordWeight
 from app.models.category_weight_snapshot import CategoryWeightSnapshot
 from app.models.news_item import news_item_categories
 from app.models.user_settings import UserSettings
@@ -96,3 +97,32 @@ def update_keyword_weights(db: Session, keywords: list[str], user_id) -> None:
             db.add(KeywordWeight(user_id=user_id, keyword=norm, weight=1.0 + math.log1p(1) * 0.5, total_marked=1))
     if keywords:
         db.commit()
+
+
+def update_category_keyword_weights(
+    db: Session,
+    keywords: list[str],
+    category_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> None:
+    """Increment per-category keyword counts and recompute weights when an article is starred."""
+    seen: set[str] = set()
+    for keyword in keywords:
+        norm = normalize_keyword(keyword)
+        if not norm or norm in seen:
+            continue
+        seen.add(norm)
+        ckw = db.get(CategoryKeywordWeight, (user_id, category_id, norm))
+        if ckw:
+            ckw.starred_count += 1
+            ckw.weight = 1.0 + math.log1p(ckw.starred_count) * 0.5
+        else:
+            db.add(CategoryKeywordWeight(
+                user_id=user_id,
+                category_id=category_id,
+                keyword=norm,
+                starred_count=1,
+                weight=1.0 + math.log1p(1) * 0.5,
+            ))
+    if keywords:
+        db.flush()

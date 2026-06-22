@@ -10,13 +10,15 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.api.deps import get_db, get_current_user
 from app.models import NewsItem, Category, CategoryWeight, KeywordWeight, NewsCluster
+from app.models.category_keyword_weight import CategoryKeywordWeight
+from app.models.keyword_cluster import KeywordCluster
 from app.models.news_item import news_item_categories
 from app.models.news_cluster import news_cluster_categories
 from app.models.user import User
 from app.models.user_settings import UserSettings
 from app.schemas.news_item import NewsItemOut, NewsClusterOut, FeedEntry
 from app.schemas.pagination import Page
-from app.services.scoring import update_category_weight, update_keyword_weights
+from app.services.scoring import update_category_weight, update_keyword_weights, update_category_keyword_weights
 from app.services.normalization import normalize_keyword
 
 router = APIRouter()
@@ -156,27 +158,58 @@ def _build_feed(
             cw.category_id: cw.weight * cw.manual_weight
             for cw in db.scalars(select(CategoryWeight)).all()
         }
+        # Global keyword weights (legacy signal, kept as a floor)
         kw_weights = {
             kw.keyword: kw.weight
             for kw in db.scalars(select(KeywordWeight).where(KeywordWeight.user_id == user_id)).all()
         }
+        # Per-category keyword weights: {(category_id, keyword): weight}
+        cat_kw_weights: dict[tuple, float] = {
+            (ckw.category_id, ckw.keyword): ckw.weight
+            for ckw in db.scalars(
+                select(CategoryKeywordWeight).where(CategoryKeywordWeight.user_id == user_id)
+            ).all()
+        }
+        # Keyword cluster lookup: {(category_id, keyword): cluster_index}
+        cluster_lookup: dict[tuple, int] = {}
+        # Cluster synonym weight: {(category_id, cluster_index): max per-cat keyword weight in cluster}
+        cluster_max_weight: dict[tuple, float] = {}
+        for kc in db.scalars(select(KeywordCluster).where(KeywordCluster.user_id == user_id)).all():
+            cluster_lookup[(kc.category_id, kc.keyword)] = kc.cluster_index
+            key = (kc.category_id, kc.cluster_index)
+            existing = cluster_max_weight.get(key, 1.0)
+            per_cat = cat_kw_weights.get((kc.category_id, kc.keyword), 1.0)
+            cluster_max_weight[key] = max(existing, per_cat)
+
         learn_w = user_settings.relevance_learning_weight if user_settings else 1.0
         cluster_w = user_settings.relevance_cluster_weight if user_settings else 0.5
 
         def _rel_key(e):
             cat_ids = [c.id for c in e.categories]
             raw_cat = max((cat_weights.get(cid, 1.0) for cid in cat_ids), default=1.0)
-            # Blend category influence: 0 = flat (1.0), 1 = raw, 2 = amplified
             cat_w = 1.0 + (raw_cat - 1.0) * learn_w
 
             n = len(e.items) if isinstance(e, NewsCluster) else 1
             source_bonus = 1.0 + math.log1p(n - 1) * cluster_w
 
             keywords = e.extracted_keywords or []
-            raw_kw = (
-                sum(kw_weights.get(normalize_keyword(k), 1.0) for k in keywords) / len(keywords)
-                if keywords else 1.0
-            )
+            if keywords and cat_ids:
+                kw_scores = []
+                for k in keywords:
+                    norm = normalize_keyword(k)
+                    # Global weight as baseline
+                    w = kw_weights.get(norm, 1.0)
+                    for cid in cat_ids:
+                        # Per-category direct weight
+                        w = max(w, cat_kw_weights.get((cid, norm), 1.0))
+                        # Cluster synonym expansion: inherit max weight of cluster peers
+                        ci = cluster_lookup.get((cid, norm))
+                        if ci is not None:
+                            w = max(w, cluster_max_weight.get((cid, ci), 1.0))
+                    kw_scores.append(w)
+                raw_kw = sum(kw_scores) / len(kw_scores)
+            else:
+                raw_kw = 1.0
             kw_factor = 1.0 + (raw_kw - 1.0) * learn_w
 
             return cat_w * source_bonus * kw_factor * _time_decay(e, decay_param) * _show_again_decay(e, show_decay)
@@ -271,6 +304,9 @@ def toggle_relevant(item_id: uuid.UUID, db: Session = Depends(get_db), current_u
         update_category_weight(db, cat.id, base=base, multiplier=multiplier, window_days=window_days, ignore_penalty=ignore_penalty)
     if item.is_relevant and item.extracted_keywords:
         update_keyword_weights(db, item.extracted_keywords, current_user.id)
+        for cat in item.categories:
+            update_category_keyword_weights(db, item.extracted_keywords, cat.id, current_user.id)
+        db.commit()
     db.refresh(item)
     return item
 

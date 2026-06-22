@@ -45,5 +45,10 @@ celery_app.conf.update(
             "schedule": crontab(hour=3, minute=0),
             "options": {"queue": "default"},
         },
+        "refresh-keyword-clusters": {
+            "task": "app.tasks.process_tasks.refresh_keyword_clusters",
+            "schedule": crontab(hour=2, minute=0),
+            "options": {"queue": "default"},
+        },
     },
 )

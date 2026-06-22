@@ -35,3 +35,17 @@ export function useSourceClusters(days: number) {
     queryFn: () => statsApi.sourceClusters(days),
   });
 }
+
+export function useKeywordClusterHistory(days: number) {
+  return useQuery({
+    queryKey: ["stats", "keyword-cluster-history", days],
+    queryFn: () => statsApi.keywordClusterHistory(days),
+  });
+}
+
+export function useKeywordClusterMap() {
+  return useQuery({
+    queryKey: ["stats", "keyword-cluster-map"],
+    queryFn: () => statsApi.keywordClusterMap(),
+  });
+}

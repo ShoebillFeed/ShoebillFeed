@@ -12,6 +12,7 @@ import { PauseCircle } from "lucide-react";
 import {
   useActivityStats, useCategoryStats, useSourceStats,
   useWeightHistory, useSourceClusters,
+  useKeywordClusterHistory, useKeywordClusterMap,
 } from "../../hooks/useStats";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 
@@ -520,6 +521,184 @@ function SourceClustersChart({ days }: { days: number }) {
   );
 }
 
+// ── Keyword cluster score history ────────────────────────────────────────────
+
+function KeywordClusterHistoryChart({ days }: { days: number }) {
+  const { t } = useTranslation();
+  const { data, isLoading } = useKeywordClusterHistory(days);
+  if (isLoading) return <Loading />;
+  if (!data?.length) {
+    return (
+      <div className="flex flex-col items-center justify-center h-40 gap-1 text-sm text-gray-400">
+        <span>{t("stats.noClusterHistory")}</span>
+        <span className="text-xs">{t("stats.clusterHistoryHint")}</span>
+      </div>
+    );
+  }
+
+  const hasSnapshots = data.some((c) => c.snapshots.length > 0);
+  if (!hasSnapshots) {
+    // We have clusters but no snapshot history yet — show current weights as a simple bar
+    return (
+      <ResponsiveContainer width="100%" height={Math.max(160, data.length * 32 + 40)}>
+        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 60, left: 8, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} horizontal={false} />
+          <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} domain={[1, "auto"]} />
+          <YAxis type="category" dataKey="cluster_label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={130} />
+          <Tooltip
+            cursor={false}
+            wrapperStyle={WRAPPER_STYLE}
+            content={({ active, payload }) => {
+              if (!active || !payload?.[0]) return null;
+              const d = payload[0].payload as { cluster_label: string; category_name: string; category_color: string; current_weight: number };
+              return (
+                <TooltipBox>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.category_color }} />
+                    <span className="font-semibold text-gray-800 dark:text-gray-100">{d.cluster_label}</span>
+                  </div>
+                  <TooltipRow name={d.category_name} value={d.current_weight.toFixed(3)} />
+                </TooltipBox>
+              );
+            }}
+          />
+          <Bar dataKey="current_weight" name="Weight" radius={[0, 4, 4, 0]}>
+            {data.map((entry, i) => (
+              <Cell key={i} fill={entry.category_color} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  const allDates = Array.from(
+    new Set(data.flatMap((c) => c.snapshots.map((s) => s.date.slice(0, 10))))
+  ).sort();
+
+  const chartData = allDates.map((date) => {
+    const point: Record<string, string | number> = { date: fmtDate(date, days) };
+    for (const cluster of data) {
+      const snap = [...cluster.snapshots].reverse().find((s) => s.date.slice(0, 10) <= date);
+      if (snap) point[cluster.cluster_label] = snap.weight;
+    }
+    return point;
+  });
+
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} />
+        <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+        <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+        <Tooltip
+          cursor={{ stroke: "rgba(99,102,241,0.2)", strokeWidth: 1 }}
+          wrapperStyle={WRAPPER_STYLE}
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null;
+            const sorted = [...payload]
+              .filter((p) => p.value !== undefined)
+              .sort((a, b) => (b.value as number) - (a.value as number));
+            return (
+              <TooltipBox label={label as string}>
+                {sorted.map((p) => (
+                  <TooltipRow key={String(p.name)} color={p.color} name={String(p.name)} value={typeof p.value === "number" ? p.value.toFixed(3) : ""} />
+                ))}
+              </TooltipBox>
+            );
+          }}
+        />
+        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, left: 0, width: "100%", textAlign: "center" }} />
+        {data.map((cluster) => (
+          <Line
+            key={`${cluster.category_name}:${cluster.cluster_label}`}
+            type="monotone"
+            dataKey={cluster.cluster_label}
+            stroke={cluster.category_color}
+            strokeWidth={2}
+            dot={false}
+            connectNulls
+          />
+        ))}
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ── Keyword cluster map ───────────────────────────────────────────────────────
+
+function KeywordClusterMapChart() {
+  const { t } = useTranslation();
+  const { data, isLoading } = useKeywordClusterMap();
+  if (isLoading) return <Loading />;
+  if (!data?.length) {
+    return (
+      <div className="flex flex-col items-center justify-center h-40 gap-1 text-sm text-gray-400">
+        <span>{t("stats.noClusterMap")}</span>
+        <span className="text-xs">{t("stats.clusterMapHint")}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {data.map((cluster, i) => {
+        const maxScore = Math.max(...cluster.keywords.map((k) => k.score), 0.01);
+        const maxWeight = Math.max(...cluster.keywords.map((k) => k.weight), 1.0);
+        return (
+          <div
+            key={i}
+            className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900"
+          >
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cluster.category_color }} />
+                <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{cluster.category_name}</span>
+              </div>
+              <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 tabular-nums">
+                {cluster.cluster_size} ★
+              </span>
+            </div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 truncate" title={cluster.cluster_label}>
+              {cluster.cluster_label}
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {cluster.keywords.map((kw) => {
+                const relSize = kw.score / maxScore;
+                const hasWeight = kw.weight > 1.0;
+                const weightIntensity = Math.min((kw.weight - 1.0) / (maxWeight - 1.0 || 1), 1);
+                return (
+                  <span
+                    key={kw.keyword}
+                    title={`score: ${kw.score.toFixed(3)}${hasWeight ? ` · weight: ${kw.weight.toFixed(2)}` : ""}`}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300 transition-colors"
+                    style={{
+                      fontSize: `${Math.round(10 + relSize * 4)}px`,
+                      backgroundColor: hasWeight
+                        ? `color-mix(in srgb, ${cluster.category_color} ${Math.round(weightIntensity * 25 + 8)}%, transparent)`
+                        : undefined,
+                      borderWidth: "1px",
+                      borderStyle: "solid",
+                      borderColor: hasWeight ? cluster.category_color + "60" : "rgb(229 231 235 / 1)",
+                    }}
+                  >
+                    {kw.keyword}
+                    {hasWeight && (
+                      <span className="ml-1 text-[9px] font-medium tabular-nums opacity-70">
+                        ×{kw.weight.toFixed(1)}
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export default function StatsPanel() {
@@ -529,6 +708,7 @@ export default function StatsPanel() {
   const [sourceDays, setSourceDays] = useState(30);
   const [weightDays, setWeightDays] = useState(60);
   const [clusterDays, setClusterDays] = useState(30);
+  const [kwClusterHistoryDays, setKwClusterHistoryDays] = useState(60);
 
   const { data: settings } = useAdvancedSettings();
   const update = useUpdateAdvancedSettings();
@@ -605,6 +785,21 @@ export default function StatsPanel() {
           action={<RangePicker value={weightDays} onChange={setWeightDays} />}
         >
           <WeightHistoryChart key={weightDays} days={weightDays} />
+        </ChartCard>
+
+        <ChartCard
+          title={t("stats.kwClusterHistoryTitle")}
+          description={t("stats.kwClusterHistoryDesc")}
+          action={<RangePicker value={kwClusterHistoryDays} onChange={setKwClusterHistoryDays} />}
+        >
+          <KeywordClusterHistoryChart key={kwClusterHistoryDays} days={kwClusterHistoryDays} />
+        </ChartCard>
+
+        <ChartCard
+          title={t("stats.kwClusterMapTitle")}
+          description={t("stats.kwClusterMapDesc")}
+        >
+          <KeywordClusterMapChart />
         </ChartCard>
       </div>
     </div>

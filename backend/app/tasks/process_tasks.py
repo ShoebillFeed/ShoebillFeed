@@ -9,6 +9,7 @@ from sqlalchemy.orm import joinedload
 from app.config import get_settings
 from app.database import SessionLocal
 from app.models import NewsItem, Category, NewsCluster, Source
+from app.models.user import User
 from app.models.llm_batch import LLMBatch
 from app.models.user_settings import UserSettings
 from app.services.clustering import recluster_processed_item
@@ -452,6 +453,21 @@ def poll_llm_batches() -> None:
 
             except Exception:
                 logger.exception("Error polling batch %s", llm_batch.anthropic_batch_id)
+    finally:
+        db.close()
+
+
+@celery_app.task(name="app.tasks.process_tasks.refresh_keyword_clusters", queue="default")
+def refresh_keyword_clusters() -> None:
+    from app.services.keyword_clustering import refresh_clusters_for_user
+    db = SessionLocal()
+    try:
+        user_ids = list(db.scalars(select(User.id)).all())
+        for user_id in user_ids:
+            try:
+                refresh_clusters_for_user(db, user_id)
+            except Exception:
+                logger.exception("Keyword cluster refresh failed for user %s", user_id)
     finally:
         db.close()
 

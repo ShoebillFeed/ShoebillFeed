@@ -8,7 +8,10 @@ from sqlalchemy.orm import Session, selectinload, joinedload
 
 from app.api.deps import get_db, get_current_user
 from app.models import NewsItem, Category, Source, NewsCluster
+from app.models.category_keyword_weight import CategoryKeywordWeight
 from app.models.category_weight_snapshot import CategoryWeightSnapshot
+from app.models.keyword_cluster import KeywordCluster
+from app.models.keyword_cluster_snapshot import KeywordClusterSnapshot
 from app.models.news_item import news_item_categories
 from app.models.user import User
 
@@ -177,6 +180,153 @@ def by_source(
             })
 
     return [source_map[sid] for sid in source_order]
+
+
+@router.get("/keyword-cluster-history")
+def keyword_cluster_history(
+    days: Annotated[int, Query(ge=1, le=365)] = 60,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Score-over-time for the top 10 keyword clusters by current weight."""
+    since = _since(days)
+
+    categories = db.scalars(
+        select(Category).where(Category.user_id == current_user.id)
+    ).all()
+    cat_map = {c.id: {"name": c.name, "color": c.color} for c in categories}
+
+    cluster_rows = db.execute(
+        select(
+            KeywordCluster.category_id,
+            KeywordCluster.cluster_index,
+            KeywordCluster.keyword,
+            KeywordCluster.cluster_size,
+        )
+        .where(KeywordCluster.user_id == current_user.id)
+        .order_by(KeywordCluster.category_id, KeywordCluster.cluster_index, KeywordCluster.score.desc())
+    ).all()
+
+    # Group: top keyword per cluster = label; collect all keywords per cluster
+    cluster_labels: dict[tuple, str] = {}
+    cluster_keywords: dict[tuple, list[str]] = {}
+    cluster_sizes: dict[tuple, int] = {}
+    for row in cluster_rows:
+        key = (row.category_id, row.cluster_index)
+        if key not in cluster_labels:
+            cluster_labels[key] = row.keyword
+            cluster_sizes[key] = row.cluster_size
+            cluster_keywords[key] = []
+        cluster_keywords[key].append(row.keyword)
+
+    ckw_map: dict[tuple, float] = {
+        (r.category_id, r.keyword): r.weight
+        for r in db.scalars(
+            select(CategoryKeywordWeight).where(CategoryKeywordWeight.user_id == current_user.id)
+        ).all()
+    }
+
+    current_weights: dict[tuple, float] = {}
+    for (cat_id, ci), label in cluster_labels.items():
+        w = max((ckw_map.get((cat_id, kw), 1.0) for kw in cluster_keywords[(cat_id, ci)]), default=1.0)
+        current_weights[(cat_id, label)] = w
+
+    top10 = sorted(current_weights.items(), key=lambda x: x[1], reverse=True)[:10]
+    top_keys: set[tuple] = {k for k, _ in top10}
+
+    snapshots = db.execute(
+        select(
+            KeywordClusterSnapshot.category_id,
+            KeywordClusterSnapshot.cluster_label,
+            KeywordClusterSnapshot.weight,
+            KeywordClusterSnapshot.recorded_at,
+        )
+        .where(
+            KeywordClusterSnapshot.user_id == current_user.id,
+            KeywordClusterSnapshot.recorded_at >= since,
+        )
+        .order_by(KeywordClusterSnapshot.recorded_at)
+    ).all()
+
+    by_cluster: dict[tuple, list[dict]] = {}
+    for row in snapshots:
+        k = (row.category_id, row.cluster_label)
+        if k in top_keys:
+            if k not in by_cluster:
+                by_cluster[k] = []
+            by_cluster[k].append({"date": row.recorded_at.isoformat(), "weight": round(row.weight, 4)})
+
+    result = []
+    for (cat_id, label), weight in top10:
+        cat = cat_map.get(cat_id, {})
+        result.append({
+            "category_name": cat.get("name", ""),
+            "category_color": cat.get("color", "#6366f1"),
+            "cluster_label": label,
+            "current_weight": round(weight, 4),
+            "snapshots": by_cluster.get((cat_id, label), []),
+        })
+
+    return result
+
+
+@router.get("/keyword-cluster-map")
+def keyword_cluster_map(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Top 10 keyword clusters by size with their top keywords and weights."""
+    categories = db.scalars(
+        select(Category).where(Category.user_id == current_user.id)
+    ).all()
+    cat_map = {c.id: {"name": c.name, "color": c.color} for c in categories}
+
+    cluster_rows = db.execute(
+        select(
+            KeywordCluster.category_id,
+            KeywordCluster.cluster_index,
+            KeywordCluster.keyword,
+            KeywordCluster.score,
+            KeywordCluster.cluster_size,
+        )
+        .where(KeywordCluster.user_id == current_user.id)
+        .order_by(KeywordCluster.cluster_size.desc(), KeywordCluster.category_id, KeywordCluster.cluster_index, KeywordCluster.score.desc())
+    ).all()
+
+    ckw_map: dict[tuple, float] = {
+        (r.category_id, r.keyword): r.weight
+        for r in db.scalars(
+            select(CategoryKeywordWeight).where(CategoryKeywordWeight.user_id == current_user.id)
+        ).all()
+    }
+
+    clusters: dict[tuple, dict] = {}
+    cluster_order: list[tuple] = []
+    for row in cluster_rows:
+        key = (row.category_id, row.cluster_index)
+        if key not in clusters:
+            clusters[key] = {
+                "category_name": cat_map.get(row.category_id, {}).get("name", ""),
+                "category_color": cat_map.get(row.category_id, {}).get("color", "#6366f1"),
+                "cluster_size": row.cluster_size,
+                "keywords": [],
+            }
+            cluster_order.append(key)
+        clusters[key]["keywords"].append({
+            "keyword": row.keyword,
+            "score": round(row.score, 4),
+            "weight": round(ckw_map.get((row.category_id, row.keyword), 1.0), 4),
+        })
+
+    sorted_clusters = sorted(cluster_order, key=lambda k: clusters[k]["cluster_size"], reverse=True)[:10]
+
+    result = []
+    for key in sorted_clusters:
+        c = clusters[key]
+        c["cluster_label"] = c["keywords"][0]["keyword"] if c["keywords"] else ""
+        result.append(c)
+
+    return result
 
 
 @router.get("/weight-history")
