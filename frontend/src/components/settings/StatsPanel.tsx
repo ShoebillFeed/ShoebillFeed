@@ -203,6 +203,13 @@ const WRAPPER_STYLE = { background: "none", border: "none", boxShadow: "none", z
 
 // ── Reading activity ──────────────────────────────────────────────────────────
 
+const ACTIVITY_SERIES = [
+  { key: "fetched",  name: "Fetched",    color: "#818cf8", axis: "left"  },
+  { key: "seen",     name: "Seen",       color: "#60a5fa", axis: "left"  },
+  { key: "read",     name: "Read",       color: "#34d399", axis: "right" },
+  { key: "starred",  name: "Starred ★",  color: "#fbbf24", axis: "right" },
+] as const;
+
 function ActivityChart({ days }: { days: number }) {
   const { data, isLoading } = useActivityStats(days);
   if (isLoading) return <Loading />;
@@ -212,36 +219,65 @@ function ActivityChart({ days }: { days: number }) {
 
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <AreaChart data={points} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+      <AreaChart data={points} margin={{ top: 4, right: 44, left: -20, bottom: 0 }}>
         <defs>
-          {[["gFetched", "#818cf8"], ["gRead", "#34d399"], ["gStarred", "#fbbf24"]].map(([id, color]) => (
-            <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+          {ACTIVITY_SERIES.map(({ key, color }) => (
+            <linearGradient key={key} id={`g_${key}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.25} />
               <stop offset="95%" stopColor={color} stopOpacity={0} />
             </linearGradient>
           ))}
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} />
         <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-        <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+        <YAxis
+          yAxisId="left"
+          tick={{ fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          allowDecimals={false}
+          width={28}
+        />
+        <YAxis
+          yAxisId="right"
+          orientation="right"
+          tick={{ fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          allowDecimals={false}
+          width={28}
+        />
         <Tooltip
           cursor={CURSOR_STYLE}
           wrapperStyle={WRAPPER_STYLE}
           content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null;
+            const ordered = ACTIVITY_SERIES.map((s) =>
+              payload.find((p) => p.dataKey === s.key)
+            ).filter(Boolean);
             return (
               <TooltipBox label={label as string}>
-                {payload.map((p) => (
-                  <TooltipRow key={String(p.name)} color={p.color} name={`${p.name ?? ""}`} value={p.value as number} />
+                {ordered.map((p) => (
+                  <TooltipRow key={String(p!.dataKey)} color={p!.color} name={String(p!.name ?? "")} value={p!.value as number} />
                 ))}
               </TooltipBox>
             );
           }}
         />
         <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-        <Area type="monotone" dataKey="fetched" name="Fetched" stroke="#818cf8" fill="url(#gFetched)" strokeWidth={2} dot={false} />
-        <Area type="monotone" dataKey="read" name="Read" stroke="#34d399" fill="url(#gRead)" strokeWidth={2} dot={false} />
-        <Area type="monotone" dataKey="starred" name="Starred ★" stroke="#fbbf24" fill="url(#gStarred)" strokeWidth={2} dot={false} />
+        {ACTIVITY_SERIES.map(({ key, name, color, axis }) => (
+          <Area
+            key={key}
+            yAxisId={axis}
+            type="monotone"
+            dataKey={key}
+            name={name}
+            stroke={color}
+            fill={`url(#g_${key})`}
+            strokeWidth={2}
+            dot={false}
+          />
+        ))}
       </AreaChart>
     </ResponsiveContainer>
   );

@@ -3,6 +3,7 @@ import client from "./client";
 export interface ActivityPoint {
   date: string;
   fetched: number;
+  seen: number;
   read: number;
   starred: number;
 }

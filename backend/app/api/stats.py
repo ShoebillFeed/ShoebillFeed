@@ -43,8 +43,29 @@ def activity(
         .order_by(cast(NewsItem.fetched_at, Date))
     ).all()
 
+    seen_rows = db.execute(
+        select(
+            cast(NewsItem.last_shown_at, Date).label("date"),
+            func.count().label("seen"),
+        )
+        .where(
+            NewsItem.user_id == current_user.id,
+            NewsItem.last_shown_at.isnot(None),
+            NewsItem.last_shown_at >= since,
+        )
+        .group_by(cast(NewsItem.last_shown_at, Date))
+    ).all()
+
+    seen_by_date = {str(r.date): r.seen for r in seen_rows}
+
     return [
-        {"date": str(r.date), "fetched": r.fetched, "read": int(r.read or 0), "starred": int(r.starred or 0)}
+        {
+            "date": str(r.date),
+            "fetched": r.fetched,
+            "seen": seen_by_date.get(str(r.date), 0),
+            "read": int(r.read or 0),
+            "starred": int(r.starred or 0),
+        }
         for r in rows
     ]
 
