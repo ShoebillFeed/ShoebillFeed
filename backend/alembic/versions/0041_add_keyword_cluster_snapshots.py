@@ -1,6 +1,6 @@
 """Add keyword_cluster_snapshots table
 
-Revision ID: 0041_add_keyword_cluster_snapshots
+Revision ID: 0041_kw_cluster_snapshots
 Revises: 0040_add_keyword_learning
 Create Date: 2026-06-21
 """
@@ -8,7 +8,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
-revision = "0041_add_keyword_cluster_snapshots"
+revision = "0041_kw_cluster_snapshots"
 down_revision = "0040_add_keyword_learning"
 branch_labels = None
 depends_on = None
