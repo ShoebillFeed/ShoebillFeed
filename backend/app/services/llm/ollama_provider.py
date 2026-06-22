@@ -23,11 +23,12 @@ class OllamaProvider(LLMProvider):
         self.model_name = model
         self.client = httpx.Client(timeout=float(timeout))
 
-    def _post(self, payload: dict) -> dict:
-        resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
+    def _post(self, payload: dict, timeout: float | None = None) -> dict:
+        kw = {"timeout": timeout} if timeout is not None else {}
+        resp = self.client.post(f"{self.base_url}/api/generate", json=payload, **kw)
         if resp.status_code == 400 and payload.get("think"):
             payload = {**payload, "think": False}
-            resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
+            resp = self.client.post(f"{self.base_url}/api/generate", json=payload, **kw)
         resp.raise_for_status()
         return resp.json()
 
@@ -60,9 +61,7 @@ class OllamaProvider(LLMProvider):
             "prompt": user,
             "options": {"num_predict": 1024, "temperature": 0.2},
         }
-        resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
-        resp.raise_for_status()
-        result = parse_llm_response(resp.json()["response"], known, social_post=social_post)
+        result = parse_llm_response(self._post(payload)["response"], known, social_post=social_post)
         result.provider_name = self.provider_name
         result.model_name = self.model_name
         return result
@@ -86,9 +85,7 @@ class OllamaProvider(LLMProvider):
             "prompt": "\n\n".join(parts),
             "options": {"num_predict": 2048, "temperature": 0.2},
         }
-        resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
-        resp.raise_for_status()
-        result = parse_cluster_response(resp.json()["response"], len(items), known)
+        result = parse_cluster_response(self._post(payload)["response"], len(items), known)
         result.provider_name = self.provider_name
         result.model_name = self.model_name
         return result
@@ -106,13 +103,7 @@ class OllamaProvider(LLMProvider):
             "prompt": f"Newsletter content:\n\n{content[:8000]}",
             "options": {"num_predict": 4096, "temperature": 0.2},
         }
-        resp = self.client.post(
-            f"{self.base_url}/api/generate",
-            json=payload,
-            timeout=600.0,
-        )
-        resp.raise_for_status()
-        result = parse_newsletter_response(resp.json()["response"], known)
+        result = parse_newsletter_response(self._post(payload, timeout=600.0)["response"], known)
         result.provider_name = self.provider_name
         result.model_name = self.model_name
         return result
