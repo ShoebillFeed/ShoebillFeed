@@ -23,20 +23,25 @@ class OllamaProvider(LLMProvider):
         self.model_name = model
         self.client = httpx.Client(timeout=float(timeout))
 
+    def _post(self, payload: dict) -> dict:
+        resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
+        if resp.status_code == 400 and payload.get("think"):
+            payload = {**payload, "think": False}
+            resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
     def _complete(self, system: str, user: str, max_tokens: int = 512) -> str:
         payload = {
             "model": self.model,
             "stream": False,
-            "think": False,
             "keep_alive": self.KEEP_ALIVE,
             "format": "json",
             "system": system,
             "prompt": user,
             "options": {"num_predict": max_tokens, "temperature": 0.2},
         }
-        resp = self.client.post(f"{self.base_url}/api/generate", json=payload)
-        resp.raise_for_status()
-        return resp.json()["response"]
+        return self._post(payload)["response"]
 
     def process_item(self, title, content, categories, max_content_chars=1500, social_post=False, output_language=None) -> ProcessedResult:
         truncated = (content or title)[:max_content_chars]
