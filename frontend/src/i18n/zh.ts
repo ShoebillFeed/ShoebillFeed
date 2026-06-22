@@ -384,7 +384,7 @@ const zh = {
     step3Desc: "AI 模型阅读每一篇新文章。它用通俗易懂的语言写出简短摘要，从您的列表中选择正确的分类，提取涵盖的关键主题，并给出两个评分：文章与该分类的相关程度，以及文章的重要程度。",
     step3Tech: "The configured LLM (Anthropic Claude or a local Ollama model) receives a structured prompt with the article title and body. It returns JSON: abstract (3–5 sentence summary), category_id (matched against your categories), keywords (extracted topic terms), relevance_score (1–10), and impact_score (1–10). A vector(768) embedding is also stored alongside each article for later clustering.",
     step4: "排序",
-    step4Desc: "打开信息流标签页时，文章会实时排序。"相关"标签页将您最可能感兴趣的内容排在前面。"影响"突出显示重要的报道。"最新"是纯粹的时间顺序。",
+    step4Desc: "打开信息流标签页时，文章会实时排序。「相关」标签页将您最可能感兴趣的内容排在前面。「影响」突出显示重要的报道。「最新」是纯粹的时间顺序。",
     step4Tech: "Relevant score = cat_weight × source_bonus × kw_factor × time_decay × show_again_decay. Category weights grow via log1p(total_starred). Keyword scoring uses three tiers: global weights, per-category weights, and cluster-synonym expansion. source_bonus = 1 + log1p(n − 1) × cluster_weight rewards articles covered by multiple sources. Time and show-again decay factors suppress stale or already-scrolled-past articles.",
     step5: "适应",
     step5Desc: "信息流从您的互动方式中学习。给文章加星标告诉 Shoebill 您想要更多类似内容。不互动地划过则会将其推向相反方向。随着时间推移，信息流会越来越贴合您的需求。",
