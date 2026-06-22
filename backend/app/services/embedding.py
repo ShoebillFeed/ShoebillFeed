@@ -23,6 +23,25 @@ def generate_embedding(text: str) -> list[float] | None:
             json={"model": settings.ollama_embedding_model, "input": text},
             timeout=30.0,
         )
+        if resp.status_code == 404:
+            # Older Ollama versions use /api/embeddings with different schema
+            resp = httpx.post(
+                f"{settings.ollama_base_url}/api/embeddings",
+                json={"model": settings.ollama_embedding_model, "prompt": text},
+                timeout=30.0,
+            )
+            resp.raise_for_status()
+            vec = resp.json().get("embedding") or []
+            if not vec:
+                return None
+            if len(vec) != EMBEDDING_DIM:
+                logger.warning(
+                    "Embedding dim mismatch: expected %d, got %d — "
+                    "check OLLAMA_EMBEDDING_MODEL matches the schema's vector(768)",
+                    EMBEDDING_DIM, len(vec),
+                )
+                return None
+            return vec
         resp.raise_for_status()
         embeddings = resp.json().get("embeddings")
         if not embeddings or not embeddings[0]:
