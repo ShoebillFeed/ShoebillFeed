@@ -40,7 +40,7 @@ class OllamaProvider(LLMProvider):
             "format": "json",
             "system": system,
             "prompt": user,
-            "options": {"num_predict": max_tokens, "temperature": 0.2},
+            "options": {"num_predict": max_tokens, "temperature": 0.1},
         }
         return self._post(payload)["response"]
 
@@ -59,7 +59,7 @@ class OllamaProvider(LLMProvider):
             "format": "json",
             "system": system,
             "prompt": user,
-            "options": {"num_predict": 1024, "temperature": 0.2},
+            "options": {"num_predict": 1024, "temperature": 0.1},
         }
         result = parse_llm_response(self._post(payload)["response"], known, social_post=social_post)
         result.provider_name = self.provider_name
@@ -83,7 +83,7 @@ class OllamaProvider(LLMProvider):
             "format": "json",
             "system": system,
             "prompt": "\n\n".join(parts),
-            "options": {"num_predict": 2048, "temperature": 0.2},
+            "options": {"num_predict": 2048, "temperature": 0.1},
         }
         result = parse_cluster_response(self._post(payload)["response"], len(items), known)
         result.provider_name = self.provider_name
@@ -101,7 +101,7 @@ class OllamaProvider(LLMProvider):
             "format": "json",
             "system": system,
             "prompt": f"Newsletter content:\n\n{content[:8000]}",
-            "options": {"num_predict": 4096, "temperature": 0.2},
+            "options": {"num_predict": 4096, "temperature": 0.1},
         }
         result = parse_newsletter_response(self._post(payload, timeout=600.0)["response"], known)
         result.provider_name = self.provider_name

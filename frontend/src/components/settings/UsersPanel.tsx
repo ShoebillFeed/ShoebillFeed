@@ -1,14 +1,19 @@
 import { useState } from "react";
-import { Plus, Trash2, ShieldCheck, KeyRound } from "lucide-react";
+import type { ReactNode } from "react";
+import { Plus, Trash2, ShieldCheck, KeyRound, BookOpen, Star, Bookmark, Newspaper, Radio, Tag, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useUsers, useCreateUser, useDeleteUser, useResetUserPassword } from "../../hooks/useAuth";
+import { useUsers, useCreateUser, useDeleteUser, useResetUserPassword, useUserStats } from "../../hooks/useAuth";
+import type { UserStats } from "../../api/auth";
 
 export default function UsersPanel() {
   const { t } = useTranslation();
   const { data: users, isLoading } = useUsers();
+  const { data: statsData } = useUserStats();
   const createUser = useCreateUser();
   const deleteUser = useDeleteUser();
   const resetPassword = useResetUserPassword();
+
+  const statsMap = new Map<string, UserStats>(statsData?.map((s) => [s.user_id, s]) ?? []);
 
   const [showForm, setShowForm] = useState(false);
   const [username, setUsername] = useState("");
@@ -130,36 +135,42 @@ export default function UsersPanel() {
       {isLoading && <p className="text-sm text-gray-400">{t("common.loading")}</p>}
 
       <div className="flex flex-col gap-2">
-        {users?.map((u) => (
+        {users?.map((u) => {
+          const s = statsMap.get(u.id);
+          return (
           <div key={u.id}>
-            <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-medium">{u.username}</span>
-                  {u.is_admin && (
-                    <span className="inline-flex items-center gap-0.5 text-xs text-indigo-600 dark:text-indigo-400">
-                      <ShieldCheck size={12} /> admin
-                    </span>
-                  )}
+            <div className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium">{u.username}</span>
+                    {u.is_admin && (
+                      <span className="inline-flex items-center gap-0.5 text-xs text-indigo-600 dark:text-indigo-400">
+                        <ShieldCheck size={12} /> admin
+                      </span>
+                    )}
+                  </div>
                 </div>
+                <button
+                  title={t("users.resetPassword")}
+                  onClick={() => resetUserId === u.id ? setResetUserId(null) : openReset(u.id)}
+                  className="p-1.5 rounded text-gray-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <KeyRound size={14} />
+                </button>
+                <button
+                  title={t("users.deleteUser")}
+                  onClick={() => {
+                    if (confirm(t("users.deleteConfirm", { name: u.username })))
+                      deleteUser.mutate(u.id);
+                  }}
+                  className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
-              <button
-                title={t("users.resetPassword")}
-                onClick={() => resetUserId === u.id ? setResetUserId(null) : openReset(u.id)}
-                className="p-1.5 rounded text-gray-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <KeyRound size={14} />
-              </button>
-              <button
-                title={t("users.deleteUser")}
-                onClick={() => {
-                  if (confirm(t("users.deleteConfirm", { name: u.username })))
-                    deleteUser.mutate(u.id);
-                }}
-                className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <Trash2 size={14} />
-              </button>
+
+              {s && <UserStatsRow stats={s} />}
             </div>
 
             {resetUserId === u.id && (
@@ -201,7 +212,8 @@ export default function UsersPanel() {
               </form>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -209,3 +221,37 @@ export default function UsersPanel() {
 
 const inputClass =
   "w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500";
+
+function UserStatsRow({ stats: s }: { stats: UserStats }) {
+  const lastActive = s.last_active ? formatRelative(s.last_active) : null;
+  return (
+    <div className="mt-2.5 pt-2.5 border-t border-gray-100 dark:border-gray-800 flex flex-wrap gap-x-4 gap-y-1">
+      <StatChip icon={<Newspaper size={11} />} label={`${s.total_items.toLocaleString()} fetched`} />
+      <StatChip icon={<BookOpen size={11} />} label={`${s.read_count.toLocaleString()} read`} />
+      <StatChip icon={<Star size={11} />} label={`${s.starred_count.toLocaleString()} starred`} />
+      <StatChip icon={<Bookmark size={11} />} label={`${s.read_later_count.toLocaleString()} saved`} />
+      <StatChip icon={<Radio size={11} className="opacity-50" />} label={`${s.sources_count} sources`} />
+      <StatChip icon={<Tag size={11} />} label={`${s.categories_count} categories`} />
+      {lastActive && <StatChip icon={<Clock size={11} />} label={lastActive} />}
+    </div>
+  );
+}
+
+function StatChip({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+      {icon} {label}
+    </span>
+  );
+}
+
+function formatRelative(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `active ${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `active ${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `active ${days}d ago`;
+  return `active ${Math.floor(days / 30)}mo ago`;
+}

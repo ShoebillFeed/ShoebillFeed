@@ -1,11 +1,15 @@
 import uuid
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.models.user import User
+from app.models.news_item import NewsItem
+from app.models.source import Source
+from app.models.category import Category
 from app.services.auth import verify_password, hash_password, create_token, get_current_user
 
 router = APIRouter()
@@ -22,6 +26,17 @@ class UserOut(BaseModel):
     is_admin: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class UserStats(BaseModel):
+    user_id: str
+    total_items: int
+    read_count: int
+    starred_count: int
+    read_later_count: int
+    sources_count: int
+    categories_count: int
+    last_active: datetime | None
 
 
 class CreateUserRequest(BaseModel):
@@ -92,6 +107,36 @@ def change_own_password(
 def list_users(db: Session = Depends(get_db), _: User = Depends(get_admin_user)):
     users = db.scalars(select(User).order_by(User.created_at)).all()
     return [UserOut(id=str(u.id), username=u.username, is_admin=u.is_admin) for u in users]
+
+
+@router.get("/users/stats", response_model=list[UserStats])
+def list_user_stats(db: Session = Depends(get_db), _: User = Depends(get_admin_user)):
+    users = db.scalars(select(User).order_by(User.created_at)).all()
+    result = []
+    for u in users:
+        uid = u.id
+        row = db.execute(
+            select(
+                func.count(NewsItem.id).label("total"),
+                func.count(NewsItem.id).filter(NewsItem.is_read.is_(True)).label("reads"),
+                func.count(NewsItem.id).filter(NewsItem.is_relevant.is_(True)).label("starred"),
+                func.count(NewsItem.id).filter(NewsItem.read_later.is_(True)).label("read_later"),
+                func.max(NewsItem.last_shown_at).label("last_active"),
+            ).where(NewsItem.user_id == uid)
+        ).one()
+        sources = db.scalar(select(func.count(Source.id)).where(Source.user_id == uid)) or 0
+        categories = db.scalar(select(func.count(Category.id)).where(Category.user_id == uid)) or 0
+        result.append(UserStats(
+            user_id=str(uid),
+            total_items=row.total or 0,
+            read_count=row.reads or 0,
+            starred_count=row.starred or 0,
+            read_later_count=row.read_later or 0,
+            sources_count=sources,
+            categories_count=categories,
+            last_active=row.last_active,
+        ))
+    return result
 
 
 @router.post("/users", response_model=UserOut, status_code=201)

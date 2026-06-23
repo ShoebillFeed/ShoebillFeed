@@ -5,6 +5,10 @@ export function useUsers() {
   return useQuery({ queryKey: ["auth", "users"], queryFn: authApi.listUsers });
 }
 
+export function useUserStats() {
+  return useQuery({ queryKey: ["auth", "users", "stats"], queryFn: authApi.listUserStats });
+}
+
 export function useCreateUser() {
   const qc = useQueryClient();
   return useMutation({
