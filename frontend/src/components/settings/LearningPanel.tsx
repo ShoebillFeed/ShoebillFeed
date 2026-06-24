@@ -1,16 +1,10 @@
 import { useState, useEffect } from "react";
 import { X, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useLearningProfile, useSetCategoryWeight, useDeleteKeyword } from "../../hooks/useLearning";
+import { useLearningProfile, useDeleteKeyword } from "../../hooks/useLearning";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { cn } from "../../lib/utils";
 import type { CategoryProfile } from "../../api/learning";
-
-const WEIGHT_PRESETS = [
-  { label: "learning.muted", value: 0 },
-  { label: "learning.normal", value: 1 },
-  { label: "learning.boost", value: 2 },
-] as const;
 
 // ─── Shared layout primitives ────────────────────────────────────────────────
 
@@ -140,13 +134,7 @@ function NumericField({
 
 // ─── CategoryRow ──────────────────────────────────────────────────────────────
 
-function CategoryRow({
-  cat,
-  onSetWeight,
-}: {
-  cat: CategoryProfile;
-  onSetWeight: (w: number) => void;
-}) {
+function CategoryRow({ cat }: { cat: CategoryProfile }) {
   const { t } = useTranslation();
 
   const learnedPct = Math.min(100, Math.max(0, (cat.learned_weight - 1) / 3 * 100));
@@ -208,25 +196,7 @@ function CategoryRow({
       </div>
 
       {/* Weight label */}
-      <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">{weightLabel}</p>
-
-      {/* Preset buttons */}
-      <div className="flex gap-1">
-        {WEIGHT_PRESETS.map(({ label, value }) => (
-          <button
-            key={value}
-            onClick={() => onSetWeight(value)}
-            className={cn(
-              "flex-1 px-2 py-1 text-xs rounded transition-colors",
-              cat.manual_weight === value
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            )}
-          >
-            {t(label)}
-          </button>
-        ))}
-      </div>
+      <p className="text-xs text-gray-400 dark:text-gray-500">{weightLabel}</p>
     </div>
   );
 }
@@ -237,7 +207,6 @@ export default function LearningPanel() {
   const { t } = useTranslation();
   const { data: profile, isLoading: profileLoading } = useLearningProfile();
   const { data: settings, isLoading: settingsLoading } = useAdvancedSettings();
-  const setCategoryWeight = useSetCategoryWeight();
   const deleteKeyword = useDeleteKeyword();
   const update = useUpdateAdvancedSettings();
 
@@ -289,11 +258,7 @@ export default function LearningPanel() {
       >
         <div className="flex flex-col gap-2">
           {profile.categories.map((cat) => (
-            <CategoryRow
-              key={cat.id}
-              cat={cat}
-              onSetWeight={(w) => setCategoryWeight.mutate({ id: cat.id, weight: w })}
-            />
+            <CategoryRow key={cat.id} cat={cat} />
           ))}
           {profile.categories.length === 0 && (
             <p className="text-sm text-gray-400">{t("learning.noCategories")}</p>

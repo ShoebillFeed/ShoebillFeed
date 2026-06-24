@@ -405,7 +405,7 @@ const en = {
   },
   learning: {
     categoriesTitle: "Category Preferences",
-    categoriesDesc: "Control how much each category influences the Relevant feed ranking.",
+    categoriesDesc: "How the system has learned each category. Adjust weights in the Categories tab.",
     keywordsTitle: "Learned Keywords",
     keywordsDesc: "Topics learned from your liked articles. Remove a keyword to reset that signal.",
     starred: "liked",
