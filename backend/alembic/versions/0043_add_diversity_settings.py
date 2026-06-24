@@ -14,9 +14,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("user_settings", sa.Column("max_per_category", sa.Integer, nullable=False, server_default="8"))
+    op.add_column("user_settings", sa.Column("max_per_category", sa.Integer, nullable=False, server_default="6"))
     op.add_column("user_settings", sa.Column("max_per_source", sa.Integer, nullable=False, server_default="5"))
-    op.add_column("user_settings", sa.Column("exploration_fraction", sa.Float, nullable=False, server_default="0.05"))
+    op.add_column("user_settings", sa.Column("exploration_fraction", sa.Float, nullable=False, server_default="0.1"))
 
 
 def downgrade() -> None:
