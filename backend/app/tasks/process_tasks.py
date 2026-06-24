@@ -9,6 +9,7 @@ from sqlalchemy.orm import joinedload
 from app.config import get_settings
 from app.database import SessionLocal
 from app.models import NewsItem, Category, NewsCluster, Source
+from app.models.category_weight import CategoryWeight
 from app.models.user import User
 from app.models.llm_batch import LLMBatch
 from app.models.user_settings import UserSettings
@@ -28,8 +29,19 @@ def _get_output_language(db, user_id) -> str | None:
     return s.output_language if s else None
 
 
+_MAX_LLM_CATEGORIES = 25
+
+
 def _get_categories_payload(db, user_id) -> list[dict]:
-    categories = db.scalars(select(Category).where(Category.user_id == user_id, Category.is_active == True)).all()  # noqa: E712
+    categories = list(db.scalars(
+        select(Category).where(Category.user_id == user_id, Category.is_active == True)  # noqa: E712
+    ).all())
+    if len(categories) > _MAX_LLM_CATEGORIES:
+        weights = {
+            cw.category_id: cw.weight
+            for cw in db.scalars(select(CategoryWeight).where(CategoryWeight.user_id == user_id)).all()
+        }
+        categories = sorted(categories, key=lambda c: weights.get(c.id, 1.0), reverse=True)[:_MAX_LLM_CATEGORIES]
     payload = []
     for c in categories:
         entry: dict = {"name": c.name, "keywords": c.keywords}
@@ -240,6 +252,12 @@ def process_news_item(self, news_item_id: str) -> None:
         db.commit()
         logger.info("Processed news item %s", news_item_id)
 
+        from app.services.llm.batch_service import propagate_llm_results
+        propagated = propagate_llm_results(db, item)
+        if propagated:
+            db.commit()
+            logger.debug("Propagated LLM results to %d same-URL item(s) for other users", propagated)
+
         try:
             from app.services.push_service import notify_item
             notify_item(db, item)
@@ -415,8 +433,9 @@ def batch_process_unprocessed(limit: int = 150) -> int:
         db.close()
 
 
-@celery_app.task(name="app.tasks.process_tasks.poll_llm_batches", queue="process")
-def poll_llm_batches() -> None:
+@celery_app.task(name="app.tasks.process_tasks._poll_single_batch", queue="process", bind=True, max_retries=2)
+def _poll_single_batch(self, llm_batch_id: str) -> None:
+    """Poll and apply results for one LLM batch. Runs as a separate task so N batches run concurrently."""
     anthropic = get_anthropic_provider()
     if anthropic is None:
         return
@@ -427,48 +446,71 @@ def poll_llm_batches() -> None:
     now = datetime.now(timezone.utc)
 
     try:
-        pending = db.scalars(
-            select(LLMBatch).where(LLMBatch.status.in_(["pending", "cancelling"]))
-        ).all()
+        llm_batch = db.get(LLMBatch, uuid.UUID(llm_batch_id))
+        if not llm_batch or llm_batch.status not in ("pending", "cancelling"):
+            return
 
         from app.services.llm.batch_service import apply_batch_results
 
-        for llm_batch in pending:
-            try:
-                batch_info = anthropic.client.messages.batches.retrieve(llm_batch.anthropic_batch_id)
+        batch_info = anthropic.client.messages.batches.retrieve(llm_batch.anthropic_batch_id)
 
-                if batch_info.processing_status == "ended":
-                    results = list(anthropic.client.messages.batches.results(llm_batch.anthropic_batch_id))
-                    applied = apply_batch_results(db, llm_batch, results, anthropic)
+        if batch_info.processing_status == "ended":
+            results = list(anthropic.client.messages.batches.results(llm_batch.anthropic_batch_id))
+            applied = apply_batch_results(db, llm_batch, results, anthropic)
 
-                    if llm_batch.status == "cancelling":
-                        _dispatch_fallback(llm_batch, applied)
-                        llm_batch.status = "cancelled"
-                        logger.warning(
-                            "Batch %s cancelled: %d applied, %d fell back",
-                            llm_batch.anthropic_batch_id, len(applied),
-                            len(llm_batch.requests) - len(applied),
-                        )
-                    else:
-                        llm_batch.status = "completed"
-                        logger.info("Batch %s completed: %d applied", llm_batch.anthropic_batch_id, len(applied))
+            if llm_batch.status == "cancelling":
+                _dispatch_fallback(llm_batch, applied)
+                llm_batch.status = "cancelled"
+                logger.warning(
+                    "Batch %s cancelled: %d applied, %d fell back",
+                    llm_batch.anthropic_batch_id, len(applied),
+                    len(llm_batch.requests) - len(applied),
+                )
+            else:
+                llm_batch.status = "completed"
+                logger.info("Batch %s completed: %d applied", llm_batch.anthropic_batch_id, len(applied))
 
-                    db.commit()
+            db.commit()
 
-                elif llm_batch.status == "pending":
-                    submitted = llm_batch.submitted_at
-                    if submitted.tzinfo is None:
-                        submitted = submitted.replace(tzinfo=timezone.utc)
-                    if now - submitted > max_wait:
-                        anthropic.client.messages.batches.cancel(llm_batch.anthropic_batch_id)
-                        llm_batch.status = "cancelling"
-                        db.commit()
-                        logger.warning("Batch %s timed out after %d min, cancelling", llm_batch.anthropic_batch_id, settings.llm_batch_max_wait_minutes)
+        elif llm_batch.status == "pending":
+            submitted = llm_batch.submitted_at
+            if submitted.tzinfo is None:
+                submitted = submitted.replace(tzinfo=timezone.utc)
+            if now - submitted > max_wait:
+                anthropic.client.messages.batches.cancel(llm_batch.anthropic_batch_id)
+                llm_batch.status = "cancelling"
+                db.commit()
+                logger.warning("Batch %s timed out after %d min, cancelling",
+                               llm_batch.anthropic_batch_id, settings.llm_batch_max_wait_minutes)
 
-            except Exception:
-                logger.exception("Error polling batch %s", llm_batch.anthropic_batch_id)
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Error polling batch %s", llm_batch_id)
+        raise self.retry(exc=exc, countdown=30)
     finally:
         db.close()
+
+
+@celery_app.task(name="app.tasks.process_tasks.poll_llm_batches", queue="process")
+def poll_llm_batches() -> None:
+    """Dispatch one _poll_single_batch task per pending batch so polls run concurrently."""
+    anthropic = get_anthropic_provider()
+    if anthropic is None:
+        return
+
+    db = SessionLocal()
+    try:
+        pending_ids = list(db.scalars(
+            select(LLMBatch.id).where(LLMBatch.status.in_(["pending", "cancelling"]))
+        ).all())
+    finally:
+        db.close()
+
+    for batch_id in pending_ids:
+        _poll_single_batch.apply_async(args=[str(batch_id)], queue="process")
+
+    if pending_ids:
+        logger.info("poll_llm_batches: dispatched %d polling task(s)", len(pending_ids))
 
 
 @celery_app.task(name="app.tasks.process_tasks.refresh_keyword_clusters", queue="default")

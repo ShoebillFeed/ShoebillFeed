@@ -1,11 +1,13 @@
 import logging
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import NewsItem, NewsCluster, Source, Category
 from app.models.llm_batch import LLMBatch
+from app.models.category_weight import CategoryWeight
 from app.models.user_settings import UserSettings
 from app.services.llm.base import (
     dedup_cluster_payload,
@@ -16,12 +18,19 @@ from app.services.llm.base import (
 logger = logging.getLogger(__name__)
 
 ITEMS_PER_GROUP = 8
+MAX_LLM_CATEGORIES = 25
 
 
 def _categories_payload(db: Session, user_id) -> list[dict]:
-    categories = db.scalars(
+    categories = list(db.scalars(
         select(Category).where(Category.user_id == user_id, Category.is_active == True)  # noqa: E712
-    ).all()
+    ).all())
+    if len(categories) > MAX_LLM_CATEGORIES:
+        weights = {
+            cw.category_id: cw.weight
+            for cw in db.scalars(select(CategoryWeight).where(CategoryWeight.user_id == user_id)).all()
+        }
+        categories = sorted(categories, key=lambda c: weights.get(c.id, 1.0), reverse=True)[:MAX_LLM_CATEGORIES]
     result = []
     for c in categories:
         entry = {"name": c.name, "keywords": c.keywords}
@@ -41,6 +50,36 @@ def _min_word_count(db: Session, user_id) -> int:
     return s.llm_min_word_count if s else 100
 
 
+def propagate_llm_results(db: Session, donor: "NewsItem") -> int:
+    """Copy LLM results from a just-processed item to same-URL items for other users that aren't yet processed."""
+    if not donor.url_hash:
+        return 0
+    recipients = db.scalars(
+        select(NewsItem).where(
+            NewsItem.url_hash == donor.url_hash,
+            NewsItem.user_id != donor.user_id,
+            NewsItem.llm_processed == False,  # noqa: E712
+        )
+    ).all()
+    if not recipients:
+        return 0
+    for item in recipients:
+        item.abstract = donor.abstract
+        item.extracted_keywords = donor.extracted_keywords
+        item.impact_score = donor.impact_score
+        item.relevance_score = donor.relevance_score
+        item.llm_processed = True
+        item.llm_provider = donor.llm_provider
+        item.llm_model = donor.llm_model
+        if donor.extracted_keywords and item.user_id:
+            kw_lower = {k.lower() for k in donor.extracted_keywords}
+            user_cats = db.scalars(
+                select(Category).where(Category.user_id == item.user_id, Category.is_active == True)  # noqa: E712
+            ).all()
+            item.categories = [cat for cat in user_cats if any(k.lower() in kw_lower for k in cat.keywords)]
+    return len(recipients)
+
+
 def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "LLMBatch | None":
     """Build and submit an Anthropic message batch. Returns the saved LLMBatch or None if empty."""
     user_cats: dict = {}
@@ -54,17 +93,26 @@ def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "L
             user_langs[uid] = _output_language(db, user_id)
             user_min_words[uid] = _min_word_count(db, user_id)
 
+    # Bulk-load all items with their sources in a single query
+    items_by_id: dict = {}
+    if item_ids:
+        items_by_id = {
+            item.id: item
+            for item in db.scalars(
+                select(NewsItem).where(NewsItem.id.in_(item_ids)).options(joinedload(NewsItem.source))
+            ).all()
+        }
+
     # Collect items into groups keyed by (user_id, group_type)
     groups: dict[tuple, list[dict]] = {}
 
     for item_id in item_ids:
-        item = db.get(NewsItem, item_id)
+        item = items_by_id.get(item_id)
         if not item or item.llm_processed:
             continue
-        source = db.get(Source, item.source_id) if item.source_id else None
         _load_user(item.user_id)
         uid = str(item.user_id)
-        is_social = source is not None and source.source_type == "mastodon"
+        is_social = item.source is not None and item.source.source_type == "mastodon"
         word_count = len((item.title + " " + (item.raw_content or "")).split())
         is_short = word_count <= user_min_words[uid] and not user_langs[uid]
         group_type = "social" if is_social else ("short" if is_short else "full")
@@ -97,16 +145,29 @@ def submit_batch(db: Session, provider, item_ids: list, cluster_ids: list) -> "L
                 "group_type": group_type,
             })
 
+    # Bulk-load clusters and all their items in two queries
+    clusters_by_id: dict = {}
+    cluster_items: dict = defaultdict(list)
+    if cluster_ids:
+        clusters_by_id = {
+            c.id: c
+            for c in db.scalars(select(NewsCluster).where(NewsCluster.id.in_(cluster_ids))).all()
+        }
+        active_cluster_ids = [cid for cid, c in clusters_by_id.items() if not c.llm_processed]
+        if active_cluster_ids:
+            for ci in db.scalars(
+                select(NewsItem)
+                .where(NewsItem.cluster_id.in_(active_cluster_ids))
+                .options(joinedload(NewsItem.source))
+            ).all():
+                cluster_items[ci.cluster_id].append(ci)
+
     # Clusters remain as individual requests (already multi-item by nature)
     for cluster_id in cluster_ids:
-        cluster = db.get(NewsCluster, cluster_id)
+        cluster = clusters_by_id.get(cluster_id)
         if not cluster or cluster.llm_processed:
             continue
-        items = db.scalars(
-            select(NewsItem)
-            .where(NewsItem.cluster_id == cluster.id)
-            .options(joinedload(NewsItem.source))
-        ).all()
+        items = cluster_items[cluster.id]
         if len(items) < 2:
             continue
         _load_user(cluster.user_id)
@@ -180,6 +241,19 @@ def apply_batch_results(db: Session, llm_batch: LLMBatch, results, provider=None
             logger.exception("Failed to apply result for %s", cid)
 
     db.commit()
+
+    # Propagate LLM results to same-URL items for other users
+    propagated = 0
+    for cid in applied:
+        meta = meta_by_id[cid]
+        if meta["item_type"] == "news_item_group":
+            for item_id in meta["item_ids"]:
+                item = db.get(NewsItem, uuid.UUID(item_id) if isinstance(item_id, str) else item_id)
+                if item and item.llm_processed:
+                    propagated += propagate_llm_results(db, item)
+    if propagated:
+        db.commit()
+        logger.debug("Batch: propagated LLM results to %d same-URL item(s) for other users", propagated)
 
     # Send push notifications for items/clusters processed in this batch
     try:
