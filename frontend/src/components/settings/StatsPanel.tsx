@@ -207,7 +207,8 @@ const ACTIVITY_SERIES = [
   { key: "fetched",  name: "Fetched",    color: "#818cf8", axis: "left"  },
   { key: "seen",     name: "Seen",       color: "#60a5fa", axis: "left"  },
   { key: "read",     name: "Read",       color: "#34d399", axis: "right" },
-  { key: "starred",  name: "Starred ★",  color: "#fbbf24", axis: "right" },
+  { key: "relevant", name: "Liked ▲",    color: "#fbbf24", axis: "right" },
+  { key: "disliked", name: "Disliked ▼", color: "#f87171", axis: "right" },
 ] as const;
 
 function ActivityChart({ days }: { days: number }) {
@@ -219,7 +220,7 @@ function ActivityChart({ days }: { days: number }) {
 
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <AreaChart data={points} margin={{ top: 4, right: 44, left: -20, bottom: 0 }}>
+      <AreaChart data={points} margin={{ top: 4, right: 44, left: 0, bottom: 0 }}>
         <defs>
           {ACTIVITY_SERIES.map(({ key, color }) => (
             <linearGradient key={key} id={`g_${key}`} x1="0" y1="0" x2="0" y2="1">

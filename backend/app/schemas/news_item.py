@@ -35,6 +35,7 @@ class NewsItemOut(BaseModel):
     llm_model: str | None = None
     is_read: bool
     is_relevant: bool
+    is_disliked: bool
     read_later: bool
     published_at: datetime | None
     fetched_at: datetime

@@ -45,6 +45,7 @@ class NewsItem(Base):
     llm_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_relevant: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_disliked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     read_later: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

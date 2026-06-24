@@ -415,6 +415,7 @@ def dislike_item(item_id: uuid.UUID, db: Session = Depends(get_db), current_user
     category_ids = [str(cat.id) for cat in item.categories] if was_relevant else []
     item.is_read = True
     item.is_relevant = False
+    item.is_disliked = True
     db.commit()
     from app.tasks.process_tasks import _recalculate_weights
     _recalculate_weights.apply_async(

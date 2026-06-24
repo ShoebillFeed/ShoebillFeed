@@ -36,7 +36,8 @@ def activity(
             cast(NewsItem.fetched_at, Date).label("date"),
             func.count().label("fetched"),
             func.sum(cast(NewsItem.is_read, Integer)).label("read"),
-            func.sum(cast(NewsItem.is_relevant, Integer)).label("starred"),
+            func.sum(cast(NewsItem.is_relevant, Integer)).label("relevant"),
+            func.sum(cast(NewsItem.is_disliked, Integer)).label("disliked"),
         )
         .where(NewsItem.user_id == current_user.id, NewsItem.fetched_at >= since)
         .group_by(cast(NewsItem.fetched_at, Date))
@@ -64,7 +65,8 @@ def activity(
             "fetched": r.fetched,
             "seen": seen_by_date.get(str(r.date), 0),
             "read": int(r.read or 0),
-            "starred": int(r.starred or 0),
+            "relevant": int(r.relevant or 0),
+            "disliked": int(r.disliked or 0),
         }
         for r in rows
     ]

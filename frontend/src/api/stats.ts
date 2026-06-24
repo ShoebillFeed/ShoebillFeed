@@ -5,7 +5,8 @@ export interface ActivityPoint {
   fetched: number;
   seen: number;
   read: number;
-  starred: number;
+  relevant: number;
+  disliked: number;
 }
 
 export interface CategoryCount {
