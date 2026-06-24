@@ -210,6 +210,9 @@ def fetch_all_sources() -> None:
             logger.debug("Dispatched fetch for '%s' with %d companion(s)", primary.name, len(companions))
 
         logger.info("fetch_all_sources: dispatched %d task(s) for %d source group(s)", dispatched, len(groups))
+    except Exception:
+        logger.exception("fetch_all_sources failed")
+        raise
     finally:
         db.close()
 
@@ -243,5 +246,9 @@ def cleanup_old_items(days: int = 30) -> int:
         db.commit()
         logger.info("Cleaned up %d old news items", count)
         return count
+    except Exception:
+        db.rollback()
+        logger.exception("cleanup_old_items failed")
+        raise
     finally:
         db.close()

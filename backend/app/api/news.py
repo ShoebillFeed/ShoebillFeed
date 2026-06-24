@@ -18,7 +18,6 @@ from app.models.user import User
 from app.models.user_settings import UserSettings
 from app.schemas.news_item import NewsItemOut, NewsClusterOut, FeedEntry
 from app.schemas.pagination import Page
-from app.services.scoring import update_category_weight, update_keyword_weights, update_category_keyword_weights, apply_keyword_penalty
 from app.services.normalization import normalize_keyword
 
 router = APIRouter()
@@ -350,7 +349,11 @@ def list_news(
 
 
 def _get_item(item_id: uuid.UUID, db: Session, user_id: uuid.UUID) -> NewsItem:
-    item = db.scalar(select(NewsItem).where(NewsItem.id == item_id, NewsItem.user_id == user_id))
+    item = db.scalar(
+        select(NewsItem)
+        .options(selectinload(NewsItem.categories))
+        .where(NewsItem.id == item_id, NewsItem.user_id == user_id)
+    )
     if not item:
         raise HTTPException(status_code=404, detail="News item not found")
     return item
@@ -371,17 +374,15 @@ def get_news_item(item_id: uuid.UUID, db: Session = Depends(get_db), current_use
 @router.patch("/{item_id}/read", response_model=NewsItemOut)
 def toggle_read(item_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     item = _get_item(item_id, db, current_user.id)
+    category_ids = [str(cat.id) for cat in item.categories]
     item.is_read = not item.is_read
     db.commit()
-    # Reading/unreading changes the ignored set — recalculate weights for this item's categories.
-    if item.categories:
-        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
-        base = user_settings.weight_base if user_settings else 1.0
-        multiplier = user_settings.weight_log_multiplier if user_settings else 0.5
-        window_days = user_settings.learning_window_days if user_settings else 90
-        ignore_penalty = user_settings.ignore_penalty_weight if user_settings else 0.1
-        for cat in item.categories:
-            update_category_weight(db, cat.id, base=base, multiplier=multiplier, window_days=window_days, ignore_penalty=ignore_penalty)
+    if category_ids:
+        from app.tasks.process_tasks import _recalculate_weights
+        _recalculate_weights.apply_async(
+            kwargs={"user_id": str(current_user.id), "category_ids": category_ids},
+            queue="default",
+        )
     db.refresh(item)
     return item
 
@@ -389,20 +390,20 @@ def toggle_read(item_id: uuid.UUID, db: Session = Depends(get_db), current_user:
 @router.patch("/{item_id}/relevant", response_model=NewsItemOut)
 def toggle_relevant(item_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     item = _get_item(item_id, db, current_user.id)
+    category_ids = [str(cat.id) for cat in item.categories]
     item.is_relevant = not item.is_relevant
+    is_now_relevant = item.is_relevant
     db.commit()
-    user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
-    base = user_settings.weight_base if user_settings else 1.0
-    multiplier = user_settings.weight_log_multiplier if user_settings else 0.5
-    window_days = user_settings.learning_window_days if user_settings else 90
-    ignore_penalty = user_settings.ignore_penalty_weight if user_settings else 0.1
-    for cat in item.categories:
-        update_category_weight(db, cat.id, base=base, multiplier=multiplier, window_days=window_days, ignore_penalty=ignore_penalty)
-    if item.is_relevant and item.extracted_keywords:
-        update_keyword_weights(db, item.extracted_keywords, current_user.id)
-        for cat in item.categories:
-            update_category_keyword_weights(db, item.extracted_keywords, cat.id, current_user.id)
-        db.commit()
+    if category_ids:
+        from app.tasks.process_tasks import _recalculate_weights
+        _recalculate_weights.apply_async(
+            kwargs={
+                "user_id": str(current_user.id),
+                "category_ids": category_ids,
+                "liked_item_id": str(item.id) if is_now_relevant else None,
+            },
+            queue="default",
+        )
     db.refresh(item)
     return item
 
@@ -411,19 +412,19 @@ def toggle_relevant(item_id: uuid.UUID, db: Session = Depends(get_db), current_u
 def dislike_item(item_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     item = _get_item(item_id, db, current_user.id)
     was_relevant = item.is_relevant
+    category_ids = [str(cat.id) for cat in item.categories] if was_relevant else []
     item.is_read = True
     item.is_relevant = False
     db.commit()
-    if item.extracted_keywords:
-        apply_keyword_penalty(db, item.extracted_keywords, current_user.id)
-    if was_relevant and item.categories:
-        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
-        base = user_settings.weight_base if user_settings else 1.0
-        multiplier = user_settings.weight_log_multiplier if user_settings else 0.5
-        window_days = user_settings.learning_window_days if user_settings else 90
-        ignore_penalty = user_settings.ignore_penalty_weight if user_settings else 0.1
-        for cat in item.categories:
-            update_category_weight(db, cat.id, base=base, multiplier=multiplier, window_days=window_days, ignore_penalty=ignore_penalty)
+    from app.tasks.process_tasks import _recalculate_weights
+    _recalculate_weights.apply_async(
+        kwargs={
+            "user_id": str(current_user.id),
+            "category_ids": category_ids,
+            "disliked_item_id": str(item.id),
+        },
+        queue="default",
+    )
     db.refresh(item)
     return item
 
@@ -527,14 +528,14 @@ def mark_shown(
     db.commit()
 
     if penalty_cat_ids:
-        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
-        base = user_settings.weight_base if user_settings else 1.0
-        multiplier = user_settings.weight_log_multiplier if user_settings else 0.5
-        window_days = user_settings.learning_window_days if user_settings else 90
-        ignore_penalty = user_settings.ignore_penalty_weight if user_settings else 0.1
-        if ignore_penalty > 0:
-            for cat_id in penalty_cat_ids:
-                update_category_weight(db, cat_id, base=base, multiplier=multiplier, window_days=window_days, ignore_penalty=ignore_penalty)
+        from app.tasks.process_tasks import _recalculate_weights
+        _recalculate_weights.apply_async(
+            kwargs={
+                "user_id": str(current_user.id),
+                "category_ids": [str(cid) for cid in penalty_cat_ids],
+            },
+            queue="default",
+        )
 
     return {"updated": len(payload.item_ids) + len(payload.cluster_ids)}
 

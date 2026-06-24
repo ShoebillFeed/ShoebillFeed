@@ -144,6 +144,8 @@ def _expand_newsletter(db, email_item: "NewsItem", source: "Source", categories_
     bind=True,
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=1200,
+    time_limit=1500,
 )
 def process_news_item(self, news_item_id: str) -> None:
     db = SessionLocal()
@@ -264,14 +266,6 @@ def process_news_item(self, news_item_id: str) -> None:
         except Exception:
             logger.exception("Push notification failed for item %s", news_item_id)
 
-        # Second-pass keyword clustering for standalone items
-        if item.cluster_id is None:
-            cluster_id = recluster_processed_item(db, item)
-            if cluster_id:
-                db.commit()
-                logger.info("Keyword-clustered item %s into cluster %s", news_item_id, cluster_id)
-                process_cluster.apply_async(args=[str(cluster_id)], queue="process")
-
     except anthropic_sdk.RateLimitError as exc:
         db.rollback()
         retry_after = int(exc.response.headers.get("retry-after", 60))
@@ -283,7 +277,24 @@ def process_news_item(self, news_item_id: str) -> None:
         logger.exception("Error processing news item %s", news_item_id)
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
     finally:
-        db.close()
+        # Second-pass keyword clustering runs outside the main try/except so a
+        # recluster failure does not retry the whole task (item is already processed).
+        if not db.is_active:
+            db.close()
+            return
+        try:
+            item = db.get(NewsItem, uuid.UUID(news_item_id))
+            if item and item.llm_processed and item.cluster_id is None:
+                cluster_id = recluster_processed_item(db, item)
+                if cluster_id:
+                    db.commit()
+                    logger.info("Keyword-clustered item %s into cluster %s", news_item_id, cluster_id)
+                    process_cluster.apply_async(args=[str(cluster_id)], queue="process")
+        except Exception:
+            logger.exception("Reclustering failed for item %s — skipping", news_item_id)
+            db.rollback()
+        finally:
+            db.close()
 
 
 @celery_app.task(
@@ -292,6 +303,8 @@ def process_news_item(self, news_item_id: str) -> None:
     bind=True,
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=1200,
+    time_limit=1500,
 )
 def process_cluster(self, cluster_id: str) -> None:
     db = SessionLocal()
@@ -513,6 +526,63 @@ def poll_llm_batches() -> None:
         logger.info("poll_llm_batches: dispatched %d polling task(s)", len(pending_ids))
 
 
+@celery_app.task(name="app.tasks.process_tasks._recalculate_weights", queue="default")
+def _recalculate_weights(
+    user_id: str,
+    category_ids: list[str],
+    liked_item_id: str | None = None,
+    disliked_item_id: str | None = None,
+) -> None:
+    """Recompute category/keyword weights in the background after a user action.
+
+    Called from API handlers so they can return immediately without doing N DB
+    round-trips per liked/disliked/shown category. Runs on the default queue
+    (separate from LLM processing) so heavy scoring work never blocks fetches.
+    """
+    from app.services.scoring import (
+        update_category_weight, update_keyword_weights,
+        apply_keyword_penalty, update_category_keyword_weights,
+    )
+    db = SessionLocal()
+    try:
+        uid = uuid.UUID(user_id)
+        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == uid))
+        base = user_settings.weight_base if user_settings else 1.0
+        multiplier = user_settings.weight_log_multiplier if user_settings else 0.5
+        window_days = user_settings.learning_window_days if user_settings else 90
+        ignore_penalty = user_settings.ignore_penalty_weight if user_settings else 0.1
+
+        for cat_id_str in category_ids:
+            try:
+                update_category_weight(
+                    db, uuid.UUID(cat_id_str),
+                    base=base, multiplier=multiplier,
+                    window_days=window_days, ignore_penalty=ignore_penalty,
+                )
+            except Exception:
+                logger.exception("update_category_weight failed for %s", cat_id_str)
+                db.rollback()
+
+        if liked_item_id:
+            item = db.get(NewsItem, uuid.UUID(liked_item_id))
+            if item and item.extracted_keywords:
+                update_keyword_weights(db, item.extracted_keywords, uid)
+                for cat in item.categories:
+                    update_category_keyword_weights(db, item.extracted_keywords, cat.id, uid)
+                db.commit()
+
+        if disliked_item_id:
+            item = db.get(NewsItem, uuid.UUID(disliked_item_id))
+            if item and item.extracted_keywords:
+                apply_keyword_penalty(db, item.extracted_keywords, uid)
+
+    except Exception:
+        logger.exception("Weight recalculation failed for user %s", user_id)
+        db.rollback()
+    finally:
+        db.close()
+
+
 @celery_app.task(name="app.tasks.process_tasks.refresh_keyword_clusters", queue="default")
 def refresh_keyword_clusters() -> None:
     from app.services.keyword_clustering import refresh_clusters_for_user
@@ -541,8 +611,8 @@ def _dispatch_fallback(llm_batch: LLMBatch, applied: set[str]) -> None:
                 process_cluster.apply_async(args=[meta["item_id"]], queue="process")
 
 
-@celery_app.task(name="app.tasks.process_tasks.decay_weights")
-def decay_weights() -> dict:
+@celery_app.task(name="app.tasks.process_tasks.decay_weights", bind=True, max_retries=2)
+def decay_weights(self) -> dict:
     """Daily slow decay of all learned keyword and category weights, per user settings."""
     import math
     from app.models.user_settings import UserSettings
@@ -565,5 +635,9 @@ def decay_weights() -> dict:
         result = decay_learned_weights(db, user_factors)
         logger.info("Weight decay complete: %s", result)
         return result
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Weight decay failed")
+        raise self.retry(exc=exc, countdown=300)
     finally:
         db.close()

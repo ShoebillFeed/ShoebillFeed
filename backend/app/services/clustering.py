@@ -110,11 +110,13 @@ def _cluster_for_user(
     """Run the title-Jaccard clustering algorithm for a single user's new items."""
     new_ids = [i.id for i in new_items]
 
-    # Load recent items from other sources for THIS user only
+    # Load recent items from other sources for THIS user only — capped to bound O(n²) comparison
     cutoff = datetime.now(timezone.utc) - timedelta(hours=LOOKBACK_HOURS)
-    q = select(NewsItem).where(
-        NewsItem.id.notin_(new_ids),
-        NewsItem.fetched_at >= cutoff,
+    q = (
+        select(NewsItem)
+        .where(NewsItem.id.notin_(new_ids), NewsItem.fetched_at >= cutoff)
+        .order_by(NewsItem.fetched_at.desc())
+        .limit(500)
     )
     if user_id is not None:
         q = q.where(NewsItem.user_id == user_id)
@@ -259,13 +261,16 @@ def recluster_processed_item(db: Session, item: NewsItem) -> uuid.UUID | None:
         item_kws = _keyword_set(item)
         if item_kws:
             candidates = db.scalars(
-                select(NewsItem).where(
+                select(NewsItem)
+                .where(
                     NewsItem.id != item.id,
                     NewsItem.user_id == item.user_id,
                     NewsItem.llm_processed == True,  # noqa: E712
                     NewsItem.fetched_at >= cutoff,
                     NewsItem.extracted_keywords.isnot(None),
                 )
+                .order_by(NewsItem.fetched_at.desc())
+                .limit(300)
             ).all()
 
             best_score = 0.0
