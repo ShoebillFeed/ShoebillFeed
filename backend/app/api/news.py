@@ -1,6 +1,6 @@
 import math
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -215,11 +215,23 @@ def _build_feed(
             .exists()
         )
 
+    user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == user_id))
+
+    # Bound the candidate set for the relevant tab to prevent unbounded growth
+    if tab == "relevant":
+        window = (user_settings.learning_window_days if user_settings else 90) or 180
+        cutoff = datetime.now(timezone.utc) - timedelta(days=window)
+        item_q = item_q.where(
+            (NewsItem.published_at >= cutoff) | (NewsItem.read_later == True) | (NewsItem.is_relevant == True)  # noqa: E712
+        )
+        cluster_q = cluster_q.where(
+            (NewsCluster.published_at >= cutoff) | (NewsCluster.read_later == True) | (NewsCluster.is_relevant == True)  # noqa: E712
+        )
+
     standalone = list(db.scalars(item_q).unique().all())
     clusters = list(db.scalars(cluster_q).unique().all())
     all_entries = standalone + clusters
 
-    user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == user_id))
     decay_param = user_settings.time_decay_param if user_settings else 2.0
     show_decay = user_settings.show_decay_param if user_settings else 0.0
 
@@ -228,7 +240,7 @@ def _build_feed(
     elif tab == "relevant":
         cat_weights = {
             cw.category_id: cw.weight * cw.manual_weight
-            for cw in db.scalars(select(CategoryWeight)).all()
+            for cw in db.scalars(select(CategoryWeight).where(CategoryWeight.user_id == user_id)).all()
         }
         # Global keyword weights (legacy signal, kept as a floor)
         kw_weights = {
@@ -297,7 +309,7 @@ def _build_feed(
         if max_per_cat or max_per_src or explore_frac > 0:
             learned_weights = {
                 cw.category_id: cw.weight
-                for cw in db.scalars(select(CategoryWeight)).all()
+                for cw in db.scalars(select(CategoryWeight).where(CategoryWeight.user_id == user_id)).all()
             }
             all_entries = _apply_diversity(all_entries, learned_weights, max_per_cat, max_per_src, explore_frac)
 

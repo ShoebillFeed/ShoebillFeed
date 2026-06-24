@@ -57,18 +57,19 @@ def update_category_weight(
     existing = db.scalar(
         select(CategoryWeight).where(CategoryWeight.category_id == category_id)
     )
+    category = db.get(Category, category_id)
     if existing:
         existing.weight = new_weight
         existing.total_marked = total
     else:
         db.add(CategoryWeight(
             category_id=category_id,
+            user_id=category.user_id if category else None,
             weight=new_weight,
             total_marked=total,
         ))
     db.flush()
 
-    category = db.get(Category, category_id)
     if category and category.user_id:
         user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == category.user_id))
         if not user_settings or user_settings.stats_enabled:
@@ -154,7 +155,7 @@ def decay_learned_weights(db: Session, user_factors: dict) -> dict:
     decayed_cat = 0
 
     # --- Global keyword weights ---
-    for kw in db.scalars(select(KeywordWeight)).all():
+    for kw in db.scalars(select(KeywordWeight).execution_options(yield_per=500)):
         factor = user_factors.get(kw.user_id, 1.0)
         if factor >= 1.0:
             continue
@@ -167,7 +168,7 @@ def decay_learned_weights(db: Session, user_factors: dict) -> dict:
             decayed_kw += 1
 
     # --- Per-category keyword weights ---
-    for ckw in db.scalars(select(CategoryKeywordWeight)).all():
+    for ckw in db.scalars(select(CategoryKeywordWeight).execution_options(yield_per=500)):
         factor = user_factors.get(ckw.user_id, 1.0)
         if factor >= 1.0:
             continue
@@ -180,8 +181,8 @@ def decay_learned_weights(db: Session, user_factors: dict) -> dict:
             decayed_ckw += 1
 
     # --- Category weights (passive; overwritten on next like/read) ---
-    for cw in db.scalars(select(CategoryWeight).join(Category, CategoryWeight.category_id == Category.id)).all():
-        factor = user_factors.get(cw.category.user_id, 1.0)
+    for cw in db.scalars(select(CategoryWeight).where(CategoryWeight.user_id != None).execution_options(yield_per=500)):  # noqa: E711
+        factor = user_factors.get(cw.user_id, 1.0)
         if factor >= 1.0:
             continue
         cw.weight = max(0.0, cw.weight * factor)

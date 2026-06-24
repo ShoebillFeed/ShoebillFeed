@@ -1,5 +1,6 @@
 import json
 import logging
+import random
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
@@ -203,6 +204,7 @@ def fetch_all_sources() -> None:
                 args=[str(primary.id)],
                 kwargs={"companion_ids": [str(s.id) for s in companions]},
                 queue="fetch",
+                countdown=random.randint(0, 270),
             )
             dispatched += 1
             logger.debug("Dispatched fetch for '%s' with %d companion(s)", primary.name, len(companions))

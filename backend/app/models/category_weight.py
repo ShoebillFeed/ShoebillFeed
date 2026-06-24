@@ -13,6 +13,9 @@ class CategoryWeight(Base):
     category_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("categories.id", ondelete="CASCADE"), unique=True, nullable=False
     )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     weight: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     manual_weight: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     total_marked: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

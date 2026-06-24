@@ -367,14 +367,27 @@ def batch_process_unprocessed(limit: int = 150) -> int:
     settings = get_settings()
     db = SessionLocal()
     try:
-        item_ids = list(db.scalars(
-            select(NewsItem.id)
-            .where(NewsItem.llm_processed == False, NewsItem.cluster_id == None)  # noqa: E711,E712
-            .limit(limit)
-        ).all())
-        cluster_ids = list(db.scalars(
-            select(NewsCluster.id).where(NewsCluster.llm_processed == False).limit(limit)  # noqa: E712
-        ).all())
+        # Distribute limit fairly across users to prevent one user starving others
+        user_ids = list(db.scalars(select(User.id)).all())
+        if not user_ids:
+            return 0
+        per_user = max(1, limit // len(user_ids))
+
+        item_ids = []
+        for uid in user_ids:
+            item_ids.extend(db.scalars(
+                select(NewsItem.id)
+                .where(NewsItem.llm_processed == False, NewsItem.cluster_id == None, NewsItem.user_id == uid)  # noqa: E711,E712
+                .limit(per_user)
+            ).all())
+
+        cluster_ids = []
+        for uid in user_ids:
+            cluster_ids.extend(db.scalars(
+                select(NewsCluster.id)
+                .where(NewsCluster.llm_processed == False, NewsCluster.user_id == uid)  # noqa: E712
+                .limit(per_user)
+            ).all())
 
         anthropic = get_anthropic_provider()
         if anthropic is None:
