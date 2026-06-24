@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Star, Bookmark, Check, ExternalLink, Trash2, TrendingUp, Share2, CheckCheck } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Bookmark, Check, ExternalLink, Trash2, TrendingUp, Share2, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
@@ -9,6 +9,7 @@ import {
   useToggleRelevant,
   useToggleReadLater,
   useDeleteNewsItem,
+  useDislikeItem,
 } from "../../hooks/useNews";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 import { sourceTypeIcon } from "../../lib/sourceTypeIcon";
@@ -23,6 +24,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
   const toggleRelevant = useToggleRelevant();
   const toggleReadLater = useToggleReadLater();
   const deleteItem = useDeleteNewsItem();
+  const dislikeItem = useDislikeItem();
   const { autoLabelOnRead } = usePreferencesStore();
 
   useEffect(() => {
@@ -198,7 +200,17 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             onClick={handleToggleRelevant}
             title={localRelevant ? t("card.unmarkRelevant") : t("card.markRelevant")}
           >
-            <Star size={14} fill={localRelevant ? "currentColor" : "none"} />
+            <ThumbsUp size={14} fill={localRelevant ? "currentColor" : "none"} />
+          </ActionButton>
+
+          <ActionButton
+            active={false}
+            activeColor="text-red-400"
+            inactiveColor={hasImage ? "text-white/50 hover:text-red-400" : "text-gray-400 hover:text-red-500"}
+            onClick={() => dislikeItem.mutate(item.id)}
+            title={t("card.dislike")}
+          >
+            <ThumbsDown size={14} />
           </ActionButton>
 
           <ActionButton

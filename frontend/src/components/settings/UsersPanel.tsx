@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { Plus, Trash2, ShieldCheck, KeyRound, BookOpen, Star, Bookmark, Newspaper, Radio, Tag, Clock } from "lucide-react";
+import { Plus, Trash2, ShieldCheck, KeyRound, BookOpen, ThumbsUp, Bookmark, Newspaper, Radio, Tag, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useUsers, useCreateUser, useDeleteUser, useResetUserPassword, useUserStats } from "../../hooks/useAuth";
 import type { UserStats } from "../../api/auth";
@@ -228,7 +228,7 @@ function UserStatsRow({ stats: s }: { stats: UserStats }) {
     <div className="mt-2.5 pt-2.5 border-t border-gray-100 dark:border-gray-800 flex flex-wrap gap-x-4 gap-y-1">
       <StatChip icon={<Newspaper size={11} />} label={`${s.total_items.toLocaleString()} fetched`} />
       <StatChip icon={<BookOpen size={11} />} label={`${s.read_count.toLocaleString()} read`} />
-      <StatChip icon={<Star size={11} />} label={`${s.starred_count.toLocaleString()} starred`} />
+      <StatChip icon={<ThumbsUp size={11} />} label={`${s.starred_count.toLocaleString()} liked`} />
       <StatChip icon={<Bookmark size={11} />} label={`${s.read_later_count.toLocaleString()} saved`} />
       <StatChip icon={<Radio size={11} className="opacity-50" />} label={`${s.sources_count} sources`} />
       <StatChip icon={<Tag size={11} />} label={`${s.categories_count} categories`} />

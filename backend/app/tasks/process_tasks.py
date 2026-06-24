@@ -13,6 +13,7 @@ from app.models.user import User
 from app.models.llm_batch import LLMBatch
 from app.models.user_settings import UserSettings
 from app.services.clustering import recluster_processed_item
+from app.services.scoring import decay_learned_weights
 from app.services.deduplication import url_hash
 from app.services.embedding import generate_embedding
 from app.services.llm.base import dedup_cluster_payload
@@ -483,3 +484,31 @@ def _dispatch_fallback(llm_batch: LLMBatch, applied: set[str]) -> None:
                     process_news_item.apply_async(args=[item_id], queue="process")
             elif meta["item_type"] == "cluster":
                 process_cluster.apply_async(args=[meta["item_id"]], queue="process")
+
+
+@celery_app.task(name="app.tasks.process_tasks.decay_weights")
+def decay_weights() -> dict:
+    """Daily slow decay of all learned keyword and category weights, per user settings."""
+    import math
+    from app.models.user_settings import UserSettings
+
+    # weight of a single like — threshold at which a row is considered neutral and pruned
+    BASELINE_WEIGHT = 1.0 + math.log1p(1) * 0.5
+    PRUNE_THRESHOLD = 1.001
+
+    db = SessionLocal()
+    try:
+        user_factors: dict = {}
+        for us in db.scalars(select(UserSettings)).all():
+            days = us.weight_decay_days
+            if days and days > 0:
+                user_factors[us.user_id] = (PRUNE_THRESHOLD / BASELINE_WEIGHT) ** (1.0 / days)
+
+        if not user_factors:
+            return {"skipped": "no users with decay enabled"}
+
+        result = decay_learned_weights(db, user_factors)
+        logger.info("Weight decay complete: %s", result)
+        return result
+    finally:
+        db.close()

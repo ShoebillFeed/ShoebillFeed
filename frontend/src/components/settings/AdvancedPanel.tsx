@@ -285,6 +285,15 @@ export default function AdvancedPanel() {
           step={0.05}
           onChange={(v) => update.mutate({ ignore_penalty_weight: v })}
         />
+        <NumericField
+          label={t("advanced.weightDecayDays")}
+          description={t("advanced.weightDecayDaysDesc")}
+          value={settings.weight_decay_days ?? 60}
+          min={0}
+          max={3650}
+          step={1}
+          onChange={(v) => update.mutate({ weight_decay_days: v })}
+        />
       </Section>
 
       <Section

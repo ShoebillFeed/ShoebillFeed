@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Star, Bookmark, Check, ExternalLink, Trash2, ChevronDown, ChevronUp, TrendingUp, Share2, CheckCheck } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Bookmark, Check, ExternalLink, Trash2, ChevronDown, ChevronUp, TrendingUp, Share2, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
@@ -9,6 +9,7 @@ import {
   useToggleClusterRelevant,
   useToggleClusterReadLater,
   useDeleteCluster,
+  useDislikeCluster,
 } from "../../hooks/useNews";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 import { sourceTypeIcon } from "../../lib/sourceTypeIcon";
@@ -30,6 +31,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
   const toggleRelevant = useToggleClusterRelevant();
   const toggleReadLater = useToggleClusterReadLater();
   const deleteCluster = useDeleteCluster();
+  const dislikeCluster = useDislikeCluster();
   const { autoLabelOnRead } = usePreferencesStore();
 
   useEffect(() => {
@@ -287,7 +289,17 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
           onClick={handleToggleRelevant}
           title={localRelevant ? t("card.unmarkRelevant") : t("card.markRelevant")}
         >
-          <Star size={14} fill={localRelevant ? "currentColor" : "none"} />
+          <ThumbsUp size={14} fill={localRelevant ? "currentColor" : "none"} />
+        </ActionButton>
+
+        <ActionButton
+          active={false}
+          activeColor="text-red-400"
+          inactiveColor={hasImage ? "text-white/50 hover:text-red-400" : "text-gray-400 hover:text-red-500"}
+          onClick={() => dislikeCluster.mutate(cluster.id)}
+          title={t("card.dislike")}
+        >
+          <ThumbsDown size={14} />
         </ActionButton>
 
         <ActionButton

@@ -23,6 +23,7 @@ export interface UserSettings {
   push_cluster_per_source: boolean;
   push_all_tabs: boolean;
   push_tab_ids: string[];
+  weight_decay_days: number;
 }
 
 export interface UserSettingsUpdate {
@@ -48,6 +49,7 @@ export interface UserSettingsUpdate {
   push_cluster_per_source?: boolean;
   push_all_tabs?: boolean;
   push_tab_ids?: string[];
+  weight_decay_days?: number;
 }
 
 export const settingsApi = {

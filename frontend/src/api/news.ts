@@ -27,6 +27,9 @@ export const newsApi = {
   toggleReadLater: (id: string) =>
     client.patch(`/news/${id}/read-later`).then((r) => r.data),
 
+  dislike: (id: string) =>
+    client.patch(`/news/${id}/dislike`).then((r) => r.data),
+
   markAllRead: (category_id?: string) =>
     client.post("/news/mark-all-read", null, { params: { category_id } }).then((r) => r.data),
 

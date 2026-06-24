@@ -10,7 +10,7 @@ from app.models import NewsCluster, NewsItem
 from app.models.user import User
 from app.models.user_settings import UserSettings
 from app.schemas.news_item import NewsClusterOut
-from app.services.scoring import update_category_weight, update_keyword_weights
+from app.services.scoring import update_category_weight, update_keyword_weights, apply_keyword_penalty
 
 router = APIRouter()
 
@@ -66,6 +66,26 @@ def toggle_read_later(cluster_id: uuid.UUID, db: Session = Depends(get_db), curr
     cluster = _get_cluster(cluster_id, db, current_user.id)
     cluster.read_later = not cluster.read_later
     db.commit()
+    return _load(cluster_id, db, current_user.id)
+
+
+@router.patch("/{cluster_id}/dislike", response_model=NewsClusterOut)
+def dislike_cluster(cluster_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    cluster = _get_cluster(cluster_id, db, current_user.id)
+    was_relevant = cluster.is_relevant
+    cluster.is_read = True
+    cluster.is_relevant = False
+    db.commit()
+    if cluster.extracted_keywords:
+        apply_keyword_penalty(db, cluster.extracted_keywords, current_user.id)
+    if was_relevant and cluster.categories:
+        user_settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
+        base = user_settings.weight_base if user_settings else 1.0
+        multiplier = user_settings.weight_log_multiplier if user_settings else 0.5
+        window_days = user_settings.learning_window_days if user_settings else 90
+        ignore_penalty = user_settings.ignore_penalty_weight if user_settings else 0.1
+        for cat in cluster.categories:
+            update_category_weight(db, cat.id, base=base, multiplier=multiplier, window_days=window_days, ignore_penalty=ignore_penalty)
     return _load(cluster_id, db, current_user.id)
 
 

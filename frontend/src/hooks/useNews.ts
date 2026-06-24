@@ -154,6 +154,34 @@ export function useDeleteNewsItem() {
   });
 }
 
+export function useDislikeItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: newsApi.dislike,
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      removeInfiniteItem(qc, id);
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
+  });
+}
+
+export function useDislikeCluster() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: clustersApi.dislike,
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      removeInfiniteItem(qc, id);
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
+  });
+}
+
 export function useToggleClusterRead() {
   const qc = useQueryClient();
   return useMutation({

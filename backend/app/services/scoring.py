@@ -99,6 +99,21 @@ def update_keyword_weights(db: Session, keywords: list[str], user_id) -> None:
         db.commit()
 
 
+def apply_keyword_penalty(db: Session, keywords: list[str], user_id, decay: float = 0.8) -> None:
+    """Reduce keyword weights for disliked content (multiplicative, floor 0.1)."""
+    seen: set[str] = set()
+    for keyword in keywords:
+        norm = normalize_keyword(keyword)
+        if not norm or norm in seen:
+            continue
+        seen.add(norm)
+        kw = db.get(KeywordWeight, (user_id, norm))
+        if kw:
+            kw.weight = max(0.1, kw.weight * decay)
+    if keywords:
+        db.commit()
+
+
 def update_category_keyword_weights(
     db: Session,
     keywords: list[str],
@@ -126,3 +141,57 @@ def update_category_keyword_weights(
             ))
     if keywords:
         db.flush()
+
+
+def decay_learned_weights(db: Session, user_factors: dict) -> dict:
+    """
+    Apply per-user multiplicative decay to all learned keyword/category weights.
+    user_factors: {user_id: daily_factor} — users absent or with factor >= 1.0 are skipped.
+    Returns counts of rows touched/pruned.
+    """
+    pruned_kw = decayed_kw = 0
+    pruned_ckw = decayed_ckw = 0
+    decayed_cat = 0
+
+    # --- Global keyword weights ---
+    for kw in db.scalars(select(KeywordWeight)).all():
+        factor = user_factors.get(kw.user_id, 1.0)
+        if factor >= 1.0:
+            continue
+        new_w = max(1.0, kw.weight * factor)
+        if new_w <= 1.001:
+            db.delete(kw)
+            pruned_kw += 1
+        else:
+            kw.weight = new_w
+            decayed_kw += 1
+
+    # --- Per-category keyword weights ---
+    for ckw in db.scalars(select(CategoryKeywordWeight)).all():
+        factor = user_factors.get(ckw.user_id, 1.0)
+        if factor >= 1.0:
+            continue
+        new_w = max(1.0, ckw.weight * factor)
+        if new_w <= 1.001:
+            db.delete(ckw)
+            pruned_ckw += 1
+        else:
+            ckw.weight = new_w
+            decayed_ckw += 1
+
+    # --- Category weights (passive; overwritten on next like/read) ---
+    for cw in db.scalars(select(CategoryWeight).join(Category, CategoryWeight.category_id == Category.id)).all():
+        factor = user_factors.get(cw.category.user_id, 1.0)
+        if factor >= 1.0:
+            continue
+        cw.weight = max(0.0, cw.weight * factor)
+        decayed_cat += 1
+
+    db.commit()
+    return {
+        "decayed_keywords": decayed_kw,
+        "pruned_keywords": pruned_kw,
+        "decayed_cat_keywords": decayed_ckw,
+        "pruned_cat_keywords": pruned_ckw,
+        "decayed_categories": decayed_cat,
+    }

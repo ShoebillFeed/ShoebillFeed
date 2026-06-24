@@ -24,6 +24,7 @@ class UserSettingsOut(BaseModel):
     push_cluster_per_source: bool = False
     push_all_tabs: bool = True
     push_tab_ids: list[str] = []
+    weight_decay_days: int = 60
 
     model_config = {"from_attributes": True}
 
@@ -51,3 +52,4 @@ class UserSettingsUpdate(BaseModel):
     push_cluster_per_source: bool | None = None
     push_all_tabs: bool | None = None
     push_tab_ids: list[str] | None = None
+    weight_decay_days: int | None = Field(None, ge=0, le=3650)

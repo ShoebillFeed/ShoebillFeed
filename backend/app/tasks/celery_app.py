@@ -50,5 +50,10 @@ celery_app.conf.update(
             "schedule": crontab(hour=2, minute=0),
             "options": {"queue": "default"},
         },
+        "decay-learned-weights": {
+            "task": "app.tasks.process_tasks.decay_weights",
+            "schedule": crontab(hour=4, minute=0),
+            "options": {"queue": "default"},
+        },
     },
 )

@@ -8,10 +8,11 @@ import UsersPanel from "../components/settings/UsersPanel";
 import AdvancedPanel from "../components/settings/AdvancedPanel";
 import NotificationsPanel from "../components/settings/NotificationsPanel";
 import StatsPanel from "../components/settings/StatsPanel";
+import LearningPanel from "../components/settings/LearningPanel";
 import AboutPanel from "../components/settings/AboutPanel";
 import { useMe } from "../hooks/useAuth";
 
-type BaseTab = "sources" | "categories" | "llm" | "advanced" | "notifications" | "stats" | "about";
+type BaseTab = "sources" | "categories" | "llm" | "advanced" | "notifications" | "stats" | "learning" | "about";
 type Tab = BaseTab | "users";
 
 export default function SettingsPage() {
@@ -26,6 +27,7 @@ export default function SettingsPage() {
     { id: "advanced", label: t("settings.advanced") },
     { id: "notifications", label: t("settings.notifications") },
     { id: "stats", label: t("settings.statistics") },
+    { id: "learning", label: t("settings.learning") },
     { id: "about", label: t("settings.about") },
   ];
   const tabs = me?.is_admin
@@ -60,6 +62,7 @@ export default function SettingsPage() {
         {activeTab === "advanced" && <AdvancedPanel />}
         {activeTab === "notifications" && <NotificationsPanel />}
         {activeTab === "stats" && <StatsPanel />}
+        {activeTab === "learning" && <LearningPanel />}
         {activeTab === "about" && <AboutPanel />}
         {activeTab === "users" && me?.is_admin && <UsersPanel />}
       </div>

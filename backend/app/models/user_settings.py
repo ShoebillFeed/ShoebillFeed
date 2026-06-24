@@ -34,3 +34,4 @@ class UserSettings(Base):
     push_cluster_per_source: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     push_all_tabs: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     push_tab_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    weight_decay_days: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
