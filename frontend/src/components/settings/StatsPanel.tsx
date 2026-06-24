@@ -220,7 +220,7 @@ function ActivityChart({ days }: { days: number }) {
 
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <AreaChart data={points} margin={{ top: 4, right: 44, left: 0, bottom: 0 }}>
+      <AreaChart data={points} margin={{ top: 4, right: 56, left: 12, bottom: 0 }}>
         <defs>
           {ACTIVITY_SERIES.map(({ key, color }) => (
             <linearGradient key={key} id={`g_${key}`} x1="0" y1="0" x2="0" y2="1">
@@ -238,6 +238,7 @@ function ActivityChart({ days }: { days: number }) {
           axisLine={false}
           allowDecimals={false}
           width={28}
+          label={{ value: "Fetched / Seen", angle: -90, position: "insideLeft", offset: 10, style: { fontSize: 10, fill: "#9ca3af", textAnchor: "middle" } }}
         />
         <YAxis
           yAxisId="right"
@@ -247,6 +248,7 @@ function ActivityChart({ days }: { days: number }) {
           axisLine={false}
           allowDecimals={false}
           width={28}
+          label={{ value: "Read / Liked", angle: 90, position: "insideRight", offset: 10, style: { fontSize: 10, fill: "#9ca3af", textAnchor: "middle" } }}
         />
         <Tooltip
           cursor={CURSOR_STYLE}
