@@ -24,6 +24,9 @@ export interface UserSettings {
   push_all_tabs: boolean;
   push_tab_ids: string[];
   weight_decay_days: number;
+  max_per_category: number;
+  max_per_source: number;
+  exploration_fraction: number;
 }
 
 export interface UserSettingsUpdate {
@@ -50,6 +53,9 @@ export interface UserSettingsUpdate {
   push_all_tabs?: boolean;
   push_tab_ids?: string[];
   weight_decay_days?: number;
+  max_per_category?: number;
+  max_per_source?: number;
+  exploration_fraction?: number;
 }
 
 export const settingsApi = {

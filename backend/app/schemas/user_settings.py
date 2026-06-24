@@ -25,6 +25,9 @@ class UserSettingsOut(BaseModel):
     push_all_tabs: bool = True
     push_tab_ids: list[str] = []
     weight_decay_days: int = 60
+    max_per_category: int = 8
+    max_per_source: int = 5
+    exploration_fraction: float = 0.05
 
     model_config = {"from_attributes": True}
 
@@ -53,3 +56,6 @@ class UserSettingsUpdate(BaseModel):
     push_all_tabs: bool | None = None
     push_tab_ids: list[str] | None = None
     weight_decay_days: int | None = Field(None, ge=0, le=3650)
+    max_per_category: int | None = Field(None, ge=0, le=50)
+    max_per_source: int | None = Field(None, ge=0, le=50)
+    exploration_fraction: float | None = Field(None, ge=0.0, le=0.5)

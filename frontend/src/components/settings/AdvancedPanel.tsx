@@ -297,6 +297,39 @@ export default function AdvancedPanel() {
       </Section>
 
       <Section
+        title={t("advanced.feedDiversity")}
+        description={t("advanced.feedDiversityDesc")}
+      >
+        <NumericField
+          label={t("advanced.maxPerCategory")}
+          description={t("advanced.maxPerCategoryDesc")}
+          value={settings.max_per_category ?? 8}
+          min={0}
+          max={50}
+          step={1}
+          onChange={(v) => update.mutate({ max_per_category: v })}
+        />
+        <NumericField
+          label={t("advanced.maxPerSource")}
+          description={t("advanced.maxPerSourceDesc")}
+          value={settings.max_per_source ?? 5}
+          min={0}
+          max={50}
+          step={1}
+          onChange={(v) => update.mutate({ max_per_source: v })}
+        />
+        <NumericField
+          label={t("advanced.explorationFraction")}
+          description={t("advanced.explorationFractionDesc")}
+          value={settings.exploration_fraction ?? 0.05}
+          min={0}
+          max={0.5}
+          step={0.05}
+          onChange={(v) => update.mutate({ exploration_fraction: v })}
+        />
+      </Section>
+
+      <Section
         title={t("advanced.relevantTabRanking")}
         description={t("advanced.relevantTabRankingDesc")}
       >

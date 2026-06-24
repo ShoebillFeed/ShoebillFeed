@@ -26,6 +26,78 @@ router = APIRouter()
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
+def _entry_source_ids(entry) -> set:
+    """Collect all source IDs from an entry (item or cluster)."""
+    if isinstance(entry, NewsItem):
+        return {entry.source_id} if entry.source_id else set()
+    return {item.source_id for item in entry.items if item.source_id}
+
+
+def _apply_diversity(
+    sorted_entries: list,
+    learned_weights: dict,
+    max_per_cat: int,
+    max_per_src: int,
+    explore_frac: float,
+) -> list:
+    """
+    Post-sort diversity pass applied to the Relevant and Impact tabs.
+
+    1. Splits entries into a high-interest pool (at least one category with a
+       learned weight > 1) and an explore pool (all categories at baseline).
+    2. Applies per-category and per-source caps to each pool, deferring excess
+       entries to later positions rather than dropping them.
+    3. Interleaves explore items into the main sequence at the configured
+       fraction so discovery content is spread throughout the feed.
+    """
+    def is_high(entry) -> bool:
+        return any(learned_weights.get(c.id, 1.0) > 1.001 for c in entry.categories)
+
+    high = [e for e in sorted_entries if is_high(e)]
+    low  = [e for e in sorted_entries if not is_high(e)]
+
+    def apply_caps(pool: list) -> list:
+        if not max_per_cat and not max_per_src:
+            return pool
+        result: list = []
+        deferred: list = []
+        cat_count: dict = {}
+        src_count: dict = {}
+        for entry in pool:
+            cat_ids = [c.id for c in entry.categories]
+            src_ids = _entry_source_ids(entry)
+            over_cat = max_per_cat > 0 and any(cat_count.get(c, 0) >= max_per_cat for c in cat_ids)
+            over_src = max_per_src > 0 and any(src_count.get(s, 0) >= max_per_src for s in src_ids)
+            if over_cat or over_src:
+                deferred.append(entry)
+            else:
+                result.append(entry)
+                for c in cat_ids:
+                    cat_count[c] = cat_count.get(c, 0) + 1
+                for s in src_ids:
+                    src_count[s] = src_count.get(s, 0) + 1
+        result.extend(deferred)
+        return result
+
+    high = apply_caps(high)
+    low  = apply_caps(low)
+
+    if explore_frac <= 0 or not low:
+        return high + low
+
+    # Insert 1 explore item every `interval` main items
+    interval = max(1, round((1.0 - explore_frac) / explore_frac))
+    result: list = []
+    lo_idx = 0
+    for i, item in enumerate(high):
+        result.append(item)
+        if lo_idx < len(low) and (i + 1) % interval == 0:
+            result.append(low[lo_idx])
+            lo_idx += 1
+    result.extend(low[lo_idx:])
+    return result
+
+
 def _age_days(entry) -> float:
     """Return the age of an entry in fractional days (0 = just published)."""
     now = datetime.now(timezone.utc)
@@ -216,6 +288,18 @@ def _build_feed(
         all_entries.sort(key=_rel_key, reverse=True)
     elif tab == "impact":
         all_entries.sort(key=lambda e: (e.impact_score or 0) * _time_decay(e, decay_param) * _show_again_decay(e, show_decay), reverse=True)
+
+    # Diversity pass: per-category/source caps + exploration budget (relevant + impact only)
+    if tab != "newest":
+        max_per_cat = (user_settings.max_per_category if user_settings else 0) or 0
+        max_per_src = (user_settings.max_per_source if user_settings else 0) or 0
+        explore_frac = (user_settings.exploration_fraction if user_settings else 0.0) or 0.0
+        if max_per_cat or max_per_src or explore_frac > 0:
+            learned_weights = {
+                cw.category_id: cw.weight
+                for cw in db.scalars(select(CategoryWeight)).all()
+            }
+            all_entries = _apply_diversity(all_entries, learned_weights, max_per_cat, max_per_src, explore_frac)
 
     return all_entries
 
