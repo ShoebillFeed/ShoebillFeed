@@ -9,8 +9,6 @@ function systemTheme(): Theme {
 }
 
 interface PreferencesState {
-  autoLabelOnRead: boolean;
-  setAutoLabelOnRead: (v: boolean) => void;
   theme: Theme;
   setTheme: (t: Theme) => void;
   uiLocale: string | null;
@@ -20,8 +18,6 @@ interface PreferencesState {
 export const usePreferencesStore = create<PreferencesState>()(
   persist(
     (set) => ({
-      autoLabelOnRead: true,
-      setAutoLabelOnRead: (v) => set({ autoLabelOnRead: v }),
       theme: systemTheme(),
       setTheme: (t) => set({ theme: t }),
       uiLocale: null,

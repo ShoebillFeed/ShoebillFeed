@@ -289,8 +289,7 @@ const en = {
     outputLanguageDesc: "Keep original uses the article's own language. Selecting a language forces all generated text into that language regardless of the source.",
     keepOriginal: "Keep original",
     reading: "Reading",
-    autoStarOnRead: "Auto-like on read",
-    autoStarDesc: "Automatically like an article when you open it. The thumbs up is highlighted so you can undo immediately.",
+
     categoryLearning: "Category Learning",
     categoryLearningDesc: "Each time you like an article, its categories gain a learned score: base + log(1 + likes) × rate. With current settings: {{examples}}.",
     startingScore: "Starting score",
@@ -466,8 +465,7 @@ const en = {
     outputLanguage: "Output language",
     outputLanguageDesc: "Language the AI uses for summaries and headlines. 'Keep original' uses each article's own language.",
     keepOriginal: "Keep original",
-    autoLike: "Auto-like on read",
-    autoLikeDesc: "Automatically like an article when you open it.",
+
     settingsSaved: "Settings saved.",
     settingsFailed: "Failed to save settings.",
   },

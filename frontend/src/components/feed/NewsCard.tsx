@@ -25,7 +25,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
   const toggleReadLater = useToggleReadLater();
   const deleteItem = useDeleteNewsItem();
   const dislikeItem = useDislikeItem();
-  const { autoLabelOnRead } = usePreferencesStore();
+
 
   useEffect(() => {
     setLocalRelevant(item.is_relevant);
@@ -34,10 +34,6 @@ export default function NewsCard({ item }: { item: NewsItem }) {
   const markRead = () => {
     const wasUnread = !item.is_read;
     toggleRead.mutate(item.id);
-    if (wasUnread && autoLabelOnRead && !item.is_relevant) {
-      toggleRelevant.mutate(item.id);
-      setLocalRelevant(true);
-    }
   };
 
   const handleToggleRelevant = () => {

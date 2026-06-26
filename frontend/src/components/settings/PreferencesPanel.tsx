@@ -579,7 +579,7 @@ export default function PreferencesPanel() {
   const { t } = useTranslation();
   const { data: settings, isLoading } = useAdvancedSettings();
   const update = useUpdateAdvancedSettings();
-  const { autoLabelOnRead, setAutoLabelOnRead, uiLocale, setUiLocale } = usePreferencesStore();
+  const { uiLocale, setUiLocale } = usePreferencesStore();
 
   if (isLoading) return <p className="text-sm text-gray-400">{t("common.loading")}</p>;
   if (!settings) return null;
@@ -624,14 +624,7 @@ export default function PreferencesPanel() {
           </select>
         </Field>
 
-        <Field label={t("preferences.autoLike")} description={t("preferences.autoLikeDesc")}>
-          <input
-            type="checkbox"
-            checked={autoLabelOnRead}
-            onChange={(e) => setAutoLabelOnRead(e.target.checked)}
-            className="mt-1 rounded accent-indigo-600 cursor-pointer"
-          />
-        </Field>
+
       </Section>
 
       {/* Section 3: Push Notifications */}

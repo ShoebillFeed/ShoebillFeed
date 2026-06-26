@@ -32,7 +32,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
   const toggleReadLater = useToggleClusterReadLater();
   const deleteCluster = useDeleteCluster();
   const dislikeCluster = useDislikeCluster();
-  const { autoLabelOnRead } = usePreferencesStore();
+
 
   useEffect(() => {
     setLocalRelevant(cluster.is_relevant);
@@ -41,10 +41,6 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
   const markRead = () => {
     const wasUnread = !cluster.is_read;
     toggleRead.mutate(cluster.id);
-    if (wasUnread && autoLabelOnRead && !cluster.is_relevant) {
-      toggleRelevant.mutate(cluster.id);
-      setLocalRelevant(true);
-    }
   };
 
   const handleToggleRelevant = () => {
