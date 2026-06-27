@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Category, CategoryCreate } from "../../types/category";
-import { useCreateCategory, useUpdateCategory } from "../../hooks/useCategories";
+import { useCategories, useCreateCategory, useUpdateCategory } from "../../hooks/useCategories";
 import { categoriesApi } from "../../api/categories";
 import { cn } from "../../lib/utils";
 
@@ -43,6 +43,7 @@ export default function CategoryForm({ category, taxonomyName, taxonomyId, defau
   const isEdit = Boolean(category);
   const create = useCreateCategory();
   const update = useUpdateCategory();
+  const { data: allCategories } = useCategories();
 
   const initialName = category?.name ?? taxonomyName ?? "";
   const initialColor = category?.color ?? defaultColor ?? "#6366f1";
@@ -75,12 +76,15 @@ export default function CategoryForm({ category, taxonomyName, taxonomyId, defau
     if (!trimmedName) return;
 
     const keywordList = keywords.split(",").map((k) => k.trim()).filter(Boolean);
+    const existingNames = (allCategories ?? [])
+      .filter((c) => c.id !== category?.id)
+      .map((c) => c.name);
     setGenerating(true);
     setGenerateError(null);
     promptManuallyEdited.current = false;
 
     try {
-      const generated = await categoriesApi.generatePrompt(trimmedName, keywordList, PROMPT_MAX_CHARS);
+      const generated = await categoriesApi.generatePrompt(trimmedName, keywordList, PROMPT_MAX_CHARS, existingNames);
       setPrompt(generated);
     } catch {
       setGenerateError(t("categoryForm.generationFailed"));

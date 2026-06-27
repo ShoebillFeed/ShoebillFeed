@@ -140,7 +140,7 @@ export default function CategoriesPanel() {
       {/* Category list */}
       <div className="flex flex-col gap-2">
         {categories?.map((cat) =>
-          editing?.id === cat.id ? (
+          editing?.id === cat.id && !cat.taxonomy_id ? (
             <div key={cat.id} className="p-4 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-gray-50 dark:bg-gray-800/50">
               <h3 className="font-medium text-sm mb-3 text-indigo-600 dark:text-indigo-400">
                 {t("categories.editingCategory", { name: cat.name })}
@@ -270,13 +270,15 @@ function CategoryRow({
               className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${cat.is_active ? "translate-x-4" : "translate-x-0"}`}
             />
           </button>
-          <button
-            title={t("common.edit")}
-            onClick={onEdit}
-            className="p-1.5 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <Pencil size={14} />
-          </button>
+          {!cat.taxonomy_id && (
+            <button
+              title={t("common.edit")}
+              onClick={onEdit}
+              className="p-1.5 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
           <button
             title={t("common.delete")}
             onClick={onDelete}

@@ -121,7 +121,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "02.02",
         name: "Crime",
         keywords: ["crime", "criminal", "offender", "victim", "investigation", "murder", "robbery", "theft", "assault", "perpetrator"],
-        prompt: "Articles about criminal activity. Covers specific crimes, criminal investigations, and criminal networks. Assign when the article's focus is on the commission of a crime or the criminal actors involved. Use subcategories for specific crime types.",
+        prompt: "Articles about criminal activity. Covers specific crimes, criminal investigations, and criminal networks. Assign when the article's focus is on the commission of a crime or the criminal actors involved. Do not assign if the article primarily covers court proceedings — use Courts and judiciary instead.",
         children: [
           {
             id: "02.02.01", name: "Cybercrime and hacking",
@@ -255,7 +255,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "04.02",
         name: "Banking and financial services",
         keywords: ["bank", "banking", "financial services", "lending", "deposit", "interest rate", "credit", "liquidity", "balance sheet", "financial institution"],
-        prompt: "Articles about banks and the broader financial services industry. Covers bank earnings, lending activity, interest rates, financial stability, and the business of financial institutions. Use subcategories for more specific banking topics.",
+        prompt: "Articles about banks and the broader financial services industry. Covers bank earnings, lending activity, interest rates, financial stability, and the business of financial institutions. Assign when banks or financial services firms are the primary subject; do not assign if the article focuses on financial markets, investment products, or crypto.",
         children: [
           {
             id: "04.02.01", name: "Central banking and monetary policy",
@@ -278,7 +278,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "04.03",
         name: "Computing and information technology",
         keywords: ["technology", "software", "hardware", "IT", "tech company", "platform", "digital", "Silicon Valley", "startup", "cloud", "data"],
-        prompt: "Articles about the computing and IT industry as a business sector. Covers technology companies, product launches, industry competition, and the commercial side of technology. Use subcategories for specific technology domains.",
+        prompt: "Articles about the computing and IT industry as a business sector. Covers technology companies, product launches, industry competition, and the commercial side of technology. Assign for broad tech industry news; do not assign if the article specifically concerns AI products, cybersecurity incidents, semiconductors, or e-commerce — use the relevant subcategory.",
         children: [
           {
             id: "04.03.01", name: "Artificial intelligence",
@@ -321,7 +321,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "04.05",
         name: "Energy and resources",
         keywords: ["energy", "oil", "gas", "OPEC", "renewable", "power", "grid", "electricity", "pipeline", "refinery", "fuel", "energy market"],
-        prompt: "Articles about the energy sector and natural resource industries. Covers energy markets, production, and policy across fossil fuels, nuclear, and renewables. Use subcategories for specific energy types.",
+        prompt: "Articles about the energy sector and natural resource industries. Covers energy markets, production, and policy across fossil fuels, nuclear, and renewables. Assign for cross-energy or multi-fuel coverage; do not assign if the article specifically concerns fossil fuels, nuclear power, or renewable energy — use the relevant subcategory instead.",
         children: [
           {
             id: "04.05.01", name: "Fossil fuels",
@@ -344,7 +344,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "04.06",
         name: "Financial markets",
         keywords: ["financial markets", "trading", "investor", "market", "assets", "portfolio", "volatility", "returns", "capital", "exchange"],
-        prompt: "Articles about financial markets and investing. Covers market movements, investor sentiment, asset prices, and trading activity. Use subcategories for specific asset classes.",
+        prompt: "Articles about financial markets and investing. Covers market movements, investor sentiment, asset prices, and trading activity. Assign for broad multi-asset market coverage; do not assign if the article focuses specifically on stocks, bonds, currencies, commodities, or private equity — use the relevant subcategory.",
         children: [
           {
             id: "04.06.01", name: "Bonds and fixed income",
@@ -485,7 +485,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "06.04",
         name: "Pollution",
         keywords: ["pollution", "contamination", "toxic", "waste", "discharge", "environmental damage", "clean-up", "health impact", "regulatory fine"],
-        prompt: "Articles about pollution and environmental contamination. Covers specific pollution events, long-term contamination, environmental clean-up, and health impacts. Use subcategories for specific pollution types.",
+        prompt: "Articles about pollution and environmental contamination. Covers specific pollution events, long-term contamination, environmental clean-up, and health impacts. Assign for general pollution coverage spanning multiple types or when the type does not fit a specific subcategory.",
         children: [
           {
             id: "06.04.01", name: "Air quality and air pollution",
@@ -542,7 +542,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "07.04",
         name: "Medical research",
         keywords: ["medical research", "study", "findings", "journal", "researcher", "breakthrough", "discovery", "clinical", "trial", "peer-reviewed"],
-        prompt: "Articles about medical and biomedical research. Covers research findings, clinical study results, and scientific advances relevant to human health. Use subcategories for specific research areas. Assign when a research finding or scientific advance in medicine is the primary subject.",
+        prompt: "Articles about medical and biomedical research. Covers research findings, clinical study results, and scientific advances relevant to human health. Assign when a research finding or scientific advance in medicine is the primary subject and the topic does not fit a specific subcategory. Do not assign if the article covers the pharmaceutical industry's business side — use Pharmaceutical industry instead.",
         children: [
           {
             id: "07.04.01", name: "Cancer research",
@@ -729,7 +729,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "11.02",
         name: "Domestic politics",
         keywords: ["domestic politics", "government", "party", "politician", "poll", "cabinet", "prime minister", "president", "administration", "opposition"],
-        prompt: "Articles about politics within a single country. Covers government decisions, political party affairs, and domestic political events. Use subcategories for elections, legislation, or party-focused stories.",
+        prompt: "Articles about politics within a single country. Covers government decisions, political party affairs, and domestic political events. Assign for general domestic political news not covered by a specific subcategory; do not assign if the article centres on elections, the legislative process, or international relations.",
         children: [
           {
             id: "11.02.01", name: "Elections and voting",
@@ -757,7 +757,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "11.03",
         name: "International relations and diplomacy",
         keywords: ["international relations", "diplomacy", "foreign minister", "summit", "geopolitics", "bilateral", "multilateral", "global governance", "UN"],
-        prompt: "Articles about relations between countries and international diplomacy. Covers summits, diplomatic talks, international agreements, and the conduct of foreign affairs. Use subcategories for specific aspects of international relations.",
+        prompt: "Articles about relations between countries and international diplomacy. Covers summits, diplomatic talks, international agreements, and the conduct of foreign affairs. Assign for broad diplomatic coverage; do not assign if the article focuses specifically on trade disputes, sanctions, or active military conflict.",
         children: [
           {
             id: "11.03.01", name: "Alliances and multilateral organizations",
@@ -785,7 +785,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "11.04",
         name: "Regulation and policy",
         keywords: ["regulation", "regulator", "policy", "rule", "compliance", "enforcement", "watchdog", "agency", "framework", "directive"],
-        prompt: "Articles about government regulation across sectors. Covers new rules, regulatory enforcement actions, and regulatory policy debates. Use subcategories for specific regulatory domains.",
+        prompt: "Articles about government regulation across sectors. Covers new rules, regulatory enforcement actions, and regulatory policy debates. Assign for cross-sector or generic regulatory coverage; do not assign if the article concerns specifically environmental, financial, healthcare, or technology regulation.",
         children: [
           {
             id: "11.04.01", name: "Antitrust and competition law",
@@ -866,7 +866,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "13.01",
         name: "Astronomy and space science",
         keywords: ["astronomy", "space", "telescope", "galaxy", "star", "universe", "cosmology", "exoplanet", "nebula", "black hole", "observation"],
-        prompt: "Articles about astronomy and space science. Covers astronomical discoveries, observations, and missions with a scientific focus. Use subcategories for specific aspects of space science and exploration.",
+        prompt: "Articles about astronomy and space science. Covers astronomical discoveries, observations, and missions with a scientific focus. Assign for broad astronomy coverage; do not assign if the article focuses specifically on commercial space companies, planetary science, a specific space mission, or telescope observations — use the relevant subcategory.",
         children: [
           {
             id: "13.01.01", name: "Commercial space industry",
@@ -894,7 +894,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "13.02",
         name: "Biology and life sciences",
         keywords: ["biology", "life sciences", "organism", "cell", "species", "evolutionary", "biological", "living", "flora", "fauna"],
-        prompt: "Articles about biology and the life sciences. Covers research into living organisms across scales from cells to ecosystems. Use subcategories for specific biological disciplines.",
+        prompt: "Articles about biology and the life sciences. Covers research into living organisms across scales from cells to ecosystems. Assign for broad biology coverage spanning multiple subdisciplines; do not assign if the article focuses specifically on ecology, evolution, genetics, or microbiology.",
         children: [
           {
             id: "13.02.01", name: "Ecology and environmental biology",
@@ -975,7 +975,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "13.08",
         name: "Physics",
         keywords: ["physics", "theory", "experiment", "measurement", "force", "energy", "matter", "observation", "theoretical", "condensed matter"],
-        prompt: "Articles about physics research. Covers experimental and theoretical advances across physics disciplines. Use subcategories for specific areas of physics.",
+        prompt: "Articles about physics research. Covers experimental and theoretical advances across physics disciplines. Assign for broad physics coverage not focused on a specific subdiscipline such as particle physics, nuclear physics, or quantum physics.",
         children: [
           {
             id: "13.08.01", name: "Nuclear physics and fusion energy",
@@ -1150,7 +1150,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "16.01",
         name: "Armed conflict and warfare",
         keywords: ["armed conflict", "war", "military operation", "casualties", "front line", "offensive", "troops", "military advance", "combat", "battle"],
-        prompt: "Articles about active armed conflict and military operations. Covers battles, military advances, casualty reports, and the conduct of war. Use subcategories for specific types of military operations.",
+        prompt: "Articles about active armed conflict and military operations. Covers battles, military advances, casualty reports, and the conduct of war. Assign for general active combat coverage; do not assign if the article focuses on a specific operation type — use Air warfare, Ground operations, or Naval operations instead.",
         children: [
           {
             id: "16.01.01", name: "Air warfare",

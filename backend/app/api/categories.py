@@ -115,6 +115,7 @@ CATEGORY_PROMPT_MAX_CHARS = 500
 class GeneratePromptRequest(BaseModel):
     name: str
     keywords: list[str] = []
+    existing_categories: list[str] = []
     max_chars: int = CATEGORY_PROMPT_MAX_CHARS
 
 
@@ -127,6 +128,7 @@ def generate_prompt(payload: GeneratePromptRequest, _: User = Depends(get_curren
         prompt = provider.generate_category_prompt(
             name=payload.name.strip(),
             keywords=payload.keywords,
+            existing_categories=payload.existing_categories,
             max_chars=payload.max_chars,
         )
         return {"prompt": prompt.strip()}

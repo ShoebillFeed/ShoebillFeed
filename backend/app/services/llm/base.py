@@ -573,20 +573,15 @@ Rules:
 Respond ONLY with valid JSON. No markdown fences, no extra text."""
 
 
-CATEGORY_TOPICS_PROMPT = """What topics, themes, subtopics, and related keywords typically appear in news coverage under the category "{name}"?{keywords_hint}
+CATEGORY_PROMPT_GENERATION = """Write a classification prompt for the news category "{name}".{keywords_section}{other_categories_section}
 
-List them concisely — no preamble, no explanation, just the topics and keywords."""
+The prompt will be read by an LLM that assigns news articles to categories.
+Structure it as:
+1. One concise sentence stating what articles belong here
+2. Two to four concrete signals (entities, topics, terms, institutions) that indicate a clear match
+3. One "Do not assign if…" clause for the most likely confusion
 
-CATEGORY_PROMPT_GENERATION = """You are configuring a news categorization system.
-
-Category name: "{name}"
-Topics and keywords that belong in this category:
-{topics}
-
-Write a classification prompt that tells an LLM when to assign a news article to this category. It should describe what kinds of articles belong here and what signals (topics, terms, contexts) indicate a match.
-Keep it under {max_chars} characters. Be concise — 2-3 sentences maximum.
-
-Return ONLY the classification prompt — no labels, no reasoning, no extra text."""
+Under {max_chars} characters total. Output ONLY the prompt text — no labels, no preamble, no explanation."""
 
 
 class LLMProvider(ABC):
@@ -650,18 +645,32 @@ class LLMProvider(ABC):
             max_tokens=300,
         )
 
-    def generate_category_prompt(self, name: str, keywords: list[str], max_chars: int = 500) -> str:
-        keywords_hint = (
-            f"\nThe user has provided these seed keywords as hints: {', '.join(keywords)}."
+    def generate_category_prompt(
+        self,
+        name: str,
+        keywords: list[str],
+        existing_categories: list[str] | None = None,
+        max_chars: int = 500,
+    ) -> str:
+        kw_section = (
+            f"\nUser-provided keywords (hints only): {', '.join(keywords)}."
             if keywords else ""
         )
-        topics = self._complete(
-            system="You are a concise knowledge assistant.",
-            user=CATEGORY_TOPICS_PROMPT.format(name=name, keywords_hint=keywords_hint),
+        other_cats = [c for c in (existing_categories or []) if c.lower() != name.lower()][:20]
+        cats_section = (
+            "\nOther categories already in this system (use for the disambiguation clause):\n"
+            + "\n".join(f"- {c}" for c in other_cats)
+            if other_cats else ""
         )
         result = self._complete(
-            system="You are a precise prompt engineer for news categorization systems.",
-            user=CATEGORY_PROMPT_GENERATION.format(name=name, topics=topics.strip(), max_chars=max_chars),
+            system="You are a precise prompt engineer for news categorisation systems.",
+            user=CATEGORY_PROMPT_GENERATION.format(
+                name=name,
+                keywords_section=kw_section,
+                other_categories_section=cats_section,
+                max_chars=max_chars,
+            ),
+            max_tokens=300,
         )
         return result[:max_chars]
 

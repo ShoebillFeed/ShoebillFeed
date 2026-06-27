@@ -20,9 +20,9 @@ export const categoriesApi = {
     client.patch<Category>(`/categories/${id}`, data).then((r) => r.data),
   delete: (id: string) => client.delete(`/categories/${id}`),
   resetWeights: () => client.post("/categories/reset-weights").then((r) => r.data),
-  generatePrompt: (name: string, keywords: string[], max_chars = 500) =>
+  generatePrompt: (name: string, keywords: string[], max_chars = 500, existing_categories: string[] = []) =>
     client
-      .post<{ prompt: string }>("/categories/generate-prompt", { name, keywords, max_chars }, { timeout: 120_000 })
+      .post<{ prompt: string }>("/categories/generate-prompt", { name, keywords, max_chars, existing_categories }, { timeout: 120_000 })
       .then((r) => r.data.prompt),
   setManualWeight: (id: string, manual_weight: number) =>
     client.patch<Category>(`/categories/${id}/weight`, { manual_weight }).then((r) => r.data),
