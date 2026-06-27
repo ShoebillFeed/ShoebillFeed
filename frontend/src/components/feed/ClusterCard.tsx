@@ -11,7 +11,6 @@ import {
   useDeleteCluster,
   useDislikeCluster,
 } from "../../hooks/useNews";
-import { usePreferencesStore } from "../../stores/preferencesStore";
 import { sourceTypeIcon } from "../../lib/sourceTypeIcon";
 import { LLMInfoIcon } from "./LLMInfoIcon";
 
@@ -39,7 +38,6 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
   }, [cluster.is_relevant]);
 
   const markRead = () => {
-    const wasUnread = !cluster.is_read;
     toggleRead.mutate(cluster.id);
   };
 

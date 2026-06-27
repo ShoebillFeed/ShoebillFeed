@@ -11,7 +11,6 @@ import {
   useDeleteNewsItem,
   useDislikeItem,
 } from "../../hooks/useNews";
-import { usePreferencesStore } from "../../stores/preferencesStore";
 import { sourceTypeIcon } from "../../lib/sourceTypeIcon";
 import { LLMInfoIcon } from "./LLMInfoIcon";
 
@@ -32,7 +31,6 @@ export default function NewsCard({ item }: { item: NewsItem }) {
   }, [item.is_relevant]);
 
   const markRead = () => {
-    const wasUnread = !item.is_read;
     toggleRead.mutate(item.id);
   };
 
