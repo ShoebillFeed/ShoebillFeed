@@ -27,6 +27,8 @@ _SESSION_VALUE_RE = re.compile(
 
 DEFAULT_TITLE_SELECTOR = "h1,h2,h3"
 DEFAULT_LINK_SELECTOR = "a"
+# If scraped excerpt is shorter than this, try fetching the full article page.
+_MIN_CONTENT_LEN = 300
 
 
 def _scrub_url(url: str) -> str:
@@ -70,6 +72,33 @@ def robots_allowed(url: str, timeout: float = 10) -> bool:
         logger.warning("Could not fetch robots.txt at %s, allowing by default", robots_url)
         return True
     return parser.can_fetch(USER_AGENT, url)
+
+
+def _extract_article_text(html: str) -> str:
+    """Pull main body text from an article page — mirrors the RSS fetcher fallback."""
+    soup = BeautifulSoup(html, "lxml")
+    main = soup.find("article") or soup.find("main") or soup.body
+    if main:
+        return main.get_text(separator=" ", strip=True)[:8000]
+    return ""
+
+
+def _fetch_full_article(url: str, allowed_netloc: str, timeout: float = 10) -> str:
+    """Fetch the full article page and return its main text.
+
+    Only follows URLs on the same netloc as the listing page — the domain's
+    robots.txt was already checked when the listing page was fetched.
+    Returns "" on any failure so the caller can fall back to the excerpt.
+    """
+    if urlparse(url).netloc != allowed_netloc:
+        return ""
+    try:
+        resp = httpx.get(url, headers={"User-Agent": USER_AGENT}, timeout=timeout, follow_redirects=True)
+        resp.raise_for_status()
+        return _extract_article_text(resp.text)
+    except Exception:
+        logger.debug("Could not fetch article content from %s", url)
+        return ""
 
 
 def fetch_html(url: str, timeout: float = 15) -> str:
@@ -154,12 +183,16 @@ class WebScraperFetcher(NewsFetcher):
     """Generic CSS-selector-based web scraper for sites without feeds.
 
     Config keys:
-      url               - page URL to scrape
-      item_selector     - CSS selector matching each article/item container
-      title_selector    - CSS selector for title within each item (default: h1,h2,h3)
-      link_selector     - CSS selector for the link element within each item (default: a)
-      content_selector  - optional CSS selector for content/description
-      base_url          - base URL for resolving relative links (defaults to url)
+      url                  - page URL to scrape
+      item_selector        - CSS selector matching each article/item container
+      title_selector       - CSS selector for title within each item (default: h1,h2,h3)
+      link_selector        - CSS selector for the link element within each item (default: a)
+      content_selector     - optional CSS selector for content/description
+      base_url             - base URL for resolving relative links (defaults to url)
+      fetch_full_articles  - follow article links to fetch full text when the listing
+                             excerpt is < 300 chars (default: true). Set to false for
+                             listing pages that already contain full content, or when
+                             the target site blocks article-level requests.
     """
 
     def fetch(self) -> list[RawNewsItem]:
@@ -169,6 +202,7 @@ class WebScraperFetcher(NewsFetcher):
         link_selector = self.config.get("link_selector", DEFAULT_LINK_SELECTOR).strip()
         content_selector = self.config.get("content_selector", "").strip() or None
         base_url = self.config.get("base_url", url).strip() or url
+        fetch_full = self.config.get("fetch_full_articles", True)
 
         if not url:
             raise ValueError("Web scraper source missing 'url'")
@@ -184,4 +218,14 @@ class WebScraperFetcher(NewsFetcher):
             logger.exception("Error fetching scraper URL %s", url)
             return []
 
-        return parse_scraper_items(html, base_url, item_selector, title_selector, link_selector, content_selector)
+        items = parse_scraper_items(html, base_url, item_selector, title_selector, link_selector, content_selector)
+
+        if fetch_full:
+            listing_netloc = urlparse(url).netloc
+            for item in items:
+                if len(item.raw_content) < _MIN_CONTENT_LEN:
+                    full = _fetch_full_article(item.url, listing_netloc)
+                    if full:
+                        item.raw_content = full
+
+        return items
