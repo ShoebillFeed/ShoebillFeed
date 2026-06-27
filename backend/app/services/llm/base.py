@@ -121,13 +121,13 @@ Respond ONLY with a valid JSON array. No markdown fences, no extra text.""".form
 
 
 CLUSTER_SYSTEM_PROMPT = """You are a neutral news analyst. Multiple sources have covered the same event. Return a JSON object with exactly these fields:
+- "source_summaries": object where each key is "item_0", "item_1", etc. — one entry per source. For each, write a short phrase (max 20 words) capturing what that source uniquely contributes: a specific fact, statistic, named person, quote, location detail, or angle not present in the others. Set a key to null only when a source genuinely adds nothing beyond what the other sources already cover. State the content directly — e.g. "Cites unnamed Pentagon official; 12% GDP impact estimate", "Only source to quote the opposition leader" — never begin with "This source", "Reports that", "Adds", "Highlights", "Notes", "States", "Also covers", or similar preamble.
 - "title": string, a short factual headline (max 10 words) that captures the core event.
 - "unified_abstract": string, 1-3 sentence factual summary that synthesises all sources into one coherent account, based strictly on the provided content. Write in neutral, precise, journalistic language — no emotional qualifiers, value judgements, or editorialising. Do not add or infer anything not present in the sources.
 - "keywords": array of 3-7 short lowercase keywords or keyphrases in English (regardless of source language) that best represent this event (e.g. ["trade war", "tariffs", "eu"])
 {categories_field}
 {relevance_field}
 - "impact_score": integer 1-10, how broadly impactful this event is
-- "source_summaries": object where each key is "item_0", "item_1", etc. Set a key to null if that item's content is identical or near-identical to another item. Otherwise write a telegraphic phrase (max 12 words) stating only what is unique to that source — no preamble words like "This source", "Unlike others", "This article", "Focuses on", "Reports that".
 
 {category_guidance}
 
@@ -313,7 +313,9 @@ _SAME_AS_RE = re.compile(
 )
 # Common filler preambles the LLM tends to produce even when told not to
 _PREAMBLE_RE = re.compile(
-    r"^(this\s+source\b|unlike\s+(other\s+sources?|others?)\b|this\s+article\b|focuses?\s+on\b|reports?\s+that\b)",
+    r"^(this\s+source\b|unlike\s+(other\s+sources?|others?)\b|this\s+article\b|focuses?\s+on\b"
+    r"|reports?\s+that\b|adds?\s+that\b|highlights?\b|notes?\s+that\b|states?\s+that\b"
+    r"|provides?\b|also\s+(covers?|includes?|reports?|mentions?)\b|uniquely\s+|the\s+(source|article)\b)",
     re.IGNORECASE,
 )
 

@@ -66,7 +66,7 @@ class OllamaProvider(LLMProvider):
         result.model_name = self.model_name
         return result
 
-    def process_cluster(self, items, categories, max_content_chars=800, output_language=None) -> ClusterResult:
+    def process_cluster(self, items, categories, max_content_chars=1200, output_language=None) -> ClusterResult:
         known = [c["name"] for c in categories]
         system = CLUSTER_SYSTEM_PROMPT.format(categories_json=json.dumps(categories)) + language_suffix(output_language)
 
