@@ -9,12 +9,16 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { PauseCircle } from "lucide-react";
+import { Accordion } from "./Accordion";
 import {
   useActivityStats, useCategoryStats, useSourceStats,
   useWeightHistory, useSourceClusters,
   useKeywordClusterHistory, useKeywordClusterMap,
 } from "../../hooks/useStats";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
+import { statsApi } from "../../api/stats";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
 
 class ChartErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
   state = { crashed: false };
@@ -220,7 +224,7 @@ function ActivityChart({ days }: { days: number }) {
 
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <AreaChart data={points} margin={{ top: 4, right: 56, left: 12, bottom: 0 }}>
+      <AreaChart data={points} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
         <defs>
           {ACTIVITY_SERIES.map(({ key, color }) => (
             <linearGradient key={key} id={`g_${key}`} x1="0" y1="0" x2="0" y2="1">
@@ -238,7 +242,6 @@ function ActivityChart({ days }: { days: number }) {
           axisLine={false}
           allowDecimals={false}
           width={28}
-          label={{ value: "Fetched / Seen", angle: -90, position: "insideLeft", offset: 10, style: { fontSize: 10, fill: "#9ca3af", textAnchor: "middle" } }}
         />
         <YAxis
           yAxisId="right"
@@ -248,7 +251,6 @@ function ActivityChart({ days }: { days: number }) {
           axisLine={false}
           allowDecimals={false}
           width={28}
-          label={{ value: "Read / Liked", angle: 90, position: "insideRight", offset: 10, style: { fontSize: 10, fill: "#9ca3af", textAnchor: "middle" } }}
         />
         <Tooltip
           cursor={CURSOR_STYLE}
@@ -752,23 +754,30 @@ export default function StatsPanel() {
   const { data: settings } = useAdvancedSettings();
   const update = useUpdateAdvancedSettings();
   const statsEnabled = settings?.stats_enabled ?? true;
+  const qc = useQueryClient();
+  const refreshClusters = useMutation({
+    mutationFn: () => statsApi.refreshClusters(),
+    onSuccess: () => {
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["stats", "keyword-cluster-map"] });
+        qc.invalidateQueries({ queryKey: ["stats", "keyword-cluster-history"] });
+      }, 3000);
+    },
+  });
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h2 className="font-semibold text-gray-900 dark:text-gray-100">{t("stats.title")}</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {t("stats.description")}
-          </p>
-        </div>
-        <div className="flex items-center gap-3 shrink-0 ml-4">
-          {!statsEnabled && (
-            <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-              <PauseCircle size={13} /> {t("stats.recordingPaused")}
-            </span>
-          )}
+      <Accordion
+        title={t("stats.title")}
+        description={t("stats.description")}
+        defaultOpen
+        action={
           <div className="flex items-center gap-2">
+            {!statsEnabled && (
+              <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                <PauseCircle size={13} /> {t("stats.recordingPaused")}
+              </span>
+            )}
             <span className="text-xs text-gray-500 dark:text-gray-400">{t("stats.recordHistory")}</span>
             <button
               role="switch"
@@ -780,67 +789,78 @@ export default function StatsPanel() {
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${statsEnabled ? "translate-x-4" : "translate-x-0"}`} />
             </button>
           </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-6">
-        <ChartCard
-          title={t("stats.activityTitle")}
-          description={t("stats.activityDesc")}
-          action={<RangePicker value={activityDays} onChange={setActivityDays} />}
-        >
-          <ActivityChart key={activityDays} days={activityDays} />
-        </ChartCard>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        }
+      >
+        <div className="flex flex-col gap-6">
           <ChartCard
-            title={t("stats.byCategoryTitle")}
-            description={t("stats.byCategoryDesc")}
-            action={<RangePicker value={categoryDays} onChange={setCategoryDays} />}
+            title={t("stats.activityTitle")}
+            description={t("stats.activityDesc")}
+            action={<RangePicker value={activityDays} onChange={setActivityDays} />}
           >
-            <ByCategoryChart key={categoryDays} days={categoryDays} />
+            <ActivityChart key={activityDays} days={activityDays} />
+          </ChartCard>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ChartCard
+              title={t("stats.byCategoryTitle")}
+              description={t("stats.byCategoryDesc")}
+              action={<RangePicker value={categoryDays} onChange={setCategoryDays} />}
+            >
+              <ByCategoryChart key={categoryDays} days={categoryDays} />
+            </ChartCard>
+
+            <ChartCard
+              title={t("stats.bySourceTitle")}
+              description={t("stats.bySourceDesc")}
+              action={<RangePicker value={sourceDays} onChange={setSourceDays} />}
+            >
+              <BySourceChart key={sourceDays} days={sourceDays} />
+            </ChartCard>
+          </div>
+
+          <ChartCard
+            title={t("stats.sourceClusterTitle")}
+            description={t("stats.sourceClusterDesc")}
+            action={<RangePicker value={clusterDays} onChange={setClusterDays} />}
+          >
+            <SourceClustersChart key={clusterDays} days={clusterDays} />
           </ChartCard>
 
           <ChartCard
-            title={t("stats.bySourceTitle")}
-            description={t("stats.bySourceDesc")}
-            action={<RangePicker value={sourceDays} onChange={setSourceDays} />}
+            title={t("stats.weightHistoryTitle")}
+            description={t("stats.weightHistoryDesc")}
+            action={<RangePicker value={weightDays} onChange={setWeightDays} />}
           >
-            <BySourceChart key={sourceDays} days={sourceDays} />
+            <WeightHistoryChart key={weightDays} days={weightDays} />
+          </ChartCard>
+
+          <ChartCard
+            title={t("stats.kwClusterHistoryTitle")}
+            description={t("stats.kwClusterHistoryDesc")}
+            action={<RangePicker value={kwClusterHistoryDays} onChange={setKwClusterHistoryDays} />}
+          >
+            <KeywordClusterHistoryChart key={kwClusterHistoryDays} days={kwClusterHistoryDays} />
+          </ChartCard>
+
+          <ChartCard
+            title={t("stats.kwClusterMapTitle")}
+            description={t("stats.kwClusterMapDesc")}
+            action={
+              <button
+                onClick={() => refreshClusters.mutate()}
+                disabled={refreshClusters.isPending}
+                title={t("stats.refreshClusters")}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-40"
+              >
+                <RefreshCw size={12} className={refreshClusters.isPending ? "animate-spin" : ""} />
+                {t("stats.refreshClusters")}
+              </button>
+            }
+          >
+            <KeywordClusterMapChart />
           </ChartCard>
         </div>
-
-        <ChartCard
-          title={t("stats.sourceClusterTitle")}
-          description={t("stats.sourceClusterDesc")}
-          action={<RangePicker value={clusterDays} onChange={setClusterDays} />}
-        >
-          <SourceClustersChart key={clusterDays} days={clusterDays} />
-        </ChartCard>
-
-        <ChartCard
-          title={t("stats.weightHistoryTitle")}
-          description={t("stats.weightHistoryDesc")}
-          action={<RangePicker value={weightDays} onChange={setWeightDays} />}
-        >
-          <WeightHistoryChart key={weightDays} days={weightDays} />
-        </ChartCard>
-
-        <ChartCard
-          title={t("stats.kwClusterHistoryTitle")}
-          description={t("stats.kwClusterHistoryDesc")}
-          action={<RangePicker value={kwClusterHistoryDays} onChange={setKwClusterHistoryDays} />}
-        >
-          <KeywordClusterHistoryChart key={kwClusterHistoryDays} days={kwClusterHistoryDays} />
-        </ChartCard>
-
-        <ChartCard
-          title={t("stats.kwClusterMapTitle")}
-          description={t("stats.kwClusterMapDesc")}
-        >
-          <KeywordClusterMapChart />
-        </ChartCard>
-      </div>
+      </Accordion>
     </div>
   );
 }

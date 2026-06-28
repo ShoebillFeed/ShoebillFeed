@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { BellOff, Check, AlertTriangle, Copy, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { BellOff, Check, AlertTriangle, Copy, Trash2 } from "lucide-react";
+import { Accordion } from "./Accordion";
 import { useTranslation } from "react-i18next";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "../../lib/utils";
@@ -53,46 +54,6 @@ const CONTENT_LANGUAGES = [
 const UI_LANGUAGES = SHARED_LANGUAGES;
 
 // ─── Layout primitives ────────────────────────────────────────────────────────
-
-function Accordion({
-  title,
-  description,
-  defaultOpen = false,
-  children,
-}: {
-  title: string;
-  description?: string;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden mb-3">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
-      >
-        <div>
-          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">{title}</h3>
-          {description && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
-          )}
-        </div>
-        {open ? (
-          <ChevronDown size={16} className="text-gray-400 shrink-0 ml-3" />
-        ) : (
-          <ChevronRight size={16} className="text-gray-400 shrink-0 ml-3" />
-        )}
-      </button>
-      {open && (
-        <div className="px-4 py-4 flex flex-col gap-4 border-t border-gray-200 dark:border-gray-700">
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function Section({
   title,

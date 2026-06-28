@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Loader } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import client from "../../api/client";
+import { Accordion } from "./Accordion";
 
 interface ProviderInfo {
   name: string;
@@ -55,14 +56,10 @@ export default function LLMConfigPanel() {
 
   return (
     <div>
-      <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">{t("llm.title")}</h2>
-
-      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-700 dark:text-amber-300 mb-6">
-        {t("llm.readOnlyNotice")}
-      </div>
-
-      <div className="mb-6">
-        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t("llm.configuredProviders")}</h3>
+      <Accordion title={t("llm.configuredProviders")} defaultOpen>
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-700 dark:text-amber-300">
+          {t("llm.readOnlyNotice")}
+        </div>
         <div className="flex flex-col gap-2">
           {config.providers.map((p) => (
             <div
@@ -100,22 +97,22 @@ export default function LLMConfigPanel() {
             </div>
           ))}
         </div>
-      </div>
+      </Accordion>
 
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium text-sm">{t("llm.serviceHealth")}</h3>
+      <Accordion
+        title={t("llm.serviceHealth")}
+        action={
           <button
             onClick={checkHealth}
             disabled={healthLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400 disabled:opacity-50"
           >
-            {healthLoading && <Loader size={14} className="animate-spin" />}
+            {healthLoading && <Loader size={13} className="animate-spin" />}
             {t("common.check")}
           </button>
-        </div>
-
-        {health && (
+        }
+      >
+        {health ? (
           <div className="flex flex-col gap-2">
             <HealthRow label={t("llm.database")} ok={health.db} />
             <HealthRow label={t("llm.redis")} ok={health.redis} />
@@ -130,8 +127,8 @@ export default function LLMConfigPanel() {
               : <HealthRow label="LLM" ok={health.llm} />
             }
           </div>
-        )}
-      </div>
+        ) : null}
+      </Accordion>
     </div>
   );
 }

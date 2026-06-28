@@ -100,4 +100,6 @@ export const statsApi = {
     client.get<KeywordClusterHistory[]>("/stats/keyword-cluster-history", { params: { days } }).then((r) => r.data),
   keywordClusterMap: () =>
     client.get<KeywordClusterMapEntry[]>("/stats/keyword-cluster-map").then((r) => r.data),
+  refreshClusters: () =>
+    client.post("/stats/refresh-clusters").then((r) => r.data),
 };

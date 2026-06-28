@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
+import { Accordion } from "./Accordion";
 
 function TechDetails({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -40,15 +41,11 @@ export default function AboutPanel() {
 
   return (
     <div>
-      <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-6">{t("about.title")}</h2>
-
-      <section className="mb-8">
-        <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">{t("about.whatTitle")}</h3>
+      <Accordion title={t("about.whatTitle")} defaultOpen>
         <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{t("about.whatBody")}</p>
-      </section>
+      </Accordion>
 
-      <section>
-        <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-4">{t("about.howTitle")}</h3>
+      <Accordion title={t("about.howTitle")}>
         <div className="flex flex-col gap-6">
           {steps.map(({ title, desc, tech }, i) => (
             <div key={i} className="flex gap-4">
@@ -63,7 +60,7 @@ export default function AboutPanel() {
             </div>
           ))}
         </div>
-      </section>
+      </Accordion>
     </div>
   );
 }

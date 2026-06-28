@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Plus, Trash2, ShieldCheck, KeyRound, BookOpen, ThumbsUp, Bookmark, Newspaper, Radio, Tag, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useUsers, useCreateUser, useDeleteUser, useResetUserPassword, useUserStats } from "../../hooks/useAuth";
+import { Accordion } from "./Accordion";
 import type { UserStats } from "../../api/auth";
 
 export default function UsersPanel() {
@@ -64,157 +65,160 @@ export default function UsersPanel() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100">{t("users.title")}</h2>
-        <button
-          onClick={() => { setShowForm(true); setFormError(null); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
-        >
-          <Plus size={14} /> {t("users.addUser")}
-        </button>
-      </div>
+      <Accordion
+        title={t("users.title")}
+        defaultOpen
+        action={
+          <button
+            onClick={() => { setShowForm(true); setFormError(null); }}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+          >
+            <Plus size={13} /> {t("users.addUser")}
+          </button>
+        }
+      >
+        {showForm && (
+          <form
+            onSubmit={handleCreate}
+            className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 flex flex-col gap-3"
+          >
+            <h3 className="font-medium text-sm">{t("users.newUser")}</h3>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t("users.username")}</label>
+              <input
+                className={inputClass}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                minLength={2}
+                placeholder="username"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t("users.password")}</label>
+              <input
+                type="password"
+                className={inputClass}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                placeholder={t("users.passwordPlaceholder")}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isAdmin}
+                onChange={(e) => setIsAdmin(e.target.checked)}
+                className="rounded"
+              />
+              {t("users.admin")}
+            </label>
+            {formError && <p className="text-sm text-red-500">{formError}</p>}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 transition-colors"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="submit"
+                disabled={createUser.isPending}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              >
+                {createUser.isPending ? t("users.creating") : t("common.create")}
+              </button>
+            </div>
+          </form>
+        )}
 
-      {showForm && (
-        <form
-          onSubmit={handleCreate}
-          className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 flex flex-col gap-3"
-        >
-          <h3 className="font-medium text-sm">{t("users.newUser")}</h3>
-          <div>
-            <label className="block text-sm font-medium mb-1">{t("users.username")}</label>
-            <input
-              className={inputClass}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              minLength={2}
-              placeholder="username"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">{t("users.password")}</label>
-            <input
-              type="password"
-              className={inputClass}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              placeholder={t("users.passwordPlaceholder")}
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isAdmin}
-              onChange={(e) => setIsAdmin(e.target.checked)}
-              className="rounded"
-            />
-            {t("users.admin")}
-          </label>
-          {formError && <p className="text-sm text-red-500">{formError}</p>}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="flex-1 px-4 py-2 text-sm font-medium rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 transition-colors"
-            >
-              {t("common.cancel")}
-            </button>
-            <button
-              type="submit"
-              disabled={createUser.isPending}
-              className="flex-1 px-4 py-2 text-sm font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-            >
-              {createUser.isPending ? t("users.creating") : t("common.create")}
-            </button>
-          </div>
-        </form>
-      )}
+        {isLoading && <p className="text-sm text-gray-400">{t("common.loading")}</p>}
 
-      {isLoading && <p className="text-sm text-gray-400">{t("common.loading")}</p>}
-
-      <div className="flex flex-col gap-2">
-        {users?.map((u) => {
-          const s = statsMap.get(u.id);
-          return (
-          <div key={u.id}>
-            <div className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-medium">{u.username}</span>
-                    {u.is_admin && (
-                      <span className="inline-flex items-center gap-0.5 text-xs text-indigo-600 dark:text-indigo-400">
-                        <ShieldCheck size={12} /> admin
-                      </span>
-                    )}
+        <div className="flex flex-col gap-2">
+          {users?.map((u) => {
+            const s = statsMap.get(u.id);
+            return (
+            <div key={u.id}>
+              <div className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium">{u.username}</span>
+                      {u.is_admin && (
+                        <span className="inline-flex items-center gap-0.5 text-xs text-indigo-600 dark:text-indigo-400">
+                          <ShieldCheck size={12} /> admin
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <button
+                    title={t("users.resetPassword")}
+                    onClick={() => resetUserId === u.id ? setResetUserId(null) : openReset(u.id)}
+                    className="p-1.5 rounded text-gray-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <KeyRound size={14} />
+                  </button>
+                  <button
+                    title={t("users.deleteUser")}
+                    onClick={() => {
+                      if (confirm(t("users.deleteConfirm", { name: u.username })))
+                        deleteUser.mutate(u.id);
+                    }}
+                    className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-                <button
-                  title={t("users.resetPassword")}
-                  onClick={() => resetUserId === u.id ? setResetUserId(null) : openReset(u.id)}
-                  className="p-1.5 rounded text-gray-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <KeyRound size={14} />
-                </button>
-                <button
-                  title={t("users.deleteUser")}
-                  onClick={() => {
-                    if (confirm(t("users.deleteConfirm", { name: u.username })))
-                      deleteUser.mutate(u.id);
-                  }}
-                  className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
+
+                {s && <UserStatsRow stats={s} />}
               </div>
 
-              {s && <UserStatsRow stats={s} />}
+              {resetUserId === u.id && (
+                <form
+                  onSubmit={handleReset}
+                  className="mt-1 p-3 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/30 flex flex-col gap-2"
+                >
+                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                    {t("users.resetPassword")} — {u.username}
+                  </p>
+                  <input
+                    type="password"
+                    className={inputClass}
+                    value={resetPassword1}
+                    onChange={(e) => setResetPassword1(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder={t("users.passwordPlaceholder")}
+                    autoFocus
+                  />
+                  {resetError && <p className="text-xs text-red-500">{resetError}</p>}
+                  {resetSuccess && <p className="text-xs text-green-600 dark:text-green-400">{resetSuccess}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setResetUserId(null)}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 transition-colors"
+                    >
+                      {t("common.cancel")}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={resetPassword.isPending}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    >
+                      {resetPassword.isPending ? "…" : t("users.resetPassword")}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
-
-            {resetUserId === u.id && (
-              <form
-                onSubmit={handleReset}
-                className="mt-1 p-3 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/30 flex flex-col gap-2"
-              >
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {t("users.resetPassword")} — {u.username}
-                </p>
-                <input
-                  type="password"
-                  className={inputClass}
-                  value={resetPassword1}
-                  onChange={(e) => setResetPassword1(e.target.value)}
-                  required
-                  minLength={6}
-                  placeholder={t("users.passwordPlaceholder")}
-                  autoFocus
-                />
-                {resetError && <p className="text-xs text-red-500">{resetError}</p>}
-                {resetSuccess && <p className="text-xs text-green-600 dark:text-green-400">{resetSuccess}</p>}
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setResetUserId(null)}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 transition-colors"
-                  >
-                    {t("common.cancel")}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={resetPassword.isPending}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                  >
-                    {resetPassword.isPending ? "…" : t("users.resetPassword")}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </Accordion>
     </div>
   );
 }

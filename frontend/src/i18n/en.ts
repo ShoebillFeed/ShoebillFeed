@@ -276,6 +276,7 @@ const en = {
     kwClusterMapDesc: "The 10 biggest keyword clusters discovered from your liked articles. Each card is a semantic topic — keyword size shows TF-IDF relevance within the cluster, and the ×weight badge shows how much you've liked articles with that keyword.",
     noClusterMap: "No keyword clusters yet.",
     clusterMapHint: "Like at least 5 articles in a category to generate clusters.",
+    refreshClusters: "Refresh clusters",
     fetched: "Fetched",
     read: "Read",
     starred: "Liked",

@@ -5,6 +5,7 @@ import { useCategories, useDeleteCategory, useResetWeights, useSetManualWeight, 
 import { categoriesApi } from "../../api/categories";
 import CategoryForm from "./CategoryForm";
 import TaxonomyBrowser from "./TaxonomyBrowser";
+import { Accordion } from "./Accordion";
 import type { Category } from "../../types/category";
 import type { TaxonomyNode } from "./iptcTaxonomy";
 import { findNode } from "./iptcTaxonomy";
@@ -65,129 +66,119 @@ export default function CategoriesPanel() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100">{t("categories.title")}</h2>
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={handleExport}
-            title={t("categories.exportTitle")}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
-          >
-            <Download size={14} /> {t("common.export")}
-          </button>
-          <label
-            title={t("categories.importTitle")}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 cursor-pointer"
-          >
-            <Upload size={14} /> {t("common.import")}
-            <input type="file" accept=".json" className="hidden" onChange={handleImport} />
-          </label>
-          <button
-            onClick={() => {
-              if (confirm(t("categories.resetWeightsConfirm")))
-                resetWeights.mutate();
-            }}
-            title={t("categories.resetWeights")}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
-          >
-            <RotateCcw size={14} /> {t("categories.resetWeights")}
-          </button>
-          <button
-            onClick={() => {
-              setPendingNode(null);
-              setEditing(null);
-              setShowCustomForm((v) => !v);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
-          >
-            <Plus size={14} /> {t("categories.addCustom")}
-          </button>
-        </div>
-      </div>
-
-      {/* Custom create form */}
-      {showCustomForm && !editing && (
-        <div className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-          <h3 className="font-medium text-sm mb-3">{t("categories.addNewCategory")}</h3>
-          <CategoryForm
-            onClose={() => setShowCustomForm(false)}
-          />
-        </div>
-      )}
-
-      {/* Taxonomy node quick-add form */}
-      {pendingNode && !editing && (
-        <div className="mb-4 p-4 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-indigo-50/40 dark:bg-indigo-900/10">
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="font-medium text-sm text-indigo-700 dark:text-indigo-300">
-              {t("categories.addFromTaxonomy")}
-            </h3>
-          </div>
-          <CategoryForm
-            taxonomyName={pendingNode.node.name}
-            taxonomyId={pendingNode.node.id}
-            defaultColor={pendingNode.color}
-            defaultKeywords={pendingNode.node.keywords}
-            defaultPrompt={pendingNode.node.prompt}
-            onClose={() => setPendingNode(null)}
-          />
-        </div>
-      )}
-
-      {isLoading && <p className="text-sm text-gray-400">{t("common.loading")}</p>}
-
-      {/* Category list */}
-      <div className="flex flex-col gap-2">
-        {categories?.map((cat) =>
-          editing?.id === cat.id ? (
-            <div key={cat.id} className="p-4 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-              <h3 className="font-medium text-sm mb-3 text-indigo-600 dark:text-indigo-400">
-                {t("categories.editingCategory", { name: cat.name })}
-              </h3>
-              <CategoryForm
-                category={cat}
-                isTaxonomy={Boolean(cat.taxonomy_id)}
-                onClose={() => setEditing(null)}
-              />
-            </div>
-          ) : (
-            <CategoryRow
-              key={cat.id}
-              cat={cat}
-              onEdit={() => { setEditing(cat); setPendingNode(null); setShowCustomForm(false); }}
-              onDelete={() => {
-                if (confirm(t("categories.deleteConfirm", { name: cat.name })))
-                  deleteCategory.mutate(cat.id);
+      <Accordion
+        title={t("categories.title")}
+        defaultOpen
+        action={
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={handleExport}
+              title={t("categories.exportTitle")}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400"
+            >
+              <Download size={13} /> {t("common.export")}
+            </button>
+            <label
+              title={t("categories.importTitle")}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400 cursor-pointer"
+            >
+              <Upload size={13} /> {t("common.import")}
+              <input type="file" accept=".json" className="hidden" onChange={handleImport} />
+            </label>
+            <button
+              onClick={() => {
+                if (confirm(t("categories.resetWeightsConfirm")))
+                  resetWeights.mutate();
               }}
+              title={t("categories.resetWeights")}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400"
+            >
+              <RotateCcw size={13} /> {t("categories.resetWeights")}
+            </button>
+            <button
+              onClick={() => {
+                setPendingNode(null);
+                setEditing(null);
+                setShowCustomForm((v) => !v);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+            >
+              <Plus size={13} /> {t("categories.addCustom")}
+            </button>
+          </div>
+        }
+      >
+        {/* Custom create form */}
+        {showCustomForm && !editing && (
+          <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+            <h3 className="font-medium text-sm mb-3">{t("categories.addNewCategory")}</h3>
+            <CategoryForm
+              onClose={() => setShowCustomForm(false)}
             />
-          )
+          </div>
         )}
 
-        {categories?.length === 0 && !isLoading && (
-          <p className="text-sm text-gray-400 text-center py-8">{t("categories.empty")}</p>
+        {/* Taxonomy node quick-add form */}
+        {pendingNode && !editing && (
+          <div className="p-4 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-indigo-50/40 dark:bg-indigo-900/10">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="font-medium text-sm text-indigo-700 dark:text-indigo-300">
+                {t("categories.addFromTaxonomy")}
+              </h3>
+            </div>
+            <CategoryForm
+              taxonomyName={pendingNode.node.name}
+              taxonomyId={pendingNode.node.id}
+              defaultColor={pendingNode.color}
+              defaultKeywords={pendingNode.node.keywords}
+              defaultPrompt={pendingNode.node.prompt}
+              onClose={() => setPendingNode(null)}
+            />
+          </div>
         )}
-      </div>
 
-      {/* Taxonomy browser */}
-      <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">
-            {t("categories.taxonomyTitle")}
-          </h3>
-          <span className="text-xs text-gray-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded font-medium">
-            Default
-          </span>
+        {isLoading && <p className="text-sm text-gray-400">{t("common.loading")}</p>}
+
+        {/* Category list */}
+        <div className="flex flex-col gap-2">
+          {categories?.map((cat) =>
+            editing?.id === cat.id ? (
+              <div key={cat.id} className="p-4 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                <h3 className="font-medium text-sm mb-3 text-indigo-600 dark:text-indigo-400">
+                  {t("categories.editingCategory", { name: cat.name })}
+                </h3>
+                <CategoryForm
+                  category={cat}
+                  isTaxonomy={Boolean(cat.taxonomy_id)}
+                  onClose={() => setEditing(null)}
+                />
+              </div>
+            ) : (
+              <CategoryRow
+                key={cat.id}
+                cat={cat}
+                onEdit={() => { setEditing(cat); setPendingNode(null); setShowCustomForm(false); }}
+                onDelete={() => {
+                  if (confirm(t("categories.deleteConfirm", { name: cat.name })))
+                    deleteCategory.mutate(cat.id);
+                }}
+              />
+            )
+          )}
+
+          {categories?.length === 0 && !isLoading && (
+            <p className="text-sm text-gray-400 text-center py-8">{t("categories.empty")}</p>
+          )}
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          {t("categories.taxonomyDesc")}
-        </p>
+      </Accordion>
+
+      <Accordion title={t("categories.taxonomyTitle")} description={t("categories.taxonomyDesc")}>
         <TaxonomyBrowser
           onAddNode={handleTaxonomyAdd}
           existingTaxonomyIds={existingTaxonomyIds}
           existingNames={existingNames}
         />
-      </div>
+      </Accordion>
     </div>
   );
 }

@@ -352,6 +352,17 @@ def keyword_cluster_map(
     return result
 
 
+@router.post("/refresh-clusters")
+def refresh_clusters(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Trigger an immediate keyword cluster refresh for the current user."""
+    from app.tasks.process_tasks import refresh_keyword_clusters
+    refresh_keyword_clusters.apply_async(queue="default")
+    return {"status": "queued"}
+
+
 @router.get("/weight-history")
 def weight_history(
     days: Annotated[int, Query(ge=1, le=365)] = 60,
