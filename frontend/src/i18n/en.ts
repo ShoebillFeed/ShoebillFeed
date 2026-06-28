@@ -277,6 +277,8 @@ const en = {
     noClusterMap: "No keyword clusters yet.",
     clusterMapHint: "Like at least 5 articles in a category to generate clusters.",
     refreshClusters: "Refresh clusters",
+    clusterSizeHint: "Number of liked articles in this cluster",
+    clusterClickHint: "Click a circle to see cluster details",
     fetched: "Fetched",
     read: "Read",
     starred: "Liked",

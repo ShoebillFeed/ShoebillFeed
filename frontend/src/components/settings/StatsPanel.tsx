@@ -1,4 +1,4 @@
-import { useState, Component } from "react";
+import { useState, useMemo, Component } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -8,7 +8,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
 } from "recharts";
 import { format, parseISO } from "date-fns";
-import { PauseCircle } from "lucide-react";
+import { PauseCircle, RefreshCw, ThumbsUp } from "lucide-react";
 import { Accordion } from "./Accordion";
 import {
   useActivityStats, useCategoryStats, useSourceStats,
@@ -18,7 +18,7 @@ import {
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { statsApi } from "../../api/stats";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import type { KeywordClusterMapEntry } from "../../api/stats";
 
 class ChartErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
   state = { crashed: false };
@@ -668,6 +668,197 @@ function KeywordClusterHistoryChart({ days }: { days: number }) {
 
 // ── Keyword cluster map ───────────────────────────────────────────────────────
 
+const SIM_W = 560;
+const SIM_H = 320;
+const MIN_R = 18;
+const MAX_R = 52;
+
+function jaccardSim(a: Set<string>, b: Set<string>): number {
+  let inter = 0;
+  for (const k of a) if (b.has(k)) inter++;
+  const union = a.size + b.size - inter;
+  return union > 0 ? inter / union : 0;
+}
+
+function truncLabel(s: string, maxLen: number) {
+  return s.length > maxLen ? s.slice(0, maxLen - 1) + "…" : s;
+}
+
+function ClusterBubbleMap({ data }: { data: KeywordClusterMapEntry[] }) {
+  const { t } = useTranslation();
+  const [hovered, setHovered] = useState<number | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
+  const activeIdx = selected !== null ? selected : hovered;
+
+  const kwSets = useMemo(
+    () => data.map((d) => new Set(d.keywords.map((k) => k.keyword))),
+    [data],
+  );
+
+  const nodes = useMemo(() => {
+    const maxSize = Math.max(...data.map((d) => d.cluster_size), 1);
+    const ns = data.map((d, i) => {
+      const angle = (2 * Math.PI * i) / data.length - Math.PI / 2;
+      const r = MIN_R + (d.cluster_size / maxSize) * (MAX_R - MIN_R);
+      const initR = 100 + r;
+      return {
+        x: SIM_W / 2 + Math.cos(angle) * initR,
+        y: SIM_H / 2 + Math.sin(angle) * initR,
+        vx: 0, vy: 0, r,
+      };
+    });
+
+    for (let t = 0; t < 280; t++) {
+      const alpha = Math.max(0.01, 1 - t / 200);
+      for (const n of ns) { n.vx = 0; n.vy = 0; }
+
+      for (let i = 0; i < ns.length; i++) {
+        // Centering
+        ns[i].vx += (SIM_W / 2 - ns[i].x) * 0.04 * alpha;
+        ns[i].vy += (SIM_H / 2 - ns[i].y) * 0.04 * alpha;
+
+        for (let j = i + 1; j < ns.length; j++) {
+          const dx = ns[j].x - ns[i].x;
+          const dy = ns[j].y - ns[i].y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 0.1;
+          const nx_ = dx / dist, ny_ = dy / dist;
+
+          // Collision repulsion
+          const minDist = ns[i].r + ns[j].r + 8;
+          if (dist < minDist) {
+            const push = (minDist - dist) * 0.6 * alpha;
+            ns[i].vx -= nx_ * push;
+            ns[i].vy -= ny_ * push;
+            ns[j].vx += nx_ * push;
+            ns[j].vy += ny_ * push;
+          }
+
+          // General charge repulsion
+          const repel = Math.min(4000 / (dist * dist), 18) * alpha;
+          ns[i].vx -= nx_ * repel;
+          ns[i].vy -= ny_ * repel;
+          ns[j].vx += nx_ * repel;
+          ns[j].vy += ny_ * repel;
+
+          // Similarity attraction — pull similar clusters together
+          const sim = jaccardSim(kwSets[i], kwSets[j]);
+          if (sim > 0) {
+            const idealDist = minDist + (1 - sim) * 160;
+            const err = (dist - idealDist) * 0.08 * alpha * sim;
+            ns[i].vx += nx_ * err;
+            ns[i].vy += ny_ * err;
+            ns[j].vx -= nx_ * err;
+            ns[j].vy -= ny_ * err;
+          }
+        }
+
+        ns[i].x = Math.max(ns[i].r + 3, Math.min(SIM_W - ns[i].r - 3, ns[i].x + ns[i].vx));
+        ns[i].y = Math.max(ns[i].r + 3, Math.min(SIM_H - ns[i].r - 3, ns[i].y + ns[i].vy));
+      }
+    }
+    return ns;
+  }, [data, kwSets]);
+
+  const active = activeIdx !== null ? data[activeIdx] : null;
+
+  return (
+    <div>
+      <svg
+        viewBox={`0 0 ${SIM_W} ${SIM_H}`}
+        className="w-full"
+        style={{ height: SIM_H * 0.85 }}
+        onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}
+      >
+        {nodes.map((n, i) => {
+          const d = data[i];
+          const isActive = activeIdx === i;
+          const fontSize = Math.max(9, Math.min(13, n.r * 0.38));
+          const maxChars = Math.max(4, Math.floor(n.r * 1.5 / (fontSize * 0.6)));
+          return (
+            <g
+              key={i}
+              transform={`translate(${n.x},${n.y})`}
+              style={{ cursor: "pointer" }}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              onClick={(e) => { e.stopPropagation(); setSelected(selected === i ? null : i); }}
+            >
+              <circle
+                r={n.r}
+                fill={d.category_color}
+                fillOpacity={isActive ? 0.92 : 0.65}
+                stroke={d.category_color}
+                strokeWidth={isActive ? 2.5 : 1}
+                strokeOpacity={isActive ? 1 : 0.4}
+              />
+              {n.r >= 22 && (
+                <text
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={fontSize}
+                  fill="white"
+                  fontWeight="600"
+                  style={{ pointerEvents: "none", userSelect: "none" }}
+                >
+                  {truncLabel(d.cluster_label, maxChars)}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      {active ? (
+        <div className="mt-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: active.category_color }} />
+                <span className="text-xs text-gray-500 dark:text-gray-400">{active.category_name}</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{active.cluster_label}</p>
+            </div>
+            <span
+              className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 shrink-0 mt-0.5"
+              title={t("stats.clusterSizeHint")}
+            >
+              <ThumbsUp size={11} />
+              {active.cluster_size}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {active.keywords.map((kw) => {
+              const hasWeight = kw.weight > 1.0;
+              return (
+                <span
+                  key={kw.keyword}
+                  title={`TF-IDF: ${kw.score.toFixed(3)}${hasWeight ? ` · liked ×${kw.weight.toFixed(1)}` : ""}`}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-gray-700 dark:text-gray-300"
+                  style={{
+                    borderWidth: "1px",
+                    borderStyle: "solid",
+                    borderColor: hasWeight ? active.category_color + "80" : "rgb(229 231 235)",
+                    backgroundColor: hasWeight ? active.category_color + "18" : undefined,
+                  }}
+                >
+                  {kw.keyword}
+                  {hasWeight && (
+                    <span className="text-[10px] font-semibold tabular-nums" style={{ color: active.category_color }}>
+                      ×{kw.weight.toFixed(1)}
+                    </span>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <p className="mt-2 text-center text-xs text-gray-400">{t("stats.clusterClickHint")}</p>
+      )}
+    </div>
+  );
+}
+
 function KeywordClusterMapChart() {
   const { t } = useTranslation();
   const { data, isLoading } = useKeywordClusterMap();
@@ -680,64 +871,7 @@ function KeywordClusterMapChart() {
       </div>
     );
   }
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {data.map((cluster, i) => {
-        const maxScore = Math.max(...cluster.keywords.map((k) => k.score), 0.01);
-        const maxWeight = Math.max(...cluster.keywords.map((k) => k.weight), 1.0);
-        return (
-          <div
-            key={i}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900"
-          >
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cluster.category_color }} />
-                <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{cluster.category_name}</span>
-              </div>
-              <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 tabular-nums">
-                {cluster.cluster_size} ★
-              </span>
-            </div>
-            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 truncate" title={cluster.cluster_label}>
-              {cluster.cluster_label}
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {cluster.keywords.map((kw) => {
-                const relSize = kw.score / maxScore;
-                const hasWeight = kw.weight > 1.0;
-                const weightIntensity = Math.min((kw.weight - 1.0) / (maxWeight - 1.0 || 1), 1);
-                return (
-                  <span
-                    key={kw.keyword}
-                    title={`score: ${kw.score.toFixed(3)}${hasWeight ? ` · weight: ${kw.weight.toFixed(2)}` : ""}`}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300 transition-colors"
-                    style={{
-                      fontSize: `${Math.round(10 + relSize * 4)}px`,
-                      backgroundColor: hasWeight
-                        ? `color-mix(in srgb, ${cluster.category_color} ${Math.round(weightIntensity * 25 + 8)}%, transparent)`
-                        : undefined,
-                      borderWidth: "1px",
-                      borderStyle: "solid",
-                      borderColor: hasWeight ? cluster.category_color + "60" : "rgb(229 231 235 / 1)",
-                    }}
-                  >
-                    {kw.keyword}
-                    {hasWeight && (
-                      <span className="ml-1 text-[9px] font-medium tabular-nums opacity-70">
-                        ×{kw.weight.toFixed(1)}
-                      </span>
-                    )}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+  return <ClusterBubbleMap data={data} />;
 }
 
 // ── Main panel ────────────────────────────────────────────────────────────────
