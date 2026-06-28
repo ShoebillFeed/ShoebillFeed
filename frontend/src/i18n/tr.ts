@@ -45,7 +45,7 @@ const tr = {
     searchPlaceholder: "Makale ara…",
     searchResults_one: "{{count}} sonuç",
     searchResults_other: "{{count}} sonuç",
-    searchNoResults: ""{{query}}" için makale bulunamadı.",
+    searchNoResults: "\"{{query}}\" için makale bulunamadı.",
   },
   tabs: {
     newest: "En yeni",

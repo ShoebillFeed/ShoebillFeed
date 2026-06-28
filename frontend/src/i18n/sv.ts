@@ -45,7 +45,7 @@ const sv = {
     searchPlaceholder: "Sök artiklar…",
     searchResults_one: "{{count}} resultat",
     searchResults_other: "{{count}} resultat",
-    searchNoResults: "Inga artiklar hittades för "{{query}}".",
+    searchNoResults: "Inga artiklar hittades för \"{{query}}\".",
   },
   tabs: {
     newest: "Senaste",

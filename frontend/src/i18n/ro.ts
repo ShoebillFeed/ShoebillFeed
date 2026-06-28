@@ -45,7 +45,7 @@ const ro = {
     searchPlaceholder: "Caută articole…",
     searchResults_one: "{{count}} rezultat",
     searchResults_other: "{{count}} rezultate",
-    searchNoResults: "Niciun articol găsit pentru „{{query}}".",
+    searchNoResults: "Niciun articol găsit pentru „{{query}}”.",
   },
   tabs: {
     newest: "Cele mai noi",

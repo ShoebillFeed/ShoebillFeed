@@ -45,7 +45,7 @@ const cs = {
     searchPlaceholder: "Hledat články…",
     searchResults_one: "{{count}} výsledek",
     searchResults_other: "{{count}} výsledků",
-    searchNoResults: "Žádné články nenalezeny pro „{{query}}".",
+    searchNoResults: "Žádné články nenalezeny pro „{{query}}”.",
   },
   tabs: {
     newest: "Nejnovější",

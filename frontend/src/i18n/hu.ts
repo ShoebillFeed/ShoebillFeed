@@ -45,7 +45,7 @@ const hu = {
     searchPlaceholder: "Cikkek keresése…",
     searchResults_one: "{{count}} találat",
     searchResults_other: "{{count}} találat",
-    searchNoResults: "Nem található cikk a következőre: „{{query}}".",
+    searchNoResults: "Nem található cikk a következőre: „{{query}}”.",
   },
   tabs: {
     newest: "Legújabb",

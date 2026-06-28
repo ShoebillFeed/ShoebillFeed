@@ -44,7 +44,7 @@ const pl = {
     searchResults_one: "{{count}} wynik",
     searchResults_few: "{{count}} wyniki",
     searchResults_other: "{{count}} wyników",
-    searchNoResults: "Nie znaleziono artykułów dla „{{query}}".",
+    searchNoResults: "Nie znaleziono artykułów dla „{{query}}”.",
     sourcesCount_one: "{{count}} źródło",
     sourcesCount_other: "{{count}} źródła",
   },

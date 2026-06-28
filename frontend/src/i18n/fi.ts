@@ -45,7 +45,7 @@ const fi = {
     searchPlaceholder: "Hae artikkeleita…",
     searchResults_one: "{{count}} tulos",
     searchResults_other: "{{count}} tulosta",
-    searchNoResults: "Artikkeleita ei löytynyt haulle "{{query}}".",
+    searchNoResults: "Artikkeleita ei löytynyt haulle \"{{query}}\".",
   },
   tabs: {
     newest: "Uusimmat",

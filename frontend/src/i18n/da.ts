@@ -45,7 +45,7 @@ const da = {
     searchPlaceholder: "Søg i artikler…",
     searchResults_one: "{{count}} resultat",
     searchResults_other: "{{count}} resultater",
-    searchNoResults: "Ingen artikler fundet for "{{query}}".",
+    searchNoResults: "Ingen artikler fundet for \"{{query}}\".",
   },
   tabs: {
     newest: "Nyeste",

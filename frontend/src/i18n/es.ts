@@ -45,7 +45,7 @@ const es = {
     searchPlaceholder: "Buscar artículos…",
     searchResults_one: "{{count}} resultado",
     searchResults_other: "{{count}} resultados",
-    searchNoResults: "No se encontraron artículos para "{{query}}".",
+    searchNoResults: "No se encontraron artículos para \"{{query}}\".",
   },
   tabs: {
     newest: "Más recientes",

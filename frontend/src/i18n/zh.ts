@@ -45,7 +45,7 @@ const zh = {
     searchPlaceholder: "搜索文章…",
     searchResults_one: "{{count}} 条结果",
     searchResults_other: "{{count}} 条结果",
-    searchNoResults: "未找到与"{{query}}"相关的文章。",
+    searchNoResults: "未找到与\"{{query}}\"相关的文章。",
   },
   tabs: {
     newest: "最新",
