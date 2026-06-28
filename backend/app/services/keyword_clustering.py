@@ -5,12 +5,14 @@ For each active category per user with enough starred articles, we:
 1. Fetch starred article embeddings + keywords
 2. Greedy union-find clustering via pure-Python cosine distance (no sklearn needed)
 3. Compute TF-IDF per cluster to find representative keywords
-4. Write to keyword_clusters table — used at feed ranking time for synonym expansion
+4. Ask the LLM to give each cluster a short human-readable label
+5. Write to keyword_clusters table — used at feed ranking time for synonym expansion
 
 The cluster weight for an unknown keyword is the max CategoryKeywordWeight of any
 keyword in the same cluster, so synonyms the user never explicitly starred still
 benefit from related articles they did star.
 """
+import json
 import logging
 import math
 import uuid
@@ -31,6 +33,16 @@ logger = logging.getLogger(__name__)
 MIN_STARRED = 5        # minimum starred articles needed to attempt clustering
 CLUSTER_DISTANCE = 0.3  # cosine distance threshold for two articles to be in the same cluster
 TOP_KEYWORDS_PER_CLUSTER = 20
+
+CLUSTER_NAMING_PROMPT = """Name the keyword clusters below. Each cluster was discovered from a user's liked news articles in the "{category}" category.
+
+For each cluster, return a short (2-5 word) human-readable English label that captures its specific topic. Be concrete and specific — prefer "EU AI Act compliance" over "AI regulation".
+
+Clusters (index → top keywords):
+{clusters_json}
+
+Return ONLY a JSON object mapping cluster index (as a string) to its label.
+Example: {{"0": "EU AI Act compliance", "1": "battery supply chain"}}"""
 
 
 def _cosine_distance(a: list[float], b: list[float]) -> float:
@@ -115,10 +127,48 @@ def _tfidf_keywords(
     return result
 
 
+def _generate_cluster_labels(
+    category_name: str,
+    top_kws: dict[int, list[tuple[str, float]]],
+    llm_provider,
+) -> dict[int, str]:
+    """Call the LLM to produce a human-readable label for each cluster. Falls back to top keyword."""
+    clusters_json = {
+        str(ci): [kw for kw, _ in keywords[:8]]
+        for ci, keywords in top_kws.items()
+        if keywords
+    }
+    if not clusters_json:
+        return {}
+
+    prompt = CLUSTER_NAMING_PROMPT.format(
+        category=category_name,
+        clusters_json=json.dumps(clusters_json, ensure_ascii=False),
+    )
+    try:
+        text = llm_provider._complete(
+            system="You are a precise text labeller. Respond only with valid JSON.",
+            user=prompt,
+            max_tokens=512,
+        )
+        text = text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        data = json.loads(text)
+        return {int(k): str(v).strip() for k, v in data.items() if str(v).strip()}
+    except Exception:
+        logger.exception("LLM cluster naming failed for category %r", category_name)
+        return {}
+
+
 def refresh_clusters_for_category(
     db: Session,
     user_id: uuid.UUID,
     category_id: uuid.UUID,
+    category_name: str = "",
+    llm_provider=None,
 ) -> int:
     """Recompute keyword clusters for one category. Returns number of clusters found."""
     starred = db.execute(
@@ -146,6 +196,11 @@ def refresh_clusters_for_category(
     n_clusters = max(labels) + 1 if labels else 0
     top_kws = _tfidf_keywords(labels, all_kws, n_clusters)
 
+    # Generate human-readable labels via LLM
+    llm_labels: dict[int, str] = {}
+    if llm_provider is not None and category_name:
+        llm_labels = _generate_cluster_labels(category_name, top_kws, llm_provider)
+
     # Replace existing clusters for this category
     db.execute(
         delete(KeywordCluster).where(
@@ -161,12 +216,15 @@ def refresh_clusters_for_category(
     rows = []
     for ci, keywords in top_kws.items():
         size = cluster_sizes.get(ci, 0)
+        # LLM label if available, else fall back to top TF-IDF keyword
+        label = llm_labels.get(ci) or (keywords[0][0] if keywords else "")
         for kw, score in keywords:
             rows.append(KeywordCluster(
                 id=uuid.uuid4(),
                 user_id=user_id,
                 category_id=category_id,
                 cluster_index=ci,
+                cluster_label=label,
                 keyword=kw,
                 score=score,
                 cluster_size=size,
@@ -179,6 +237,13 @@ def refresh_clusters_for_category(
 
 def refresh_clusters_for_user(db: Session, user_id: uuid.UUID) -> None:
     """Recompute keyword clusters for all active categories of a user."""
+    from app.services.llm.factory import get_llm_provider
+    try:
+        llm_provider = get_llm_provider()
+    except Exception:
+        logger.warning("Could not load LLM provider for cluster naming — labels will use top keyword")
+        llm_provider = None
+
     categories = db.scalars(
         select(Category).where(Category.user_id == user_id, Category.is_active == True)  # noqa: E712
     ).all()
@@ -186,17 +251,21 @@ def refresh_clusters_for_user(db: Session, user_id: uuid.UUID) -> None:
     total_clusters = 0
     for cat in categories:
         try:
-            n = refresh_clusters_for_category(db, user_id, cat.id)
+            n = refresh_clusters_for_category(
+                db, user_id, cat.id,
+                category_name=cat.name,
+                llm_provider=llm_provider,
+            )
             total_clusters += n
         except Exception:
             logger.exception("Cluster refresh failed for category %s", cat.id)
 
     # Write weight snapshots for all current clusters so score-over-time charts have data.
-    # The cluster_label (top keyword) is used as the stable identity across daily runs.
     for cat in categories:
         clusters_for_cat = db.execute(
             select(
                 KeywordCluster.cluster_index,
+                KeywordCluster.cluster_label,
                 KeywordCluster.keyword,
                 KeywordCluster.score,
                 KeywordCluster.cluster_size,
@@ -208,23 +277,23 @@ def refresh_clusters_for_user(db: Session, user_id: uuid.UUID) -> None:
         if not clusters_for_cat:
             continue
 
-        # For each cluster, pick the top keyword as the label and the max keyword weight as the score
-        seen_clusters: dict[int, str] = {}  # cluster_index → label
+        # For each cluster, use its stored label; collect all keywords
+        seen_clusters: dict[int, str] = {}
         cluster_sizes: dict[int, int] = {}
+        cluster_keywords: dict[int, list[str]] = defaultdict(list)
         for row in clusters_for_cat:
             if row.cluster_index not in seen_clusters:
-                seen_clusters[row.cluster_index] = row.keyword
+                seen_clusters[row.cluster_index] = row.cluster_label or row.keyword
                 cluster_sizes[row.cluster_index] = row.cluster_size
+            cluster_keywords[row.cluster_index].append(row.keyword)
 
         for ci, label in seen_clusters.items():
-            # Find max CategoryKeywordWeight for any keyword in this cluster
-            kws_in_cluster = [r.keyword for r in clusters_for_cat if r.cluster_index == ci]
             weights = db.execute(
                 select(CategoryKeywordWeight.weight)
                 .where(
                     CategoryKeywordWeight.user_id == user_id,
                     CategoryKeywordWeight.category_id == cat.id,
-                    CategoryKeywordWeight.keyword.in_(kws_in_cluster),
+                    CategoryKeywordWeight.keyword.in_(cluster_keywords[ci]),
                 )
             ).scalars().all()
             max_weight = max(weights, default=1.0)

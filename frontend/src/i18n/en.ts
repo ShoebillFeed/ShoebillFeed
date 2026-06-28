@@ -273,7 +273,7 @@ const en = {
     noClusterHistory: "No keyword cluster data yet.",
     clusterHistoryHint: "Like articles and wait for the nightly cluster refresh.",
     kwClusterMapTitle: "Keyword cluster map",
-    kwClusterMapDesc: "The 10 biggest keyword clusters discovered from your liked articles. Each card is a semantic topic — keyword size shows TF-IDF relevance within the cluster, and the ×weight badge shows how much you've liked articles with that keyword.",
+    kwClusterMapDesc: "Up to 35 keyword clusters discovered from your liked articles, named by AI. Each bubble is a semantic topic — click to explore its keywords and learned weights.",
     noClusterMap: "No keyword clusters yet.",
     clusterMapHint: "Like at least 5 articles in a category to generate clusters.",
     refreshClusters: "Refresh clusters",

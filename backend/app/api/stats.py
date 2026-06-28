@@ -223,6 +223,7 @@ def keyword_cluster_history(
         select(
             KeywordCluster.category_id,
             KeywordCluster.cluster_index,
+            KeywordCluster.cluster_label,
             KeywordCluster.keyword,
             KeywordCluster.cluster_size,
         )
@@ -230,14 +231,14 @@ def keyword_cluster_history(
         .order_by(KeywordCluster.category_id, KeywordCluster.cluster_index, KeywordCluster.score.desc())
     ).all()
 
-    # Group: top keyword per cluster = label; collect all keywords per cluster
+    # Group: use stored cluster_label (LLM-generated); fall back to top keyword
     cluster_labels: dict[tuple, str] = {}
     cluster_keywords: dict[tuple, list[str]] = {}
     cluster_sizes: dict[tuple, int] = {}
     for row in cluster_rows:
         key = (row.category_id, row.cluster_index)
         if key not in cluster_labels:
-            cluster_labels[key] = row.keyword
+            cluster_labels[key] = row.cluster_label or row.keyword
             cluster_sizes[key] = row.cluster_size
             cluster_keywords[key] = []
         cluster_keywords[key].append(row.keyword)
@@ -298,7 +299,7 @@ def keyword_cluster_map(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Top 10 keyword clusters by size with their top keywords and weights."""
+    """Top 35 keyword clusters by size with their top keywords and weights."""
     categories = db.scalars(
         select(Category).where(Category.user_id == current_user.id)
     ).all()
@@ -308,6 +309,7 @@ def keyword_cluster_map(
         select(
             KeywordCluster.category_id,
             KeywordCluster.cluster_index,
+            KeywordCluster.cluster_label,
             KeywordCluster.keyword,
             KeywordCluster.score,
             KeywordCluster.cluster_size,
@@ -332,6 +334,7 @@ def keyword_cluster_map(
                 "category_name": cat_map.get(row.category_id, {}).get("name", ""),
                 "category_color": cat_map.get(row.category_id, {}).get("color", "#6366f1"),
                 "cluster_size": row.cluster_size,
+                "cluster_label": row.cluster_label or "",
                 "keywords": [],
             }
             cluster_order.append(key)
@@ -341,12 +344,14 @@ def keyword_cluster_map(
             "weight": round(ckw_map.get((row.category_id, row.keyword), 1.0), 4),
         })
 
-    sorted_clusters = sorted(cluster_order, key=lambda k: clusters[k]["cluster_size"], reverse=True)[:10]
+    sorted_clusters = sorted(cluster_order, key=lambda k: clusters[k]["cluster_size"], reverse=True)[:35]
 
     result = []
     for key in sorted_clusters:
         c = clusters[key]
-        c["cluster_label"] = c["keywords"][0]["keyword"] if c["keywords"] else ""
+        # Fall back to top TF-IDF keyword if LLM label is absent
+        if not c["cluster_label"] and c["keywords"]:
+            c["cluster_label"] = c["keywords"][0]["keyword"]
         result.append(c)
 
     return result

@@ -17,6 +17,7 @@ class KeywordCluster(Base):
         UUID(as_uuid=True), ForeignKey("categories.id", ondelete="CASCADE"), nullable=False
     )
     cluster_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    cluster_label: Mapped[str] = mapped_column(String(300), nullable=False, server_default="")
     keyword: Mapped[str] = mapped_column(String(200), nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False)
     cluster_size: Mapped[int] = mapped_column(Integer, nullable=False)
