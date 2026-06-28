@@ -116,15 +116,18 @@ async def list_tools() -> list[types.Tool]:
         types.Tool(
             name="get_feed",
             description=(
-                "Get news items from the feed. Returns the most recent articles, "
-                "optionally filtered by tab or read status."
+                "Get news items from the feed. Returns articles ordered by the selected sort mode, "
+                "optionally filtered by read status, categories, or sources."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "tab": {
                         "type": "string",
-                        "description": "Feed tab: 'newest', 'relevant', or 'impact'. Defaults to 'newest'.",
+                        "description": (
+                            "Sort/filter mode: 'newest' (by date), 'relevant' (by personalised score), "
+                            "'impact' (by impact score), or 'read_later' (bookmarked items). Defaults to 'newest'."
+                        ),
                     },
                     "page_size": {
                         "type": "integer",
@@ -134,19 +137,54 @@ async def list_tools() -> list[types.Tool]:
                         "type": "boolean",
                         "description": "If true, return only unread articles.",
                     },
+                    "category_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter by category UUIDs (use list_categories to discover IDs).",
+                    },
+                    "source_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter by source UUIDs (use list_sources to discover IDs).",
+                    },
                 },
             },
         ),
         types.Tool(
             name="search_news",
-            description="Search news articles by keyword across title, abstract, and content.",
+            description=(
+                "Search news articles by keyword across title, abstract, and content. "
+                "Supports the same sort modes and filters as the main feed."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "query": {"type": "string", "description": "Search query."},
+                    "sort": {
+                        "type": "string",
+                        "description": "Sort order: 'newest' (default), 'relevant', or 'impact'.",
+                    },
+                    "category_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter results to these category UUIDs (use list_categories to discover IDs).",
+                    },
+                    "source_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter results to these source UUIDs (use list_sources to discover IDs).",
+                    },
+                    "unread_only": {
+                        "type": "boolean",
+                        "description": "If true, return only unread articles.",
+                    },
+                    "bookmarked_only": {
+                        "type": "boolean",
+                        "description": "If true, return only bookmarked (Read Later) articles.",
+                    },
                     "page_size": {
                         "type": "integer",
-                        "description": "Number of results (1–50, default 20).",
+                        "description": "Number of results (1–50, default 50).",
                     },
                 },
                 "required": ["query"],
@@ -281,9 +319,15 @@ def _handle(name: str, args: dict) -> str:
     if name == "get_feed":
         tab = args.get("tab", "newest")
         page_size = min(int(args.get("page_size", 20)), 50)
-        params: dict = {"tab": tab, "page_size": page_size}
+        params: dict = {"tab": tab if tab != "read_later" else "newest", "page_size": page_size}
         if args.get("unread_only"):
             params["is_read"] = False
+        if tab == "read_later":
+            params["read_later"] = True
+        if args.get("category_ids"):
+            params["category_ids"] = args["category_ids"]
+        if args.get("source_ids"):
+            params["source_ids"] = args["source_ids"]
         data = _get("/news", params)
         items = data.get("items", [])
         if not items:
@@ -292,8 +336,17 @@ def _handle(name: str, args: dict) -> str:
 
     if name == "search_news":
         query = args["query"]
-        page_size = min(int(args.get("page_size", 20)), 50)
-        items = _get("/news/search", {"q": query, "page_size": page_size})
+        page_size = min(int(args.get("page_size", 50)), 50)
+        params = {"q": query, "page_size": page_size, "sort": args.get("sort", "newest")}
+        if args.get("unread_only"):
+            params["is_read"] = False
+        if args.get("bookmarked_only"):
+            params["read_later"] = True
+        if args.get("category_ids"):
+            params["category_ids"] = args["category_ids"]
+        if args.get("source_ids"):
+            params["source_ids"] = args["source_ids"]
+        items = _get("/news/search", params)
         if not items:
             return f"No results for '{query}'."
         return f"Results for '{query}':\n\n" + "\n\n---\n\n".join(_fmt_item(i) for i in items)
@@ -370,7 +423,7 @@ def _handle(name: str, args: dict) -> str:
         lines = []
         for s in sources:
             active = "✓" if s.get("is_active") else "✗"
-            lines.append(f"{active} {s['name']} ({s.get('source_type', 'unknown')})")
+            lines.append(f"{active} {s['name']} ({s.get('source_type', 'unknown')}) — id:{s['id']}")
         return "\n".join(lines)
 
     if name == "list_categories":
@@ -380,7 +433,7 @@ def _handle(name: str, args: dict) -> str:
         lines = []
         for c in cats:
             active = "✓" if c.get("is_active") else "✗"
-            lines.append(f"{active} {c['name']}")
+            lines.append(f"{active} {c['name']} — id:{c['id']}")
         return "\n".join(lines)
 
     if name == "trigger_fetch":

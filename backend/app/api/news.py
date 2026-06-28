@@ -362,13 +362,18 @@ def _get_item(item_id: uuid.UUID, db: Session, user_id: uuid.UUID) -> NewsItem:
 @router.get("/search", response_model=list[NewsItemOut])
 def search_news(
     q: str = Query(..., min_length=1),
-    page_size: int = Query(20, ge=1, le=50),
+    sort: Literal["newest", "relevant", "impact"] = Query("newest"),
+    category_ids: list[uuid.UUID] = Query(default=[]),
+    source_ids: list[uuid.UUID] = Query(default=[]),
+    is_read: bool | None = Query(default=None),
+    read_later: bool | None = Query(default=None),
+    page_size: int = Query(50, ge=1, le=50),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy import or_
     pattern = f"%{q}%"
-    items = db.scalars(
+    stmt = (
         select(NewsItem)
         .where(
             NewsItem.user_id == current_user.id,
@@ -379,10 +384,29 @@ def search_news(
             ),
         )
         .options(selectinload(NewsItem.categories), selectinload(NewsItem.source))
-        .order_by(NewsItem.fetched_at.desc())
-        .limit(page_size)
-    ).all()
-    return items
+    )
+    if category_ids:
+        stmt = stmt.where(
+            select(news_item_categories.c.news_item_id)
+            .where(
+                news_item_categories.c.news_item_id == NewsItem.id,
+                news_item_categories.c.category_id.in_(category_ids),
+            )
+            .exists()
+        )
+    if source_ids:
+        stmt = stmt.where(NewsItem.source_id.in_(source_ids))
+    if is_read is not None:
+        stmt = stmt.where(NewsItem.is_read == is_read)
+    if read_later is not None:
+        stmt = stmt.where(NewsItem.read_later == read_later)
+    if sort == "relevant":
+        stmt = stmt.order_by(NewsItem.relevance_score.desc().nulls_last(), NewsItem.fetched_at.desc())
+    elif sort == "impact":
+        stmt = stmt.order_by(NewsItem.impact_score.desc().nulls_last(), NewsItem.fetched_at.desc())
+    else:
+        stmt = stmt.order_by(NewsItem.fetched_at.desc())
+    return db.scalars(stmt.limit(page_size)).all()
 
 
 @router.get("/{item_id}", response_model=NewsItemOut)

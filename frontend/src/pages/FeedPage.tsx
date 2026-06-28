@@ -61,7 +61,13 @@ export default function FeedPage() {
     uncategorized: !activeCustomTab && showUncategorizedOnly ? true : undefined,
   });
 
-  const { data: searchResults, isLoading: isSearchLoading } = useSearchNews(searchQuery);
+  const { data: searchResults, isLoading: isSearchLoading } = useSearchNews(searchQuery, {
+    sort: effectiveTab,
+    category_ids: effectiveCategoryIds.length ? effectiveCategoryIds : undefined,
+    source_ids: effectiveSourceIds.length ? effectiveSourceIds : undefined,
+    is_read: effectiveIsRead,
+    read_later: effectiveReadLater,
+  });
 
   const items = useMemo<FeedEntry[]>(
     () => data?.pages.flatMap((p) => p.items) ?? [],
@@ -111,7 +117,7 @@ export default function FeedPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {!activeCustomTab && !isSearching && (
+          {!activeCustomTab && (
             <>
               <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
                 <input
@@ -151,7 +157,21 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* Search mode */}
+      <FeedTabs
+        active={activeTab}
+        activeCustomTabId={activeCustomTabId}
+        onChange={setTab}
+        onCustomTabChange={setCustomTab}
+      />
+
+      {!activeCustomTab && (
+        <>
+          <CategoryFilter />
+          <SourceFilter />
+        </>
+      )}
+
+      {/* Search results */}
       {isSearching ? (
         <div>
           {isSearchLoading ? (
@@ -177,20 +197,6 @@ export default function FeedPage() {
         </div>
       ) : (
         <>
-          <FeedTabs
-            active={activeTab}
-            activeCustomTabId={activeCustomTabId}
-            onChange={setTab}
-            onCustomTabChange={setCustomTab}
-          />
-
-          {!activeCustomTab && (
-            <>
-              <CategoryFilter />
-              <SourceFilter />
-            </>
-          )}
-
           {activeCustomTab && (
             <div className="flex flex-wrap gap-1.5 mb-3 text-xs text-gray-400 dark:text-gray-500">
               {activeCustomTab.category_ids.length === 0 && activeCustomTab.source_ids.length === 0 && !activeCustomTab.unread_only && (

@@ -2,7 +2,7 @@ import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tansta
 import type { InfiniteData, QueryKey } from "@tanstack/react-query";
 import { newsApi } from "../api/news";
 import { clustersApi } from "../api/clusters";
-import type { ApiTab } from "../api/news";
+import type { ApiTab, SearchParams } from "../api/news";
 import type { FeedEntry, NewsPage } from "../types/news";
 
 type SnapCtx = { snapshots: [QueryKey, InfiniteData<NewsPage> | undefined][] };
@@ -245,10 +245,10 @@ export function useMarkShown() {
   return useMutation({ mutationFn: newsApi.markShown });
 }
 
-export function useSearchNews(query: string) {
+export function useSearchNews(query: string, params?: SearchParams) {
   return useQuery({
-    queryKey: ["news", "search", query],
-    queryFn: () => newsApi.search(query),
+    queryKey: ["news", "search", query, params],
+    queryFn: () => newsApi.search(query, params),
     enabled: query.trim().length > 0,
     staleTime: 30_000,
   });
