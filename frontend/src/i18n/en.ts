@@ -228,6 +228,7 @@ const en = {
     generatingText: "Asking the LLM to analyse this category…",
     generationFailed: "LLM generation failed — using template instead.",
     promptHint: "The LLM first reasons about what topics belong here, then writes the prompt. You can edit it freely.",
+    taxonomyLocked: "Fixed by IPTC taxonomy — not editable.",
     addCategory: "Add Category",
   },
   llm: {

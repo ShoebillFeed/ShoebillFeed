@@ -35,10 +35,12 @@ interface Props {
   defaultKeywords?: string[];
   /** Pre-fill prompt from a taxonomy node (create mode only) */
   defaultPrompt?: string;
+  /** When true, keywords and prompt fields are read-only */
+  isTaxonomy?: boolean;
   onClose: () => void;
 }
 
-export default function CategoryForm({ category, taxonomyName, taxonomyId, defaultColor, defaultKeywords, defaultPrompt, onClose }: Props) {
+export default function CategoryForm({ category, taxonomyName, taxonomyId, defaultColor, defaultKeywords, defaultPrompt, isTaxonomy, onClose }: Props) {
   const { t } = useTranslation();
   const isEdit = Boolean(category);
   const create = useCreateCategory();
@@ -159,57 +161,66 @@ export default function CategoryForm({ category, taxonomyName, taxonomyId, defau
       <div>
         <label className="block text-sm font-medium mb-1">{t("categoryForm.keywords")}</label>
         <input
-          className={inputClass}
+          className={cn(inputClass, isTaxonomy && "opacity-50 cursor-not-allowed")}
           value={keywords}
-          onChange={(e) => setKeywords(e.target.value)}
+          onChange={(e) => !isTaxonomy && setKeywords(e.target.value)}
+          readOnly={isTaxonomy}
           placeholder={t("categoryForm.keywordsPlaceholder")}
         />
-        <p className="text-xs text-gray-400 mt-1">{t("categoryForm.keywordsHint")}</p>
+        {isTaxonomy ? (
+          <p className="text-xs text-gray-400 mt-1">{t("categoryForm.taxonomyLocked")}</p>
+        ) : (
+          <p className="text-xs text-gray-400 mt-1">{t("categoryForm.keywordsHint")}</p>
+        )}
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="block text-sm font-medium">{t("categoryForm.prompt")}</label>
-          <button
-            type="button"
-            onClick={regeneratePrompt}
-            disabled={generating || !name.trim()}
-            className={cn(
-              "flex items-center gap-1 text-xs transition-colors",
-              generating || !name.trim()
-                ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
-                : "text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300"
-            )}
-            title={t("categoryForm.generateWithLLM")}
-          >
-            <RefreshCw size={12} className={generating ? "animate-spin" : ""} />
-            {generating ? t("categoryForm.generating") : t("categoryForm.regenerate")}
-          </button>
+          {!isTaxonomy && (
+            <button
+              type="button"
+              onClick={regeneratePrompt}
+              disabled={generating || !name.trim()}
+              className={cn(
+                "flex items-center gap-1 text-xs transition-colors",
+                generating || !name.trim()
+                  ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                  : "text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300"
+              )}
+              title={t("categoryForm.generateWithLLM")}
+            >
+              <RefreshCw size={12} className={generating ? "animate-spin" : ""} />
+              {generating ? t("categoryForm.generating") : t("categoryForm.regenerate")}
+            </button>
+          )}
         </div>
         <textarea
-          className={cn(inputClass, "resize-none", generating && "opacity-50")}
+          className={cn(inputClass, "resize-none", (generating || isTaxonomy) && "opacity-50", isTaxonomy && "cursor-not-allowed")}
           rows={3}
           maxLength={PROMPT_MAX_CHARS}
           value={generating ? t("categoryForm.generatingText") : prompt}
-          onChange={(e) => handlePromptChange(e.target.value)}
-          readOnly={generating}
+          onChange={(e) => !isTaxonomy && handlePromptChange(e.target.value)}
+          readOnly={generating || isTaxonomy}
           placeholder={t("categoryForm.promptPlaceholder")}
         />
-        <div className="flex items-center justify-between mt-1">
-          <p className="text-xs text-gray-400">{t("categoryForm.promptHint")}</p>
-          {!generating && (
-            <span className={cn(
-              "text-xs tabular-nums shrink-0 ml-2",
-              prompt.length >= PROMPT_MAX_CHARS
-                ? "text-red-500"
-                : prompt.length >= PROMPT_MAX_CHARS * 0.9
-                ? "text-amber-500"
-                : "text-gray-400"
-            )}>
-              {prompt.length}/{PROMPT_MAX_CHARS}
-            </span>
-          )}
-        </div>
+        {!isTaxonomy && (
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-xs text-gray-400">{t("categoryForm.promptHint")}</p>
+            {!generating && (
+              <span className={cn(
+                "text-xs tabular-nums shrink-0 ml-2",
+                prompt.length >= PROMPT_MAX_CHARS
+                  ? "text-red-500"
+                  : prompt.length >= PROMPT_MAX_CHARS * 0.9
+                  ? "text-amber-500"
+                  : "text-gray-400"
+              )}>
+                {prompt.length}/{PROMPT_MAX_CHARS}
+              </span>
+            )}
+          </div>
+        )}
         {generateError && (
           <p className="text-xs text-amber-500 mt-1">{generateError}</p>
         )}
