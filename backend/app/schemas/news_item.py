@@ -39,6 +39,7 @@ class NewsItemOut(BaseModel):
     read_later: bool
     published_at: datetime | None
     fetched_at: datetime
+    last_shown_at: datetime | None = None
     source: SourceSummary | None = None
     categories: list[CategorySummary] = []
 

@@ -18,6 +18,9 @@ export const newsApi = {
   list: (params: NewsParams) =>
     client.get<NewsPage>("/news", { params }).then((r) => r.data),
 
+  search: (q: string, page_size = 50) =>
+    client.get<import("../types/news").NewsItem[]>("/news/search", { params: { q, page_size } }).then((r) => r.data),
+
   toggleRead: (id: string) =>
     client.patch(`/news/${id}/read`).then((r) => r.data),
 

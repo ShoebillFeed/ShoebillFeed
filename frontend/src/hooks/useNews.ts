@@ -244,3 +244,12 @@ export function useDeleteCluster() {
 export function useMarkShown() {
   return useMutation({ mutationFn: newsApi.markShown });
 }
+
+export function useSearchNews(query: string) {
+  return useQuery({
+    queryKey: ["news", "search", query],
+    queryFn: () => newsApi.search(query),
+    enabled: query.trim().length > 0,
+    staleTime: 30_000,
+  });
+}

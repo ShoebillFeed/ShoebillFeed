@@ -1,17 +1,28 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useFilterStore } from "../stores/filterStore";
-import { useInfiniteNews, useMarkAllRead } from "../hooks/useNews";
+import { useInfiniteNews, useMarkAllRead, useSearchNews } from "../hooks/useNews";
 import { useUserTabs } from "../hooks/useTabs";
 import FeedTabs from "../components/feed/FeedTabs";
 import CategoryFilter from "../components/feed/CategoryFilter";
 import SourceFilter from "../components/feed/SourceFilter";
 import NewsFeed from "../components/feed/NewsFeed";
-import { CheckCheck, RefreshCw } from "lucide-react";
+import NewsCard from "../components/feed/NewsCard";
+import NewsCardSkeleton from "../components/feed/NewsCardSkeleton";
+import { CheckCheck, RefreshCw, Search, X } from "lucide-react";
 import { sourcesApi } from "../api/sources";
 import { useQueryClient } from "@tanstack/react-query";
 import type { FeedEntry } from "../types/news";
 import type { ApiTab } from "../api/news";
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return debounced;
+}
 
 export default function FeedPage() {
   const { t } = useTranslation();
@@ -26,11 +37,15 @@ export default function FeedPage() {
   const markAllRead = useMarkAllRead();
   const { data: customTabs } = useUserTabs();
 
+  const [searchInput, setSearchInput] = useState("");
+  const searchQuery = useDebounce(searchInput, 300);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const isSearching = searchQuery.trim().length > 0;
+
   const activeCustomTab = activeCustomTabId
     ? customTabs?.find((t) => t.id === activeCustomTabId) ?? null
     : null;
 
-  // When a custom tab is active, its config overrides the manual filters.
   const effectiveTab = (activeCustomTab?.sort ?? (activeTab === "read_later" ? "newest" : activeTab)) as ApiTab;
   const effectiveCategoryIds = activeCustomTab ? activeCustomTab.category_ids : selectedCategoryIds;
   const effectiveSourceIds = activeCustomTab ? activeCustomTab.source_ids : selectedSourceIds;
@@ -45,6 +60,8 @@ export default function FeedPage() {
     read_later: effectiveReadLater,
     uncategorized: !activeCustomTab && showUncategorizedOnly ? true : undefined,
   });
+
+  const { data: searchResults, isLoading: isSearchLoading } = useSearchNews(searchQuery);
 
   const items = useMemo<FeedEntry[]>(
     () => data?.pages.flatMap((p) => p.items) ?? [],
@@ -68,10 +85,33 @@ export default function FeedPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t("feed.title")}</h1>
-        <div className="flex items-center gap-2">
-          {!activeCustomTab && (
+      <div className="flex items-center justify-between mb-3 gap-3">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 shrink-0">{t("feed.title")}</h1>
+
+        {/* Search bar */}
+        <div className="relative flex-1 max-w-xs">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+            ref={searchRef}
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t("feed.searchPlaceholder")}
+            className="w-full pl-8 pr-7 py-1.5 text-sm rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => setSearchInput("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {!activeCustomTab && !isSearching && (
             <>
               <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
                 <input
@@ -111,51 +151,77 @@ export default function FeedPage() {
         </div>
       </div>
 
-      <FeedTabs
-        active={activeTab}
-        activeCustomTabId={activeCustomTabId}
-        onChange={setTab}
-        onCustomTabChange={setCustomTab}
-      />
-
-      {/* Category/source filters only for built-in tabs */}
-      {!activeCustomTab && (
+      {/* Search mode */}
+      {isSearching ? (
+        <div>
+          {isSearchLoading ? (
+            <div className="flex flex-col gap-4">
+              {Array.from({ length: 5 }).map((_, i) => <NewsCardSkeleton key={i} />)}
+            </div>
+          ) : searchResults && searchResults.length > 0 ? (
+            <>
+              <p className="text-xs text-gray-400 mb-3">
+                {t("feed.searchResults", { count: searchResults.length })}
+              </p>
+              <div className="flex flex-col gap-4">
+                {searchResults.map((item) => (
+                  <NewsCard key={item.id} item={item} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-gray-400 mt-8 text-center">
+              {t("feed.searchNoResults", { query: searchQuery })}
+            </p>
+          )}
+        </div>
+      ) : (
         <>
-          <CategoryFilter />
-          <SourceFilter />
+          <FeedTabs
+            active={activeTab}
+            activeCustomTabId={activeCustomTabId}
+            onChange={setTab}
+            onCustomTabChange={setCustomTab}
+          />
+
+          {!activeCustomTab && (
+            <>
+              <CategoryFilter />
+              <SourceFilter />
+            </>
+          )}
+
+          {activeCustomTab && (
+            <div className="flex flex-wrap gap-1.5 mb-3 text-xs text-gray-400 dark:text-gray-500">
+              {activeCustomTab.category_ids.length === 0 && activeCustomTab.source_ids.length === 0 && !activeCustomTab.unread_only && (
+                <span>{t("feed.allArticles", { sort: activeCustomTab.sort })}</span>
+              )}
+              {activeCustomTab.category_ids.length > 0 && (
+                <span>{t("feed.categoriesCount", { count: activeCustomTab.category_ids.length })}</span>
+              )}
+              {activeCustomTab.source_ids.length > 0 && (
+                <span>{t("feed.sourcesCount", { count: activeCustomTab.source_ids.length })}</span>
+              )}
+              {activeCustomTab.unread_only && <span>{t("feed.unreadOnlyFilter")}</span>}
+            </div>
+          )}
+
+          {data && (
+            <p className="text-xs text-gray-400 mb-3">
+              {t("feed.articleCount", { loaded: items.length, total })}
+            </p>
+          )}
+
+          <NewsFeed
+            items={items}
+            isLoading={isLoading}
+            hasMore={!!hasNextPage}
+            isLoadingMore={isFetchingNextPage}
+            onLoadMore={fetchNextPage}
+            onRefresh={handleRefresh}
+          />
         </>
       )}
-
-      {/* Custom tab filter summary */}
-      {activeCustomTab && (
-        <div className="flex flex-wrap gap-1.5 mb-3 text-xs text-gray-400 dark:text-gray-500">
-          {activeCustomTab.category_ids.length === 0 && activeCustomTab.source_ids.length === 0 && !activeCustomTab.unread_only && (
-            <span>{t("feed.allArticles", { sort: activeCustomTab.sort })}</span>
-          )}
-          {activeCustomTab.category_ids.length > 0 && (
-            <span>{t("feed.categoriesCount", { count: activeCustomTab.category_ids.length })}</span>
-          )}
-          {activeCustomTab.source_ids.length > 0 && (
-            <span>{t("feed.sourcesCount", { count: activeCustomTab.source_ids.length })}</span>
-          )}
-          {activeCustomTab.unread_only && <span>{t("feed.unreadOnlyFilter")}</span>}
-        </div>
-      )}
-
-      {data && (
-        <p className="text-xs text-gray-400 mb-3">
-          {t("feed.articleCount", { loaded: items.length, total })}
-        </p>
-      )}
-
-      <NewsFeed
-        items={items}
-        isLoading={isLoading}
-        hasMore={!!hasNextPage}
-        isLoadingMore={isFetchingNextPage}
-        onLoadMore={fetchNextPage}
-        onRefresh={handleRefresh}
-      />
     </div>
   );
 }
