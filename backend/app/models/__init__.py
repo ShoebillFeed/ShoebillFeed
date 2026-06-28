@@ -13,5 +13,6 @@ from app.models.news_item import NewsItem
 from app.models.user_tab import UserTab
 from app.models.llm_batch import LLMBatch
 from app.models.push_subscription import PushSubscription
+from app.models.api_token import ApiToken
 
-__all__ = ["User", "UserSettings", "Category", "CategoryWeight", "CategoryWeightSnapshot", "KeywordWeight", "CategoryKeywordWeight", "KeywordCluster", "KeywordClusterSnapshot", "Source", "NewsCluster", "NewsItem", "UserTab", "LLMBatch", "PushSubscription"]
+__all__ = ["User", "UserSettings", "Category", "CategoryWeight", "CategoryWeightSnapshot", "KeywordWeight", "CategoryKeywordWeight", "KeywordCluster", "KeywordClusterSnapshot", "Source", "NewsCluster", "NewsItem", "UserTab", "LLMBatch", "PushSubscription", "ApiToken"]

@@ -359,6 +359,32 @@ def _get_item(item_id: uuid.UUID, db: Session, user_id: uuid.UUID) -> NewsItem:
     return item
 
 
+@router.get("/search", response_model=list[NewsItemOut])
+def search_news(
+    q: str = Query(..., min_length=1),
+    page_size: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from sqlalchemy import or_
+    pattern = f"%{q}%"
+    items = db.scalars(
+        select(NewsItem)
+        .where(
+            NewsItem.user_id == current_user.id,
+            or_(
+                NewsItem.title.ilike(pattern),
+                NewsItem.abstract.ilike(pattern),
+                NewsItem.raw_content.ilike(pattern),
+            ),
+        )
+        .options(selectinload(NewsItem.categories), selectinload(NewsItem.source))
+        .order_by(NewsItem.fetched_at.desc())
+        .limit(page_size)
+    ).all()
+    return items
+
+
 @router.get("/{item_id}", response_model=NewsItemOut)
 def get_news_item(item_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     item = db.scalar(
