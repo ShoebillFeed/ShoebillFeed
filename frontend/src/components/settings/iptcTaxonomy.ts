@@ -13,7 +13,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Arts, entertainment and media",
     color: "#ec4899",
     keywords: ["arts", "culture", "entertainment", "media", "film", "music", "television", "streaming", "fashion", "gaming", "literature"],
-    prompt: "Assign this category to articles about arts, culture, entertainment, and the media industry. Include film, music, television, visual arts, gaming, fashion, and media organizations. Use the most specific subcategory available.",
+    prompt: "Assign this category to articles about arts, culture, entertainment, and the media industry. Include film, music, television, visual arts, gaming, fashion, and media organizations. Also assign specific subcategories (01.01–01.13) as applicable.",
     children: [
       {
         id: "01.01", name: "Cinema and film",
@@ -79,7 +79,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "01.13",
         name: "Media",
         keywords: ["media", "journalism", "press", "publisher", "news industry", "media ownership", "press freedom", "newsroom", "editorial", "media company"],
-        prompt: "Assign this category to articles about the media industry as a business or institution. Include media ownership, press freedom, journalism practices, and content distribution trends. Exclude specific media content — assign to the content type instead (Film, Music, TV, etc.).",
+        prompt: "Assign this category to articles about the media industry as a business or institution. Include media ownership, press freedom, journalism practices, and content distribution trends. Also assign Broadcasting (01.13.01), Journalism and news (01.13.02), Online media and publishing (01.13.03), or Social media and influencers (01.13.04) as applicable. Exclude specific media content — assign to the content type instead (Film, Music, TV, etc.).",
         children: [
           {
             id: "01.13.01", name: "Broadcasting",
@@ -110,7 +110,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Crime, law and justice",
     color: "#ef4444",
     keywords: ["crime", "law", "court", "justice", "arrest", "trial", "verdict", "sentence", "police", "prosecution", "legal", "criminal"],
-    prompt: "Assign this category to articles about crime, the legal system, and justice. Include criminal cases, court proceedings, law enforcement, and incarceration. Use the most specific subcategory available.",
+    prompt: "Assign this category to articles about crime, the legal system, and justice. Include criminal cases, court proceedings, law enforcement, and incarceration. Also assign specific subcategories (02.01–02.05) as applicable.",
     children: [
       {
         id: "02.01", name: "Courts and judiciary",
@@ -121,7 +121,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "02.02",
         name: "Crime",
         keywords: ["crime", "criminal", "offender", "victim", "investigation", "murder", "robbery", "theft", "assault", "perpetrator"],
-        prompt: "Assign this category to articles about criminal activity, investigations, and criminal networks. Exclude court proceedings (use Courts and judiciary) and law enforcement as an institution (use Law enforcement and policing).",
+        prompt: "Assign this category to articles about criminal activity, investigations, and criminal networks. Also assign Cybercrime (02.02.01), Drug trafficking (02.02.02), Financial crime (02.02.03), Organized crime (02.02.04), Terrorism (02.02.05), or Violent crime (02.02.06) as applicable. Exclude court proceedings (use Courts and judiciary) and law enforcement as an institution (use Law enforcement and policing).",
         children: [
           {
             id: "02.02.01", name: "Cybercrime and hacking",
@@ -177,7 +177,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Disaster, accident and emergency",
     color: "#f97316",
     keywords: ["disaster", "accident", "emergency", "casualties", "rescue", "evacuation", "fatalities", "relief", "crisis", "damage"],
-    prompt: "Assign this category to articles about disasters, accidents, and emergencies. Include natural disasters, industrial accidents, transport crashes, and emergency response. Use the most specific subcategory available.",
+    prompt: "Assign this category to articles about disasters, accidents, and emergencies. Include natural disasters, industrial accidents, transport crashes, and emergency response. Also assign specific subcategories (03.01–03.05) as applicable.",
     children: [
       {
         id: "03.01", name: "Aviation accident",
@@ -198,7 +198,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "03.04",
         name: "Natural disaster",
         keywords: ["natural disaster", "disaster relief", "casualties", "evacuation", "emergency response", "FEMA", "aid", "affected", "damage"],
-        prompt: "Assign this category to articles about natural disasters, casualties, emergency response, and relief efforts. Use the most specific subcategory; assign the parent only for multi-type or preparedness coverage.",
+        prompt: "Assign this category to articles about natural disasters, casualties, emergency response, and relief efforts. Also assign disaster subcategories (03.04.01–03.04.06) as applicable.",
         children: [
           {
             id: "03.04.01", name: "Drought",
@@ -244,7 +244,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Economy, business and finance",
     color: "#f59e0b",
     keywords: ["economy", "business", "finance", "market", "company", "investment", "profit", "earnings", "GDP", "growth", "industry", "trade"],
-    prompt: "Assign this category to articles about economics, business, and financial markets. Include corporate news, economic indicators, industry sectors, and business strategy. Use the most specific subcategory available.",
+    prompt: "Assign this category to articles about economics, business, and financial markets. Include corporate news, economic indicators, industry sectors, and business strategy. Also assign specific subcategories (04.01–04.17) as applicable.",
     children: [
       {
         id: "04.01", name: "Agriculture and food industry",
@@ -255,7 +255,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "04.02",
         name: "Banking and financial services",
         keywords: ["bank", "banking", "financial services", "lending", "deposit", "interest rate", "credit", "liquidity", "balance sheet", "financial institution"],
-        prompt: "Assign this category to articles about banks and financial services firms as businesses. Include bank earnings, lending activity, and financial stability. Exclude investment products and crypto (use Financial markets or Cryptocurrency) and monetary policy (use Central banking and monetary policy).",
+        prompt: "Assign this category to articles about banks and financial services firms as businesses. Include bank earnings, lending activity, and financial stability. Also assign Central banking and monetary policy (04.02.01), Consumer finance and lending (04.02.02), or Investment banking (04.02.03) as applicable. Exclude investment products and crypto (use Financial markets (04.06) or Cryptocurrency (04.04)).",
         children: [
           {
             id: "04.02.01", name: "Central banking and monetary policy",
@@ -278,7 +278,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "04.03",
         name: "Computing and information technology",
         keywords: ["technology", "software", "hardware", "IT", "tech company", "platform", "digital", "Silicon Valley", "startup", "cloud", "data"],
-        prompt: "Assign this category to articles about the computing and IT industry as a business sector. Include technology companies, product launches, and industry competition. Exclude AI (use Artificial intelligence), cybersecurity incidents (use Cybersecurity), semiconductors (use Hardware and semiconductors), and e-commerce (use Internet and e-commerce).",
+        prompt: "Assign this category to articles about the computing and IT industry as a business sector. Include technology companies, product launches, and industry competition. Also assign Artificial intelligence (04.03.01), Cloud computing and infrastructure (04.03.02), Cybersecurity (04.03.03), Hardware and semiconductors (04.03.04), Internet and e-commerce (04.03.05), or Software and apps (04.03.06) as applicable.",
         children: [
           {
             id: "04.03.01", name: "Artificial intelligence",
@@ -321,7 +321,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "04.05",
         name: "Energy and resources",
         keywords: ["energy", "oil", "gas", "OPEC", "renewable", "power", "grid", "electricity", "pipeline", "refinery", "fuel", "energy market"],
-        prompt: "Assign this category to articles about the energy sector and natural resources. Use a specific subcategory for fossil fuels, nuclear, or renewables; assign the parent for cross-energy or general energy market coverage.",
+        prompt: "Assign this category to articles about the energy sector and natural resources. Also assign Fossil fuels (04.05.01), Nuclear energy (04.05.02), or Renewable energy (04.05.03) as applicable.",
         children: [
           {
             id: "04.05.01", name: "Fossil fuels",
@@ -344,7 +344,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "04.06",
         name: "Financial markets",
         keywords: ["financial markets", "trading", "investor", "market", "assets", "portfolio", "volatility", "returns", "capital", "exchange"],
-        prompt: "Assign this category to articles about financial markets and investing. Use a specific subcategory for stocks, bonds, currencies, commodities, or private equity; assign the parent for broad multi-asset coverage.",
+        prompt: "Assign this category to articles about financial markets and investing. Also assign Bonds and fixed income (04.06.01), Commodities (04.06.02), Currencies and forex (04.06.03), Equities and stock markets (04.06.04), or Private equity and venture capital (04.06.05) as applicable.",
         children: [
           {
             id: "04.06.01", name: "Bonds and fixed income",
@@ -430,7 +430,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Education",
     color: "#84cc16",
     keywords: ["education", "school", "university", "students", "learning", "curriculum", "teacher", "campus", "degree", "academic", "teaching"],
-    prompt: "Assign this category to articles about education at all levels. Include schools, universities, educational policy, and the education sector. Use the most specific subcategory available.",
+    prompt: "Assign this category to articles about education at all levels. Include schools, universities, educational policy, and the education sector. Also assign specific subcategories (05.01–05.05) as applicable.",
     children: [
       {
         id: "05.01", name: "Higher education and universities",
@@ -464,7 +464,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Environment",
     color: "#22c55e",
     keywords: ["environment", "climate", "ecology", "nature", "conservation", "emissions", "pollution", "sustainability", "ecosystem", "biodiversity"],
-    prompt: "Assign this category to articles about the natural environment and environmental issues. Include climate change, conservation, pollution, and ecosystem health. Use the most specific subcategory available.",
+    prompt: "Assign this category to articles about the natural environment and environmental issues. Include climate change, conservation, pollution, and ecosystem health. Also assign specific subcategories (06.01–06.06) as applicable.",
     children: [
       {
         id: "06.01", name: "Climate change",
@@ -485,7 +485,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "06.04",
         name: "Pollution",
         keywords: ["pollution", "contamination", "toxic", "waste", "discharge", "environmental damage", "clean-up", "health impact", "regulatory fine"],
-        prompt: "Assign this category to articles about pollution and environmental contamination. Use a specific subcategory for air, water, or plastic pollution; assign the parent for multi-type or general pollution coverage.",
+        prompt: "Assign this category to articles about pollution and environmental contamination. Also assign Air quality and air pollution (06.04.01), Plastic and waste pollution (06.04.02), or Water pollution (06.04.03) as applicable.",
         children: [
           {
             id: "06.04.01", name: "Air quality and air pollution",
@@ -521,7 +521,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Health",
     color: "#06b6d4",
     keywords: ["health", "medicine", "disease", "treatment", "patient", "hospital", "doctor", "medical", "clinical", "public health", "healthcare"],
-    prompt: "Assign this category to articles about human health, medicine, and healthcare. Include diseases, treatments, public health, and medical research. Use the most specific subcategory available.",
+    prompt: "Assign this category to articles about human health, medicine, and healthcare. Include diseases, treatments, public health, and medical research. Also assign specific subcategories (07.01–07.08) as applicable.",
     children: [
       {
         id: "07.01", name: "Epidemics and pandemics",
@@ -542,7 +542,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "07.04",
         name: "Medical research",
         keywords: ["medical research", "study", "findings", "journal", "researcher", "breakthrough", "discovery", "clinical", "trial", "peer-reviewed"],
-        prompt: "Assign this category to articles about medical and biomedical research. Include research findings and scientific advances in medicine. Use a specific subcategory where available. Exclude pharmaceutical business news (use Pharmaceutical industry).",
+        prompt: "Assign this category to articles about medical and biomedical research. Include research findings and scientific advances in medicine. Also assign Cancer research (07.04.01), Drug development and clinical trials (07.04.02), Genetics and genomics (07.04.03), Medical devices and diagnostics (07.04.04), or Neuroscience and brain research (07.04.05) as applicable. Exclude pharmaceutical business news (use Pharmaceutical industry).",
         children: [
           {
             id: "07.04.01", name: "Cancer research",
@@ -598,7 +598,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Human interest",
     color: "#fb923c",
     keywords: ["human interest", "personal story", "community", "inspiring", "unusual", "heartwarming", "social", "profile", "people"],
-    prompt: "Assign this category to articles whose primary appeal is a human subject or story rather than a news event. Include personal profiles, community stories, and heartwarming or unusual accounts.",
+    prompt: "Assign this category to articles whose primary appeal is a human subject or story rather than a news event. Include personal profiles, community stories, and heartwarming or unusual accounts. Also assign Animals (08.01), Celebrity and public figures (08.02), People and profiles (08.03), or Royalty and nobility (08.04) as applicable.",
     children: [
       {
         id: "08.01", name: "Animals",
@@ -627,7 +627,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Labour and employment",
     color: "#8b5cf6",
     keywords: ["labour", "employment", "jobs", "workers", "wages", "workforce", "hiring", "unemployment", "union", "workplace"],
-    prompt: "Assign this category to articles about labour markets, employment, and worker rights. Include jobs data, wages, unions, and workplace issues. Use the most specific subcategory available.",
+    prompt: "Assign this category to articles about labour markets, employment, and worker rights. Include jobs data, wages, unions, and workplace issues. Also assign specific subcategories (09.01–09.05) as applicable.",
     children: [
       {
         id: "09.01", name: "Employment and jobs",
@@ -661,7 +661,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Lifestyle and leisure",
     color: "#10b981",
     keywords: ["lifestyle", "leisure", "hobby", "travel", "food", "home", "wellness", "consumer", "trend", "culture", "recreation"],
-    prompt: "Assign this category to articles about lifestyle, leisure, and consumer culture. Include food, travel, home, and hobbies. Use the most specific subcategory available.",
+    prompt: "Assign this category to articles about lifestyle, leisure, and consumer culture. Include food, travel, home, and hobbies. Also assign specific subcategories (10.01–10.06) as applicable.",
     children: [
       {
         id: "10.01", name: "Food and drink",
@@ -700,13 +700,13 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Politics",
     color: "#f43f5e",
     keywords: ["politics", "government", "policy", "election", "parliament", "congress", "minister", "legislation", "political", "power", "diplomacy"],
-    prompt: "Assign this category to articles about politics, government, and public policy. Include elections, legislation, government decisions, international relations, and regulatory affairs. Assign for general political coverage; use subcategories for specific topics.",
+    prompt: "Assign this category to articles about politics, government, and public policy. Include elections, legislation, government decisions, international relations, and regulatory affairs. Also assign Defence and military policy (11.01), Domestic politics (11.02), International relations and diplomacy (11.03), or Regulation and policy (11.04) as applicable.",
     children: [
       {
         id: "11.01",
         name: "Defence and military policy",
         keywords: ["defence", "military", "armed forces", "defence budget", "NATO", "security", "strategy", "deterrence", "army", "navy", "air force"],
-        prompt: "Assign this category to articles about defence policy and military affairs outside of active conflict. Include defence budgets, military strategy, arms procurement, and security alliances. Exclude active warfare and military operations (use Conflict, war and peace (16)).",
+        prompt: "Assign this category to articles about defence policy and military affairs outside of active conflict. Include defence budgets, military strategy, arms procurement, and security alliances. Also assign Arms and weapons programmes (11.01.01), Intelligence and espionage (11.01.02), or Military technology (11.01.03) as applicable. Exclude active warfare and military operations (use Conflict, war and peace (16)).",
         children: [
           {
             id: "11.01.01", name: "Arms and weapons programmes",
@@ -729,7 +729,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "11.02",
         name: "Domestic politics",
         keywords: ["domestic politics", "government", "party", "politician", "poll", "cabinet", "prime minister", "president", "administration", "opposition"],
-        prompt: "Assign this category to articles about politics within a single country. Include government decisions, political party affairs, and domestic political events. Exclude elections (use Elections and voting (11.02.01)), legislation (use Legislation and lawmaking (11.02.03)), and international relations (use International relations and diplomacy (11.03)).",
+        prompt: "Assign this category to articles about politics within a single country. Include government decisions, political party affairs, and domestic political events. Also assign Elections and voting (11.02.01), Government and governance (11.02.02), Legislation and lawmaking (11.02.03), or Political parties and movements (11.02.04) as applicable. Exclude international relations (use International relations and diplomacy (11.03)).",
         children: [
           {
             id: "11.02.01", name: "Elections and voting",
@@ -757,7 +757,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "11.03",
         name: "International relations and diplomacy",
         keywords: ["international relations", "diplomacy", "foreign minister", "summit", "geopolitics", "bilateral", "multilateral", "global governance", "UN"],
-        prompt: "Assign this category to articles about relations between countries and international diplomacy. Include summits, diplomatic talks, and international agreements. Exclude trade disputes (use International trade (04.04)), sanctions (use Sanctions and trade restrictions (11.03.04)), and active military conflict (use Conflict, war and peace (16)).",
+        prompt: "Assign this category to articles about relations between countries and international diplomacy. Include summits, diplomatic talks, and international agreements. Also assign Alliances and multilateral organizations (11.03.01), Bilateral diplomacy (11.03.02), Foreign policy (11.03.03), or Sanctions and trade restrictions (11.03.04) as applicable. Exclude trade disputes (use International trade (04.04)) and active military conflict (use Conflict, war and peace (16)).",
         children: [
           {
             id: "11.03.01", name: "Alliances and multilateral organizations",
@@ -785,7 +785,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "11.04",
         name: "Regulation and policy",
         keywords: ["regulation", "regulator", "policy", "rule", "compliance", "enforcement", "watchdog", "agency", "framework", "directive"],
-        prompt: "Assign this category to articles about government regulation across sectors. Include new rules, regulatory enforcement actions, and regulatory policy debates. Exclude environmental (use Environmental regulation (11.04.03)), financial (use Financial regulation (11.04.04)), and technology regulation (use Technology regulation (11.04.05)).",
+        prompt: "Assign this category to articles about government regulation across sectors. Include new rules, regulatory enforcement actions, and regulatory policy debates. Also assign Antitrust and competition law (11.04.01), Data protection and privacy (11.04.02), Environmental regulation (11.04.03), Financial regulation (11.04.04), or Technology regulation (11.04.05) as applicable.",
         children: [
           {
             id: "11.04.01", name: "Antitrust and competition law",
@@ -821,7 +821,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Religion and belief",
     color: "#a855f7",
     keywords: ["religion", "faith", "belief", "spiritual", "church", "mosque", "temple", "prayer", "worship", "theology", "clergy"],
-    prompt: "Assign this category to articles about religion, faith, and religious communities. Include religious events, institutions, theology, and the role of religion in public life. Assign for cross-religious coverage; use subcategories for specific faiths.",
+    prompt: "Assign this category to articles about religion, faith, and religious communities. Include religious events, institutions, theology, and the role of religion in public life. Also assign Buddhism (12.01), Christianity (12.02), Hinduism (12.03), Islam (12.04), Judaism (12.05), or Religious freedom and secularism (12.06) as applicable.",
     children: [
       {
         id: "12.01", name: "Buddhism",
@@ -860,13 +860,13 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Science and technology",
     color: "#3b82f6",
     keywords: ["science", "research", "discovery", "study", "findings", "scientists", "laboratory", "experiment", "academic", "breakthrough", "technology"],
-    prompt: "Assign this category to articles about scientific research and technological development. Include discoveries, research findings, and advances across all scientific disciplines. Exclude commercial technology products and companies (use Economy, business and finance (04)).",
+    prompt: "Assign this category to articles about scientific research and technological development. Include discoveries, research findings, and advances across all scientific disciplines. Also assign specific subcategories (13.01–13.09) as applicable. Exclude commercial technology products and companies (use Economy, business and finance (04)).",
     children: [
       {
         id: "13.01",
         name: "Astronomy and space science",
         keywords: ["astronomy", "space", "telescope", "galaxy", "star", "universe", "cosmology", "exoplanet", "nebula", "black hole", "observation"],
-        prompt: "Assign this category to articles about astronomy and space science. Include astronomical discoveries and observations. Exclude commercial space companies (use Commercial space industry (13.01.01)), planetary science (use Planetary science (13.01.02)), specific missions (use Space exploration and missions (13.01.03)), and telescope findings (use Telescopes and astronomical observation (13.01.04)).",
+        prompt: "Assign this category to articles about astronomy and space science. Include astronomical discoveries and observations. Also assign Commercial space industry (13.01.01), Planetary science (13.01.02), Space exploration and missions (13.01.03), or Telescopes and astronomical observation (13.01.04) as applicable.",
         children: [
           {
             id: "13.01.01", name: "Commercial space industry",
@@ -894,7 +894,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "13.02",
         name: "Biology and life sciences",
         keywords: ["biology", "life sciences", "organism", "cell", "species", "evolutionary", "biological", "living", "flora", "fauna"],
-        prompt: "Assign this category to articles about biology and the life sciences. Include research into living organisms across scales from cells to ecosystems. Exclude ecology (use Ecology and environmental biology (13.02.01)), evolution (use Evolution and palaeontology (13.02.02)), genetics (use Genetics and genomics (13.02.03)), and microbiology (use Microbiology and virology (13.02.04)).",
+        prompt: "Assign this category to articles about biology and the life sciences. Include research into living organisms across scales from cells to ecosystems. Also assign Ecology and environmental biology (13.02.01), Evolution and palaeontology (13.02.02), Genetics and genomics (13.02.03), or Microbiology and virology (13.02.04) as applicable.",
         children: [
           {
             id: "13.02.01", name: "Ecology and environmental biology",
@@ -927,7 +927,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "13.04",
         name: "Computer science and AI",
         keywords: ["computer science", "algorithm", "AI research", "machine learning", "neural network", "deep learning", "research paper", "benchmark", "model architecture"],
-        prompt: "Assign this category to articles about computer science and AI as academic disciplines. Include research papers, algorithmic advances, and scientific progress in computation and intelligence. Exclude commercial AI products and services (use Artificial intelligence (04.03.01)).",
+        prompt: "Assign this category to articles about computer science and AI as academic disciplines. Include research papers, algorithmic advances, and scientific progress in computation and intelligence. Also assign Algorithms and data science (13.04.01), Artificial intelligence research (13.04.02), Natural language processing (13.04.03), Quantum computing (13.04.04), or Robotics and automation (13.04.05) as applicable. Exclude commercial AI products and services (use Artificial intelligence (04.03.01)).",
         children: [
           {
             id: "13.04.01", name: "Algorithms and data science",
@@ -975,7 +975,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
         id: "13.08",
         name: "Physics",
         keywords: ["physics", "theory", "experiment", "measurement", "force", "energy", "matter", "observation", "theoretical", "condensed matter"],
-        prompt: "Assign this category to articles about physics research. Include experimental and theoretical advances across physics disciplines. Exclude particle physics (use Particle physics (13.08.02)), nuclear physics and fusion (use Nuclear physics and fusion energy (13.08.01)), and quantum physics (use Quantum physics (13.08.03)).",
+        prompt: "Assign this category to articles about physics research. Include experimental and theoretical advances across physics disciplines. Also assign Nuclear physics and fusion energy (13.08.01), Particle physics and high-energy physics (13.08.02), or Quantum physics (13.08.03) as applicable.",
         children: [
           {
             id: "13.08.01", name: "Nuclear physics and fusion energy",
@@ -1006,7 +1006,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Society",
     color: "#64748b",
     keywords: ["society", "social", "community", "culture", "people", "demographic", "inequality", "rights", "urban", "population", "trend"],
-    prompt: "Assign this category to articles about social issues, demographic trends, and the organisation of society. Include human rights, social movements, inequality, and cultural and demographic change. Assign for general social coverage; use subcategories for specific topics.",
+    prompt: "Assign this category to articles about social issues, demographic trends, and the organisation of society. Include human rights, social movements, inequality, and cultural and demographic change. Also assign Demographics and population (14.01), Family and relationships (14.02), Human rights and civil liberties (14.03), Immigration and refugees (14.04), Inequality and poverty (14.05), Internet culture and digital society (14.06), Social movements and activism (14.07), or Urbanization and cities (14.08) as applicable.",
     children: [
       {
         id: "14.01", name: "Demographics and population",
@@ -1055,7 +1055,7 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Sport",
     color: "#0ea5e9",
     keywords: ["sport", "athlete", "team", "match", "game", "competition", "championship", "league", "coach", "performance", "victory", "defeat"],
-    prompt: "Assign this category to articles about professional and competitive sport. Include matches, tournaments, athlete news, and the sports industry. Assign for general sports coverage; use subcategories for specific sports.",
+    prompt: "Assign this category to articles about professional and competitive sport. Include matches, tournaments, athlete news, and the sports industry. Also assign specific sport subcategories (15.01–15.16) as applicable.",
     children: [
       {
         id: "15.01", name: "American football",
@@ -1144,13 +1144,13 @@ export const IPTC_TAXONOMY: TaxonomyNode[] = [
     name: "Conflict, war and peace",
     color: "#dc2626",
     keywords: ["war", "conflict", "military", "troops", "battle", "ceasefire", "casualties", "frontline", "offensive", "defence", "fighting"],
-    prompt: "Assign this category to articles about armed conflicts, warfare, and peace processes. Include active military operations, peace negotiations, and war-related events. Assign for general conflict coverage; use subcategories for specific conflict types.",
+    prompt: "Assign this category to articles about armed conflicts, warfare, and peace processes. Include active military operations, peace negotiations, and war-related events. Also assign Armed conflict and warfare (16.01), Arms trade and weapons proliferation (16.02), Peace negotiations and ceasefires (16.03), Terrorism and insurgency (16.04), or War crimes and atrocities (16.05) as applicable.",
     children: [
       {
         id: "16.01",
         name: "Armed conflict and warfare",
         keywords: ["armed conflict", "war", "military operation", "casualties", "front line", "offensive", "troops", "military advance", "combat", "battle"],
-        prompt: "Assign this category to articles about active armed conflict and military operations. Include battles, military advances, and casualty reports. Exclude specific operation types — use Air warfare (16.01.01), Ground operations (16.01.03), or Naval operations (16.01.04).",
+        prompt: "Assign this category to articles about active armed conflict and military operations. Include battles, military advances, and casualty reports. Also assign Air warfare (16.01.01), Cyberwarfare (16.01.02), Ground operations (16.01.03), or Naval operations (16.01.04) as applicable.",
         children: [
           {
             id: "16.01.01", name: "Air warfare",
