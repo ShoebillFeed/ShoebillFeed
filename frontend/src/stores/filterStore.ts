@@ -8,6 +8,8 @@ interface FilterState {
   selectedSourceIds: string[];
   showUnreadOnly: boolean;
   showUncategorizedOnly: boolean;
+  categoryFilterExpanded: boolean;
+  sourceFilterExpanded: boolean;
   setTab: (tab: FeedTab) => void;
   setCustomTab: (id: string | null) => void;
   toggleCategory: (id: string) => void;
@@ -16,6 +18,8 @@ interface FilterState {
   clearSources: () => void;
   setShowUnreadOnly: (v: boolean) => void;
   setShowUncategorizedOnly: (v: boolean) => void;
+  setCategoryFilterExpanded: (v: boolean) => void;
+  setSourceFilterExpanded: (v: boolean) => void;
 }
 
 export const useFilterStore = create<FilterState>((set) => ({
@@ -25,6 +29,8 @@ export const useFilterStore = create<FilterState>((set) => ({
   selectedSourceIds: [],
   showUnreadOnly: false,
   showUncategorizedOnly: false,
+  categoryFilterExpanded: false,
+  sourceFilterExpanded: false,
   setTab: (tab) => set({ activeTab: tab, activeCustomTabId: null }),
   setCustomTab: (id) => set({ activeCustomTabId: id }),
   toggleCategory: (id) =>
@@ -43,4 +49,6 @@ export const useFilterStore = create<FilterState>((set) => ({
   clearSources: () => set({ selectedSourceIds: [] }),
   setShowUnreadOnly: (v) => set({ showUnreadOnly: v }),
   setShowUncategorizedOnly: (v) => set({ showUncategorizedOnly: v }),
+  setCategoryFilterExpanded: (v) => set({ categoryFilterExpanded: v }),
+  setSourceFilterExpanded: (v) => set({ sourceFilterExpanded: v }),
 }));

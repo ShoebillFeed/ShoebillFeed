@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSources } from "../../hooks/useSources";
@@ -19,8 +18,7 @@ const CHIP_INACTIVE = "bg-white text-gray-600 border-gray-300 hover:border-gray-
 export default function SourceFilter() {
   const { t } = useTranslation();
   const { data: sources } = useSources();
-  const { selectedSourceIds, toggleSource, clearSources } = useFilterStore();
-  const [expanded, setExpanded] = useState(false);
+  const { selectedSourceIds, toggleSource, clearSources, sourceFilterExpanded: expanded, setSourceFilterExpanded: setExpanded } = useFilterStore();
 
   const active = sources?.filter((s) => s.is_active) ?? [];
   if (active.length === 0) return null;

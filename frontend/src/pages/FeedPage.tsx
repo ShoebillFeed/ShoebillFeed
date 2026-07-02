@@ -107,6 +107,7 @@ export default function FeedPage() {
                 type="button"
                 onClick={() => setShowUnreadOnly(!showUnreadOnly)}
                 title={t("feed.unreadOnly")}
+                aria-label={t("feed.unreadOnly")}
                 className={`p-1.5 rounded transition-colors ${showUnreadOnly ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
               >
                 <Eye size={15} />
@@ -115,6 +116,7 @@ export default function FeedPage() {
                 type="button"
                 onClick={() => setShowUncategorizedOnly(!showUncategorizedOnly)}
                 title={t("feed.uncategorizedOnly")}
+                aria-label={t("feed.uncategorizedOnly")}
                 className={`p-1.5 rounded transition-colors ${showUncategorizedOnly ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
               >
                 <Tag size={15} />
@@ -125,6 +127,7 @@ export default function FeedPage() {
           <button
             onClick={handleFetchAll}
             title={t("feed.fetchAll")}
+            aria-label={t("feed.fetchAll")}
             disabled={isFetching}
             className="p-1.5 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
           >

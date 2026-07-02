@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCategories } from "../../hooks/useCategories";
@@ -10,9 +9,8 @@ const CHIP_INACTIVE = "bg-white text-gray-600 border-gray-300 hover:border-gray-
 
 export default function CategoryFilter() {
   const { t } = useTranslation();
-  const { selectedCategoryIds, toggleCategory, clearCategories, selectedSourceIds } = useFilterStore();
+  const { selectedCategoryIds, toggleCategory, clearCategories, selectedSourceIds, categoryFilterExpanded: expanded, setCategoryFilterExpanded: setExpanded } = useFilterStore();
   const { data: categories } = useCategories(selectedSourceIds.length ? selectedSourceIds : undefined);
-  const [expanded, setExpanded] = useState(false);
 
   if (!categories?.length) return null;
 

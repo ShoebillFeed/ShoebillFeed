@@ -374,6 +374,7 @@ function ActionButton({
     <button
       onClick={onClick}
       title={title}
+      aria-label={title}
       className={cn(
         "p-2.5 rounded transition-colors",
         active

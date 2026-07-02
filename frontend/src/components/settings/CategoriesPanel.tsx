@@ -286,7 +286,7 @@ function CategoryRow({
               step={0.1}
               value={localWeight}
               onChange={(e) => handleSliderChange(parseFloat(e.target.value))}
-              className="flex-1 h-1.5 accent-indigo-600 cursor-pointer"
+              className="flex-1 h-4 accent-indigo-600 cursor-pointer"
             />
             <span className="text-xs font-mono text-gray-500 dark:text-gray-400 w-20 shrink-0 text-right">
               ×{localWeight.toFixed(1)}

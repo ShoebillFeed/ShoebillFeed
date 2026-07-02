@@ -1,5 +1,6 @@
 import { useState, useMemo, Component } from "react";
 import type { ReactNode } from "react";
+import { usePreferencesStore } from "../../stores/preferencesStore";
 import { useTranslation } from "react-i18next";
 import {
   AreaChart, Area,
@@ -202,6 +203,11 @@ function fmtDate(iso: string, days: number) {
   }
 }
 
+function useGridColor() {
+  const theme = usePreferencesStore((s) => s.theme);
+  return theme === "dark" ? "#374151" : "#e5e7eb";
+}
+
 const CURSOR_STYLE = { fill: "rgba(99,102,241,0.06)" };
 const WRAPPER_STYLE = { background: "none", border: "none", boxShadow: "none", zIndex: 50 } as const;
 
@@ -216,6 +222,7 @@ const ACTIVITY_SERIES = [
 ] as const;
 
 function ActivityChart({ days }: { days: number }) {
+  const gridColor = useGridColor();
   const { data, isLoading } = useActivityStats(days);
   if (isLoading) return <Loading />;
   if (!data?.length) return <Empty />;
@@ -233,7 +240,7 @@ function ActivityChart({ days }: { days: number }) {
             </linearGradient>
           ))}
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
         <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
         <YAxis
           yAxisId="left"
@@ -291,6 +298,7 @@ function ActivityChart({ days }: { days: number }) {
 // ── Volume by category ────────────────────────────────────────────────────────
 
 function ByCategoryChart({ days }: { days: number }) {
+  const gridColor = useGridColor();
   const { data, isLoading } = useCategoryStats(days);
   if (isLoading) return <Loading />;
   if (!data?.length) return <Empty />;
@@ -298,7 +306,7 @@ function ByCategoryChart({ days }: { days: number }) {
   return (
     <ResponsiveContainer width="100%" height={Math.max(160, data.length * 36 + 40)}>
       <BarChart data={data} layout="vertical" margin={{ top: 4, right: 32, left: 8, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} horizontal={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} horizontal={false} />
         <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
         <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={90} />
         <Tooltip
@@ -331,6 +339,7 @@ function ByCategoryChart({ days }: { days: number }) {
 // ── Volume by source ──────────────────────────────────────────────────────────
 
 function BySourceChart({ days }: { days: number }) {
+  const gridColor = useGridColor();
   const { data, isLoading } = useSourceStats(days);
   if (isLoading) return <Loading />;
   if (!data?.length) return <Empty />;
@@ -361,7 +370,7 @@ function BySourceChart({ days }: { days: number }) {
   return (
     <ResponsiveContainer width="100%" height={Math.max(160, data.length * 36 + 40)}>
       <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} horizontal={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} horizontal={false} />
         <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
         <YAxis
           type="category"
@@ -418,6 +427,7 @@ function BySourceChart({ days }: { days: number }) {
 // ── Category weight history ───────────────────────────────────────────────────
 
 function WeightHistoryChart({ days }: { days: number }) {
+  const gridColor = useGridColor();
   const { data, isLoading } = useWeightHistory(days);
   if (isLoading) return <Loading />;
   if (!data?.length) {
@@ -440,7 +450,7 @@ function WeightHistoryChart({ days }: { days: number }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
       <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
         <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
         <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
         <Tooltip
@@ -477,6 +487,7 @@ function WeightHistoryChart({ days }: { days: number }) {
 // ── Source cluster co-occurrence ──────────────────────────────────────────────
 
 function SourceClustersChart({ days }: { days: number }) {
+  const gridColor = useGridColor();
   const { data, isLoading } = useSourceClusters(days);
   if (isLoading) return <Loading />;
   if (!data?.length) return <Empty />;
@@ -509,7 +520,7 @@ function SourceClustersChart({ days }: { days: number }) {
   return (
     <ResponsiveContainer width="100%" height={Math.max(160, data.length * 40 + 40)}>
       <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} horizontal={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} horizontal={false} />
         <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
         <YAxis
           type="category"
@@ -565,6 +576,7 @@ function SourceClustersChart({ days }: { days: number }) {
 // ── Keyword cluster score history ────────────────────────────────────────────
 
 function KeywordClusterHistoryChart({ days }: { days: number }) {
+  const gridColor = useGridColor();
   const { t } = useTranslation();
   const { data, isLoading } = useKeywordClusterHistory(days);
   if (isLoading) return <Loading />;
@@ -583,7 +595,7 @@ function KeywordClusterHistoryChart({ days }: { days: number }) {
     return (
       <ResponsiveContainer width="100%" height={Math.max(160, data.length * 32 + 40)}>
         <BarChart data={data} layout="vertical" margin={{ top: 4, right: 60, left: 8, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} horizontal={false} />
           <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} domain={[1, "auto"]} />
           <YAxis type="category" dataKey="cluster_label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={130} />
           <Tooltip
@@ -629,7 +641,7 @@ function KeywordClusterHistoryChart({ days }: { days: number }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
       <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
         <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
         <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
         <Tooltip

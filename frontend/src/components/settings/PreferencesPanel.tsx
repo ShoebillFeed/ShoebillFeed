@@ -149,7 +149,7 @@ function ScoreSlider({
         step={1}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="flex-1 h-2 appearance-none bg-gray-200 dark:bg-gray-700 rounded-full cursor-pointer accent-indigo-600"
+        className="flex-1 h-4 appearance-none bg-gray-200 dark:bg-gray-700 rounded-full cursor-pointer accent-indigo-600"
       />
       <span className="text-sm font-medium w-10 text-right shrink-0 text-gray-800 dark:text-gray-200">
         {value}/10
@@ -355,7 +355,7 @@ function PushNotificationsSection() {
   return (
     <>
       {notConfigured && (
-        <div className="mb-4 flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-sm">
+        <div className="mb-4 flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-sm">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />
           <span>{t("notifications.vapidNotConfigured")}</span>
         </div>
@@ -648,7 +648,7 @@ function ApiTokensContent() {
 
       {/* Newly created token — show-once banner */}
       {newToken && (
-        <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 flex flex-col gap-2">
+        <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 flex flex-col gap-2">
           <p className="text-xs font-medium text-green-800 dark:text-green-300">
             {t("advanced.tokenCreated")}
           </p>

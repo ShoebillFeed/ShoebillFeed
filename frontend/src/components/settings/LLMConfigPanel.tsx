@@ -57,7 +57,7 @@ export default function LLMConfigPanel() {
   return (
     <div>
       <Accordion title={t("llm.configuredProviders")} defaultOpen>
-        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-700 dark:text-amber-300">
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-700 dark:text-amber-300">
           {t("llm.readOnlyNotice")}
         </div>
         <div className="flex flex-col gap-2">
@@ -143,7 +143,7 @@ function HealthRow({ label, ok }: { label: string; ok: boolean }) {
         <XCircle size={16} className="text-red-500 shrink-0" />
       )}
       <span className="text-sm font-medium">{label}</span>
-      <span className={`ml-auto text-xs font-medium ${ok ? "text-green-600 dark:text-green-400" : "text-red-500"}`}>
+      <span className={`ml-auto text-xs font-medium px-1.5 py-0.5 rounded ${ok ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"}`}>
         {ok ? t("llm.healthy") : t("llm.unreachable")}
       </span>
     </div>
