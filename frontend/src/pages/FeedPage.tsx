@@ -39,6 +39,7 @@ export default function FeedPage() {
 
   const [searchInput, setSearchInput] = useState("");
   const searchQuery = useDebounce(searchInput, 300);
+  const [isFetching, setIsFetching] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const isSearching = searchQuery.trim().length > 0;
 
@@ -76,12 +77,17 @@ export default function FeedPage() {
   const total = data?.pages[0]?.total ?? 0;
 
   const handleFetchAll = async () => {
+    if (isFetching) return;
+    setIsFetching(true);
     qc.invalidateQueries({ queryKey: ["news"] });
     try {
       await sourcesApi.fetchAll();
-      setTimeout(() => qc.invalidateQueries({ queryKey: ["news"] }), 5000);
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["news"] });
+        setIsFetching(false);
+      }, 5000);
     } catch {
-      // backend fetch errors don't block the re-sort
+      setIsFetching(false);
     }
   };
 
@@ -141,9 +147,10 @@ export default function FeedPage() {
           <button
             onClick={handleFetchAll}
             title={t("feed.fetchAll")}
-            className="p-1.5 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            disabled={isFetching}
+            className="p-1.5 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
           >
-            <RefreshCw size={15} />
+            <RefreshCw size={15} className={isFetching ? "animate-spin" : ""} />
           </button>
 
         </div>
