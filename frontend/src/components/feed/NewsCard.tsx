@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowBigUp, ArrowBigDown, Bookmark, Check, ExternalLink, Trash2, Share2, CheckCheck } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, TrendingUp, Bookmark, Check, ExternalLink, Trash2, Share2, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
