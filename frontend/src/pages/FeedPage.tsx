@@ -9,7 +9,7 @@ import SourceFilter from "../components/feed/SourceFilter";
 import NewsFeed from "../components/feed/NewsFeed";
 import NewsCard from "../components/feed/NewsCard";
 import NewsCardSkeleton from "../components/feed/NewsCardSkeleton";
-import { CheckCheck, RefreshCw, Search, X } from "lucide-react";
+import { CheckCheck, Eye, RefreshCw, Search, Tag, X } from "lucide-react";
 import { sourcesApi } from "../api/sources";
 import { useQueryClient } from "@tanstack/react-query";
 import type { FeedEntry } from "../types/news";
@@ -119,24 +119,22 @@ export default function FeedPage() {
         <div className="flex items-center gap-2 shrink-0">
           {!activeCustomTab && (
             <>
-              <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showUnreadOnly}
-                  onChange={(e) => setShowUnreadOnly(e.target.checked)}
-                  className="rounded"
-                />
-                {t("feed.unreadOnly")}
-              </label>
-              <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showUncategorizedOnly}
-                  onChange={(e) => setShowUncategorizedOnly(e.target.checked)}
-                  className="rounded"
-                />
-                {t("feed.uncategorizedOnly")}
-              </label>
+              <button
+                type="button"
+                onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+                title={t("feed.unreadOnly")}
+                className={`p-1.5 rounded transition-colors ${showUnreadOnly ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+              >
+                <Eye size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowUncategorizedOnly(!showUncategorizedOnly)}
+                title={t("feed.uncategorizedOnly")}
+                className={`p-1.5 rounded transition-colors ${showUncategorizedOnly ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+              >
+                <Tag size={15} />
+              </button>
             </>
           )}
 
