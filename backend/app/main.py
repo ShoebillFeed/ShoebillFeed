@@ -20,7 +20,7 @@ def _ensure_default_user() -> None:
         return
     from app.database import SessionLocal
     from app.models.user import User
-    from app.services.auth import hash_password
+    from app.services.auth import hash_password, verify_password
     from sqlalchemy import select
     db = SessionLocal()
     try:
@@ -33,10 +33,18 @@ def _ensure_default_user() -> None:
             ))
             db.commit()
             logger.info("Created default admin user '%s'", settings.admin_username)
-        elif not existing.is_admin:
-            existing.is_admin = True
-            db.commit()
-            logger.info("Promoted '%s' to admin", settings.admin_username)
+        else:
+            changed = False
+            if not existing.is_admin:
+                existing.is_admin = True
+                changed = True
+                logger.info("Promoted '%s' to admin", settings.admin_username)
+            if not verify_password(settings.admin_password, existing.hashed_password):
+                existing.hashed_password = hash_password(settings.admin_password)
+                changed = True
+                logger.info("Reset password for admin user '%s'", settings.admin_username)
+            if changed:
+                db.commit()
     finally:
         db.close()
 
