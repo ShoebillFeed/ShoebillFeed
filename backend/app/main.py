@@ -39,7 +39,11 @@ def _ensure_default_user() -> None:
                 existing.is_admin = True
                 changed = True
                 logger.info("Promoted '%s' to admin", settings.admin_username)
-            if not verify_password(settings.admin_password, existing.hashed_password):
+            try:
+                password_matches = verify_password(settings.admin_password, existing.hashed_password)
+            except ValueError:
+                password_matches = False
+            if not password_matches:
                 existing.hashed_password = hash_password(settings.admin_password)
                 changed = True
                 logger.info("Reset password for admin user '%s'", settings.admin_username)
