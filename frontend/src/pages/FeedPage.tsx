@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useFilterStore } from "../stores/filterStore";
-import { useInfiniteNews, useMarkAllRead, useSearchNews } from "../hooks/useNews";
+import { useInfiniteNews, useSearchNews } from "../hooks/useNews";
 import { useUserTabs } from "../hooks/useTabs";
 import FeedTabs from "../components/feed/FeedTabs";
 import CategoryFilter from "../components/feed/CategoryFilter";
@@ -9,7 +9,7 @@ import SourceFilter from "../components/feed/SourceFilter";
 import NewsFeed from "../components/feed/NewsFeed";
 import NewsCard from "../components/feed/NewsCard";
 import NewsCardSkeleton from "../components/feed/NewsCardSkeleton";
-import { CheckCheck, Eye, RefreshCw, Search, Tag, X } from "lucide-react";
+import { Eye, RefreshCw, Search, Tag, X } from "lucide-react";
 import { sourcesApi } from "../api/sources";
 import { useQueryClient } from "@tanstack/react-query";
 import type { FeedEntry } from "../types/news";
@@ -34,7 +34,7 @@ export default function FeedPage() {
     showUncategorizedOnly, setShowUncategorizedOnly,
   } = useFilterStore();
   const qc = useQueryClient();
-  const markAllRead = useMarkAllRead();
+
   const { data: customTabs } = useUserTabs();
 
   const [searchInput, setSearchInput] = useState("");
@@ -145,13 +145,7 @@ export default function FeedPage() {
           >
             <RefreshCw size={15} />
           </button>
-          <button
-            onClick={() => markAllRead.mutate(undefined)}
-            title={t("feed.markAllRead")}
-            className="p-1.5 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <CheckCheck size={15} />
-          </button>
+
         </div>
       </div>
 
