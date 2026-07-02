@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { TrendingUp, TrendingDown, Bookmark, Check, ExternalLink, Trash2, ChevronDown, ChevronUp, Share2, CheckCheck } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, Bookmark, Check, ExternalLink, Trash2, ChevronDown, ChevronUp, Share2, CheckCheck, TrendingUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
@@ -283,7 +283,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
           onClick={handleToggleRelevant}
           title={localRelevant ? t("card.unmarkRelevant") : t("card.markRelevant")}
         >
-          <TrendingUp size={14} />
+          <ArrowBigUp size={15} fill={localRelevant ? "currentColor" : "none"} />
         </ActionButton>
 
         <ActionButton
@@ -293,7 +293,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
           onClick={() => dislikeCluster.mutate(cluster.id)}
           title={t("card.dislike")}
         >
-          <TrendingDown size={14} />
+          <ArrowBigDown size={15} />
         </ActionButton>
 
         <ActionButton
