@@ -2,12 +2,14 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Plus, Trash2, ShieldCheck, KeyRound, BookOpen, ThumbsUp, Bookmark, Newspaper, Radio, Tag, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useToast } from "../ui/Toaster";
 import { useUsers, useCreateUser, useDeleteUser, useResetUserPassword, useUserStats } from "../../hooks/useAuth";
 import { Accordion } from "./Accordion";
 import type { UserStats } from "../../api/auth";
 
 export default function UsersPanel() {
   const { t } = useTranslation();
+  const toast = useToast();
   const { data: users, isLoading } = useUsers();
   const { data: statsData } = useUserStats();
   const createUser = useCreateUser();
@@ -163,10 +165,7 @@ export default function UsersPanel() {
                   </button>
                   <button
                     title={t("users.deleteUser")}
-                    onClick={() => {
-                      if (confirm(t("users.deleteConfirm", { name: u.username })))
-                        deleteUser.mutate(u.id);
-                    }}
+                    onClick={() => toast.confirm(t("users.deleteConfirm", { name: u.username }), () => deleteUser.mutate(u.id))}
                     className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   >
                     <Trash2 size={14} />

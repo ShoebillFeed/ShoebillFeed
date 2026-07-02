@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Trash2, Play, Pencil, RefreshCw, Download, Upload, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useToast } from "../ui/Toaster";
 import { Accordion } from "./Accordion";
 import { useSources, useDeleteSource, useFetchSource, useImportSources, useToggleSourceActive, useSharedSources, useAdoptSource } from "../../hooks/useSources";
 import { sourcesApi } from "../../api/sources";
@@ -20,6 +21,7 @@ function downloadJson(data: unknown, filename: string) {
 
 export default function SourcesPanel() {
   const { t } = useTranslation();
+  const toast = useToast();
   const { data: sources, isLoading } = useSources();
   const { data: sharedSources } = useSharedSources();
   const deleteSource = useDeleteSource();
@@ -139,7 +141,7 @@ export default function SourcesPanel() {
                   </IconButton>
                   <IconButton
                     title={t("common.delete")}
-                    onClick={() => { if (confirm(t("sources.deleteConfirm", { name: source.name }))) deleteSource.mutate(source.id); }}
+                    onClick={() => toast.confirm(t("sources.deleteConfirm", { name: source.name }), () => deleteSource.mutate(source.id))}
                     className="hover:text-red-500"
                   >
                     <Trash2 size={14} />

@@ -12,7 +12,7 @@ const TYPE_ICON: Record<string, string> = {
   email: "✉️",
 };
 
-const CHIP_BASE = "px-3 py-1 rounded-full text-xs font-medium border transition-colors";
+const CHIP_BASE = "px-3 py-2 rounded-full text-xs font-medium border transition-colors";
 const CHIP_ACTIVE = "bg-gray-800 text-white border-gray-800 dark:bg-gray-200 dark:text-gray-900";
 const CHIP_INACTIVE = "bg-white text-gray-600 border-gray-300 hover:border-gray-400 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600";
 

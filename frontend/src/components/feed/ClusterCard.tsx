@@ -375,7 +375,7 @@ function ActionButton({
       onClick={onClick}
       title={title}
       className={cn(
-        "p-1.5 rounded transition-colors",
+        "p-2.5 rounded transition-colors",
         active
           ? activeColor
           : inactiveColor ?? "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",

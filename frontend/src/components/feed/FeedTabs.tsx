@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Zap, TrendingUp, Clock, Bookmark, Plus, Pencil, Trash2 } from "lucide-react";
+import { useToast } from "../ui/Toaster";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 import type { FeedTab } from "../../types/news";
@@ -28,6 +29,7 @@ export default function FeedTabs({
   onCustomTabChange: (id: string | null) => void;
 }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const { data: customTabs } = useUserTabs();
   const createTab = useCreateTab();
   const updateTab = useUpdateTab();
@@ -53,10 +55,11 @@ export default function FeedTabs({
   };
 
   const handleDelete = (tab: UserTab) => {
-    if (!confirm(t("tabs.deleteConfirm", { name: tab.name }))) return;
-    if (activeCustomTabId === tab.id) onCustomTabChange(null);
-    deleteTab.mutate(tab.id);
-    if (form?.kind === "edit" && form.tab.id === tab.id) setForm(null);
+    toast.confirm(t("tabs.deleteConfirm", { name: tab.name }), () => {
+      if (activeCustomTabId === tab.id) onCustomTabChange(null);
+      deleteTab.mutate(tab.id);
+      if (form?.kind === "edit" && form.tab.id === tab.id) setForm(null);
+    });
   };
 
   return (
@@ -98,21 +101,21 @@ export default function FeedTabs({
               </button>
               <div className={cn(
                 "flex items-center gap-0.5 pb-px -ml-1 transition-opacity",
-                isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                isActive ? "opacity-100" : "opacity-30 hover:opacity-80",
               )}>
                 <button
                   onClick={(e) => { e.stopPropagation(); setForm({ kind: "edit", tab }); }}
                   title={t("tabs.editTab")}
-                  className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="p-1.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 >
-                  <Pencil size={11} />
+                  <Pencil size={14} />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDelete(tab); }}
                   title={t("tabs.deleteTab")}
-                  className="p-1 rounded text-gray-400 hover:text-red-500 transition-colors"
+                  className="p-1.5 rounded text-gray-400 hover:text-red-500 transition-colors"
                 >
-                  <Trash2 size={11} />
+                  <Trash2 size={14} />
                 </button>
               </div>
             </div>

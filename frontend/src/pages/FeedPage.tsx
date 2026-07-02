@@ -97,32 +97,10 @@ export default function FeedPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3 gap-3">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 shrink-0">{t("feed.title")}</h1>
-
-        {/* Search bar */}
-        <div className="relative flex-1 max-w-xs">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          <input
-            ref={searchRef}
-            type="search"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={t("feed.searchPlaceholder")}
-            className="w-full pl-8 pr-7 py-1.5 text-sm rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400"
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={() => setSearchInput("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <X size={13} />
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
+      <div className="mb-3">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t("feed.title")}</h1>
+          <div className="flex items-center gap-2">
           {!activeCustomTab && (
             <>
               <button
@@ -153,6 +131,30 @@ export default function FeedPage() {
             <RefreshCw size={15} className={isFetching ? "animate-spin" : ""} />
           </button>
 
+          </div>
+        </div>
+
+        {/* Search bar */}
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+            ref={searchRef}
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t("feed.searchPlaceholder")}
+            className="w-full pl-9 pr-9 py-2 text-sm rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => setSearchInput("")}
+              aria-label="Clear search"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-0.5"
+            >
+              <X size={13} />
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Plus, Trash2, Pencil, RotateCcw, Download, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useToast } from "../ui/Toaster";
 import { useCategories, useDeleteCategory, useResetWeights, useSetManualWeight, useImportCategories, useUpdateCategory } from "../../hooks/useCategories";
 import { categoriesApi } from "../../api/categories";
 import CategoryForm from "./CategoryForm";
@@ -24,6 +25,7 @@ function downloadJson(data: unknown, filename: string) {
 
 export default function CategoriesPanel() {
   const { t } = useTranslation();
+  const toast = useToast();
   const { data: categories, isLoading } = useCategories();
   const deleteCategory = useDeleteCategory();
   const resetWeights = useResetWeights();
@@ -86,10 +88,7 @@ export default function CategoriesPanel() {
               <input type="file" accept=".json" className="hidden" onChange={handleImport} />
             </label>
             <button
-              onClick={() => {
-                if (confirm(t("categories.resetWeightsConfirm")))
-                  resetWeights.mutate();
-              }}
+              onClick={() => toast.confirm(t("categories.resetWeightsConfirm"), () => resetWeights.mutate(), t("categories.resetWeights"))}
               title={t("categories.resetWeights")}
               className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400"
             >
@@ -158,10 +157,7 @@ export default function CategoriesPanel() {
                 key={cat.id}
                 cat={cat}
                 onEdit={() => { setEditing(cat); setPendingNode(null); setShowCustomForm(false); }}
-                onDelete={() => {
-                  if (confirm(t("categories.deleteConfirm", { name: cat.name })))
-                    deleteCategory.mutate(cat.id);
-                }}
+                onDelete={() => toast.confirm(t("categories.deleteConfirm", { name: cat.name }), () => deleteCategory.mutate(cat.id))}
               />
             )
           )}

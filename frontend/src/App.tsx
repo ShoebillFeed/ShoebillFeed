@@ -8,6 +8,7 @@ import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import { useMe } from "./hooks/useAuth";
 import { usePreferencesStore } from "./stores/preferencesStore";
+import { Toaster } from "./components/ui/Toaster";
 
 function ThemeProvider() {
   const theme = usePreferencesStore((s) => s.theme);
@@ -59,7 +60,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <>
+    <Toaster>
       <ThemeProvider />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -77,6 +78,6 @@ export default function App() {
           }
         />
       </Routes>
-    </>
+    </Toaster>
   );
 }
