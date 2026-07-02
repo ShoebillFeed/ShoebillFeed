@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ThumbsUp, ThumbsDown, Bookmark, Check, ExternalLink, Trash2, TrendingUp, Share2, CheckCheck } from "lucide-react";
+import { TrendingUp, TrendingDown, Bookmark, Check, ExternalLink, Trash2, Share2, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
@@ -194,7 +194,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             onClick={handleToggleRelevant}
             title={localRelevant ? t("card.unmarkRelevant") : t("card.markRelevant")}
           >
-            <ThumbsUp size={14} fill={localRelevant ? "currentColor" : "none"} />
+            <TrendingUp size={14} />
           </ActionButton>
 
           <ActionButton
@@ -204,7 +204,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             onClick={() => dislikeItem.mutate(item.id)}
             title={t("card.dislike")}
           >
-            <ThumbsDown size={14} />
+            <TrendingDown size={14} />
           </ActionButton>
 
           <ActionButton
