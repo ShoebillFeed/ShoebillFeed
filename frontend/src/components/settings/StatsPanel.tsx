@@ -369,7 +369,7 @@ function BySourceChart({ days }: { days: number }) {
           tick={{ fontSize: 11 }}
           tickLine={false}
           axisLine={false}
-          width={120}
+          width={160}
           tickFormatter={(name: string) => {
             const entry = data.find((d) => d.name === name);
             const type = entry ? (SOURCE_TYPE_LABEL[entry.source_type] ?? entry.source_type) : "";

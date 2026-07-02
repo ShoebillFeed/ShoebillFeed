@@ -136,7 +136,7 @@ export default function CategoryForm({ category, taxonomyName, taxonomyId, defau
 
       <div>
         <label className="block text-sm font-medium mb-2">{t("categoryForm.color")}</label>
-        <div className="flex flex-wrap gap-2 mb-2">
+        <div className="flex flex-wrap gap-3 mb-2">
           {PRESET_COLORS.map((c) => (
             <button
               key={c}
@@ -144,7 +144,7 @@ export default function CategoryForm({ category, taxonomyName, taxonomyId, defau
               onClick={() => setColor(c)}
               style={{ backgroundColor: c }}
               className={cn(
-                "w-7 h-7 rounded-full border-2 transition-transform",
+                "w-8 h-8 rounded-full border-2 transition-transform",
                 color === c ? "border-gray-900 dark:border-white scale-110" : "border-transparent"
               )}
             />

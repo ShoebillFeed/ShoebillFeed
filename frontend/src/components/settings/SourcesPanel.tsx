@@ -103,7 +103,7 @@ export default function SourcesPanel() {
             ) : (
               <div
                 key={source.id}
-                className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg"
+                className="flex items-center gap-3 p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">

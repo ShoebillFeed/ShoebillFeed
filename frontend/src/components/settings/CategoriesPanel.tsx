@@ -213,7 +213,7 @@ function CategoryRow({
   const taxonomyNode = cat.taxonomy_id ? findNode(cat.taxonomy_id) : null;
 
   return (
-    <div className={`p-3 bg-white dark:bg-gray-900 border rounded-lg transition-opacity ${inactive ? "opacity-50 border-gray-100 dark:border-gray-800" : "border-gray-200 dark:border-gray-700"}`}>
+    <div className={`p-4 bg-white dark:bg-gray-900 border rounded-lg transition-opacity ${inactive ? "opacity-50 border-gray-100 dark:border-gray-800" : "border-gray-200 dark:border-gray-700"}`}>
       <div className="flex items-center gap-3">
         <div
           className="w-4 h-4 rounded-full shrink-0"

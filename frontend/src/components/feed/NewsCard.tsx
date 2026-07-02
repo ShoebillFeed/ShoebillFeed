@@ -148,7 +148,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
               {item.title}
             </h3>
             <ExternalLink size={12} className={cn(
-              "shrink-0 mt-1 opacity-0 group-hover:opacity-60 transition-opacity",
+              "shrink-0 mt-1 opacity-30 group-hover:opacity-70 transition-opacity",
               hasImage ? "text-white" : "text-indigo-500"
             )} />
           </div>

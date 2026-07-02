@@ -81,7 +81,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
         hasImage ? "min-h-48 border-transparent" : "p-4 bg-white dark:bg-gray-900",
         !hasImage && (cluster.is_read
           ? "border-gray-100 dark:border-gray-800"
-          : "border-indigo-200 dark:border-indigo-800"),
+          : "border-gray-200 dark:border-gray-700"),
         cluster.is_read && "opacity-70",
       )}
     >
@@ -247,7 +247,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
                               )}
                               {item.title}
                             </span>
-                            <ExternalLink size={10} className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-60 transition-opacity text-indigo-400" />
+                            <ExternalLink size={10} className="shrink-0 mt-0.5 opacity-30 group-hover:opacity-70 transition-opacity text-indigo-400" />
                           </div>
                           {item.source_summary && (
                             <p className={cn(
