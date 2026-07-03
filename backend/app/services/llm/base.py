@@ -244,6 +244,8 @@ def _parse_categories(raw, known_categories: list[str]) -> list[str]:
     lookup = {name.casefold(): name for name in known_categories}
     result = []
     for n in raw:
+        if isinstance(n, dict):
+            n = n.get("name", "")
         name = str(n).strip()
         if not name:
             continue
