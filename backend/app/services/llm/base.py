@@ -13,8 +13,9 @@ logger = logging.getLogger(__name__)
 # Shared field descriptions and category-matching guidance, reused across all
 # classification prompts so wording stays consistent and changes apply everywhere.
 CATEGORIES_FIELD = (
-    '- "categories": array of category names from the provided list whose subject this '
-    'item is genuinely about (can be empty [], can have multiple matches)'
+    '- "categories": array of category names taken verbatim from the provided list whose subject this '
+    'item is genuinely about (can be empty [], can have multiple matches). '
+    'ONLY use names that appear exactly in the list — do not invent new categories.'
 )
 
 RELEVANCE_FIELD = (
@@ -23,8 +24,8 @@ RELEVANCE_FIELD = (
     'only briefly or tangentially mentioned. Use 5 if no category matched.'
 )
 
-CATEGORY_GUIDANCE = """Available categories: {categories_json}
-Each category has a name, optional "keywords" (signals for its topic, not phrases that must appear verbatim) and optionally a "description". When a description is present, weigh it more heavily than the keywords. Judge fit by the item's overall subject, not incidental keyword overlap — only include a category if the item's main topic genuinely falls within it, even if a keyword appears only in passing."""
+CATEGORY_GUIDANCE = """Available categories (use ONLY these exact names): {categories_json}
+Each category has a name, optional "keywords" (signals for its topic, not phrases that must appear verbatim) and optionally a "description". When a description is present, weigh it more heavily than the keywords. Judge fit by the item's overall subject, not incidental keyword overlap — only include a category if the item's main topic genuinely falls within it, even if a keyword appears only in passing. If no category fits, return an empty array."""
 
 
 SYSTEM_PROMPT = """You are a neutral news analyst. Given a news article title and content, return a JSON object with exactly these fields:
