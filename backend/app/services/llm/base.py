@@ -1,3 +1,4 @@
+import ast
 import json
 import logging
 import re
@@ -246,6 +247,13 @@ def _parse_categories(raw, known_categories: list[str]) -> list[str]:
     for n in raw:
         if isinstance(n, dict):
             n = n.get("name", "")
+        elif isinstance(n, str) and n.strip().startswith("{"):
+            try:
+                parsed = ast.literal_eval(n.strip())
+                if isinstance(parsed, dict):
+                    n = parsed.get("name", "")
+            except (ValueError, SyntaxError):
+                pass
         name = str(n).strip()
         if not name:
             continue
