@@ -94,7 +94,8 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
             loading="lazy"
             onError={() => setHasImage(false)}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/15" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" />
         </div>
       )}
 
@@ -140,7 +141,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
         <h3 className={cn(
           "text-sm font-semibold leading-snug mb-1",
           hasImage
-            ? "text-white"
+            ? "text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]"
             : cluster.is_read ? "text-gray-500 dark:text-gray-400" : "text-gray-900 dark:text-gray-100"
         )}>
           {cluster.title}
@@ -151,7 +152,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
       {cluster.unified_abstract ? (
         <p className={cn(
           "text-sm leading-relaxed",
-          hasImage ? "text-white/75" : (cluster.is_read ? "text-gray-500 dark:text-gray-400" : "text-gray-900 dark:text-gray-100")
+          hasImage ? "text-white/75 [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" : (cluster.is_read ? "text-gray-500 dark:text-gray-400" : "text-gray-900 dark:text-gray-100")
         )}>
           {cluster.unified_abstract}
         </p>
