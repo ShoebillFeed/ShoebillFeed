@@ -17,11 +17,11 @@ export function Accordion({
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden mb-3">
-      <div className="flex items-center bg-gray-50 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+      <div className="bg-gray-50 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex-1 flex items-center justify-between px-4 py-3 text-left min-w-0"
+          className="w-full flex items-center justify-between px-4 py-3 text-left"
         >
           <div className="min-w-0 pr-3">
             <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">{title}</h3>
@@ -36,7 +36,7 @@ export function Accordion({
           )}
         </button>
         {action && (
-          <div className="pr-3 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div className="px-4 pb-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
             {action}
           </div>
         )}
