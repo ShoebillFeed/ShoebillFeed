@@ -82,14 +82,16 @@ function Section({
 function Field({
   label,
   description,
+  stacked,
   children,
 }: {
   label: string;
   description?: string;
+  stacked?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start gap-4">
+    <div className={stacked ? "flex flex-col gap-2" : "flex items-start gap-4"}>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{label}</p>
         {description && (
@@ -399,6 +401,7 @@ function PushNotificationsSection() {
             <Field
               label={t("notifications.minScore")}
               description={t("notifications.minScoreDesc")}
+              stacked
             >
               <ScoreSlider
                 value={settings.push_min_relevance}
