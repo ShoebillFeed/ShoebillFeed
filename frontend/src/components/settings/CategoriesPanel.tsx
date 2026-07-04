@@ -26,7 +26,8 @@ function downloadJson(data: unknown, filename: string) {
 export default function CategoriesPanel() {
   const { t } = useTranslation();
   const toast = useToast();
-  const { data: categories, isLoading } = useCategories();
+  const { data: categoriesRaw, isLoading } = useCategories();
+  const categories = categoriesRaw ? [...categoriesRaw].sort((a, b) => a.name.localeCompare(b.name)) : categoriesRaw;
   const deleteCategory = useDeleteCategory();
   const resetWeights = useResetWeights();
   const importCategories = useImportCategories();

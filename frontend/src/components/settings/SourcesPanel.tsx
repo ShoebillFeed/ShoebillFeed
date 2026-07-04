@@ -22,7 +22,8 @@ function downloadJson(data: unknown, filename: string) {
 export default function SourcesPanel() {
   const { t } = useTranslation();
   const toast = useToast();
-  const { data: sources, isLoading } = useSources();
+  const { data: sourcesRaw, isLoading } = useSources();
+  const sources = sourcesRaw ? [...sourcesRaw].sort((a, b) => a.name.localeCompare(b.name)) : sourcesRaw;
   const { data: sharedSources } = useSharedSources();
   const deleteSource = useDeleteSource();
   const fetchSource = useFetchSource();
