@@ -9,7 +9,7 @@ import SourceFilter from "../components/feed/SourceFilter";
 import NewsFeed from "../components/feed/NewsFeed";
 import NewsCard from "../components/feed/NewsCard";
 import NewsCardSkeleton from "../components/feed/NewsCardSkeleton";
-import { Eye, RefreshCw, Search, Tag, X } from "lucide-react";
+import { ArrowUp, Eye, RefreshCw, Search, Tag, X } from "lucide-react";
 import { sourcesApi } from "../api/sources";
 import { useQueryClient } from "@tanstack/react-query";
 import type { FeedEntry } from "../types/news";
@@ -40,7 +40,14 @@ export default function FeedPage() {
   const [searchInput, setSearchInput] = useState("");
   const searchQuery = useDebounce(searchInput, 300);
   const [isFetching, setIsFetching] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 300);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   const isSearching = searchQuery.trim().length > 0;
 
   const activeCustomTab = activeCustomTabId
@@ -231,6 +238,21 @@ export default function FeedPage() {
             onRefresh={handleRefresh}
           />
         </>
+      )}
+
+      {showScrollTop && (
+        <button
+          onClick={() => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            handleRefresh();
+          }}
+          aria-label={t("feed.scrollToTop")}
+          title={t("feed.scrollToTop")}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
+        >
+          <ArrowUp size={15} />
+          {t("feed.scrollToTop")}
+        </button>
       )}
     </div>
   );

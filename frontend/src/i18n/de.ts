@@ -45,7 +45,8 @@ const de = {
     searchPlaceholder: "Artikel suchen…",
     searchResults_one: "{{count}} Ergebnis",
     searchResults_other: "{{count}} Ergebnisse",
-    searchNoResults: "Keine Artikel gefunden für „{{query}}”.",
+    searchNoResults: “Keine Artikel gefunden für „{{query}}”.”,
+    scrollToTop: “Nach oben”,
   },
   tabs: {
     newest: "Neueste",

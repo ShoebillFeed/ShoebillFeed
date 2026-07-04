@@ -46,6 +46,7 @@ const en = {
     searchResults_one: "{{count}} result",
     searchResults_other: "{{count}} results",
     searchNoResults: "No articles found for \"{{query}}\".",
+    scrollToTop: "Back to top",
   },
   tabs: {
     newest: "Newest",
