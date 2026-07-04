@@ -20,7 +20,7 @@ export default function SourceFilter() {
   const { data: sources } = useSources();
   const { selectedSourceIds, toggleSource, clearSources, sourceFilterExpanded: expanded, setSourceFilterExpanded: setExpanded } = useFilterStore();
 
-  const active = sources?.filter((s) => s.is_active) ?? [];
+  const active = (sources?.filter((s) => s.is_active) ?? []).sort((a, b) => a.name.localeCompare(b.name));
   if (active.length === 0) return null;
 
   const selected = active.filter((s) => selectedSourceIds.includes(s.id));

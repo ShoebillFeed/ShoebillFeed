@@ -14,8 +14,9 @@ export default function CategoryFilter() {
 
   if (!categories?.length) return null;
 
-  const selected = categories.filter((c) => selectedCategoryIds.includes(c.id));
-  const unselected = categories.filter((c) => !selectedCategoryIds.includes(c.id));
+  const sorted = [...categories].sort((a, b) => a.name.localeCompare(b.name));
+  const selected = sorted.filter((c) => selectedCategoryIds.includes(c.id));
+  const unselected = sorted.filter((c) => !selectedCategoryIds.includes(c.id));
   const hasSelection = selected.length > 0;
   const showToggle = unselected.length > 0 || expanded;
 
