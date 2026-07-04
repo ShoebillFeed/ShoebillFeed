@@ -589,49 +589,18 @@ function KeywordClusterHistoryChart({ days }: { days: number }) {
     );
   }
 
-  const hasSnapshots = data.some((c) => c.snapshots.length > 0);
-  if (!hasSnapshots) {
-    // We have clusters but no snapshot history yet — show current weights as a simple bar
-    return (
-      <ResponsiveContainer width="100%" height={Math.max(160, data.length * 32 + 40)}>
-        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 60, left: 8, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} horizontal={false} />
-          <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} domain={[1, "auto"]} />
-          <YAxis type="category" dataKey="cluster_label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={130} />
-          <Tooltip
-            cursor={false}
-            wrapperStyle={WRAPPER_STYLE}
-            content={({ active, payload }) => {
-              if (!active || !payload?.[0]) return null;
-              const d = payload[0].payload as { cluster_label: string; category_name: string; category_color: string; current_weight: number };
-              return (
-                <TooltipBox>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.category_color }} />
-                    <span className="font-semibold text-gray-800 dark:text-gray-100">{d.cluster_label}</span>
-                  </div>
-                  <TooltipRow name={d.category_name} value={d.current_weight.toFixed(3)} />
-                </TooltipBox>
-              );
-            }}
-          />
-          <Bar dataKey="current_weight" name="Weight" radius={[0, 4, 4, 0]}>
-            {data.map((entry, i) => (
-              <Cell key={i} fill={entry.category_color} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    );
-  }
+  const today = new Date().toISOString().slice(0, 10);
+  const enrichedData = data.map((c) =>
+    c.snapshots.length > 0 ? c : { ...c, snapshots: [{ date: today, weight: c.current_weight }] }
+  );
 
   const allDates = Array.from(
-    new Set(data.flatMap((c) => c.snapshots.map((s) => s.date.slice(0, 10))))
+    new Set(enrichedData.flatMap((c) => c.snapshots.map((s) => s.date.slice(0, 10))))
   ).sort();
 
   const chartData = allDates.map((date) => {
     const point: Record<string, string | number> = { date: fmtDate(date, days) };
-    for (const cluster of data) {
+    for (const cluster of enrichedData) {
       const snap = [...cluster.snapshots].reverse().find((s) => s.date.slice(0, 10) <= date);
       if (snap) point[cluster.cluster_label] = snap.weight;
     }
@@ -662,7 +631,7 @@ function KeywordClusterHistoryChart({ days }: { days: number }) {
           }}
         />
         <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, left: 0, width: "100%", textAlign: "center" }} />
-        {data.map((cluster) => (
+        {enrichedData.map((cluster) => (
           <Line
             key={`${cluster.category_name}:${cluster.cluster_label}`}
             type="monotone"
