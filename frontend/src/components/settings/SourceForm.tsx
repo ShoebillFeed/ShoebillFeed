@@ -48,6 +48,7 @@ export default function SourceForm({ source, onClose }: Props) {
   const [interval, setInterval] = useState(source?.fetch_interval ?? 3600);
   const [isActive, setIsActive] = useState(source?.is_active ?? true);
   const [formError, setFormError] = useState<string | null>(null);
+  const [robotsBlocked, setRobotsBlocked] = useState(false);
 
   const setConfigField = (key: string, value: string) =>
     setConfig((prev) => ({ ...prev, [key]: value }));
@@ -115,7 +116,7 @@ export default function SourceForm({ source, onClose }: Props) {
         </div>
       )}
 
-      <ConfigFields type={type} config={config} onChange={setConfigField} />
+      <ConfigFields type={type} config={config} onChange={setConfigField} onRobotsBlocked={setRobotsBlocked} />
 
       <div>
         <label className="block text-sm font-medium mb-1">{t("sourceForm.fetchInterval")}</label>
@@ -146,7 +147,11 @@ export default function SourceForm({ source, onClose }: Props) {
         <button type="button" onClick={onClose} className={cn(btnClass, "flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300")}>
           {t("common.cancel")}
         </button>
-        <button type="submit" className={cn(btnClass, "flex-1 bg-indigo-600 text-white hover:bg-indigo-700")}>
+        <button
+          type="submit"
+          disabled={type === "scraper" && robotsBlocked}
+          className={cn(btnClass, "flex-1 bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed")}
+        >
           {isEdit ? t("common.save") : t("sourceForm.addSource")}
         </button>
       </div>
@@ -158,10 +163,12 @@ function ConfigFields({
   type,
   config,
   onChange,
+  onRobotsBlocked,
 }: {
   type: SourceType;
   config: Record<string, string>;
   onChange: (k: string, v: string) => void;
+  onRobotsBlocked?: (blocked: boolean) => void;
 }) {
   const { t } = useTranslation();
   if (type === "rss") return (
@@ -292,16 +299,18 @@ function ConfigFields({
   if (type === "telegram") return (
     <Field label={t("sourceForm.telegramChannel")} field="channel" config={config} onChange={onChange} placeholder="bbcnews" required />
   );
-  if (type === "scraper") return <ScraperConfigFields config={config} onChange={onChange} />;
+  if (type === "scraper") return <ScraperConfigFields config={config} onChange={onChange} onRobotsBlocked={onRobotsBlocked} />;
   return null;
 }
 
 function ScraperConfigFields({
   config,
   onChange,
+  onRobotsBlocked,
 }: {
   config: Record<string, string>;
   onChange: (k: string, v: string) => void;
+  onRobotsBlocked?: (blocked: boolean) => void;
 }) {
   const { t } = useTranslation();
   const [advancedOpen, setAdvancedOpen] = useState(Boolean(config["item_selector"]));
@@ -315,11 +324,16 @@ function ScraperConfigFields({
   const url = (config["url"] ?? "").trim();
   const fetchFull = config["fetch_full_articles"] !== "false";
 
+  const setBlocked = (blocked: boolean) => {
+    setRobotsBlocked(blocked);
+    onRobotsBlocked?.(blocked);
+  };
+
   const handleDetect = async () => {
     if (!url || detecting) return;
     setDetecting(true);
     setDetectError(null);
-    setRobotsBlocked(false);
+    setBlocked(false);
     setPreview(null);
     setItemCount(null);
     setDetectedSelectors(null);
@@ -340,7 +354,7 @@ function ScraperConfigFields({
       if (result.item_count === 0) setAdvancedOpen(true);
     } catch (err) {
       if (isAxiosError(err) && err.response?.status === 403) {
-        setRobotsBlocked(true);
+        setBlocked(true);
       } else {
         setDetectError(t("sourceForm.scraperDetectError"));
         setAdvancedOpen(true);
@@ -416,21 +430,6 @@ function ScraperConfigFields({
       )}
 
       <div>
-        <label className="flex items-start gap-2.5 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={fetchFull}
-            onChange={(e) => onChange("fetch_full_articles", e.target.checked ? "true" : "false")}
-            className="mt-0.5 rounded shrink-0"
-          />
-          <div>
-            <span className="text-sm font-medium">{t("sourceForm.scraperFetchFull")}</span>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t("sourceForm.scraperFetchFullDesc")}</p>
-          </div>
-        </label>
-      </div>
-
-      <div>
         <button
           type="button"
           onClick={() => setAdvancedOpen((v) => !v)}
@@ -446,6 +445,18 @@ function ScraperConfigFields({
             <Field label={t("sourceForm.scraperLinkSelector")} field="link_selector" config={config} onChange={onChange} placeholder="a.read-more" />
             <Field label={t("sourceForm.scraperContentSelector")} field="content_selector" config={config} onChange={onChange} placeholder="p.summary" />
             <p className="text-xs text-gray-400 dark:text-gray-500">{t("sourceForm.scraperTip")}</p>
+            <label className="flex items-start gap-2.5 cursor-pointer pt-1 border-t border-gray-100 dark:border-gray-700">
+              <input
+                type="checkbox"
+                checked={fetchFull}
+                onChange={(e) => onChange("fetch_full_articles", e.target.checked ? "true" : "false")}
+                className="mt-0.5 rounded shrink-0"
+              />
+              <div>
+                <span className="text-sm font-medium">{t("sourceForm.scraperFetchFull")}</span>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t("sourceForm.scraperFetchFullDesc")}</p>
+              </div>
+            </label>
           </div>
         )}
       </div>
