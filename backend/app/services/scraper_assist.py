@@ -10,7 +10,7 @@ from app.services.llm.factory import get_llm_provider
 
 logger = logging.getLogger(__name__)
 
-SIMPLIFY_MAX_CHARS = 8000
+SIMPLIFY_MAX_CHARS = 12000
 PREVIEW_LIMIT = 8
 
 _KEEP_ATTRS = {"class", "id", "href"}
@@ -18,18 +18,32 @@ _TEXT_SNIPPET_LEN = 80
 _HREF_SNIPPET_LEN = 60
 _MAX_CLASSES = 3
 
+# Chrome-level noise that never contains article listings and can consume
+# thousands of characters before the real content begins.
+_NOISE_TAGS = [
+    "script", "style", "svg", "noscript", "head", "iframe", "template",
+    "nav", "header", "footer", "aside", "form",
+]
+
 
 def _simplify_html(html: str, max_chars: int = SIMPLIFY_MAX_CHARS) -> str:
     """Strip a page down to its tag/class/id/href structure with short text
-    snippets, so an LLM can spot the repeated article pattern cheaply."""
+    snippets, so an LLM can spot the repeated article pattern cheaply.
+
+    Navigation, headers, footers, sidebars and forms are removed first because
+    they sit at the top of the DOM and push article content past the character
+    budget.  The search then scopes to <main> or <article> when present, since
+    those elements almost always wrap the listing we care about.
+    """
     soup = BeautifulSoup(html, "lxml")
 
-    for tag in soup(["script", "style", "svg", "noscript", "head", "iframe", "template"]):
+    for tag in soup(_NOISE_TAGS):
         tag.decompose()
     for comment in soup.find_all(string=lambda s: isinstance(s, Comment)):
         comment.extract()
 
-    body = soup.body or soup
+    # Prefer the main content block; fall back to the full body.
+    body = soup.find("main") or soup.find("article") or soup.body or soup
 
     for tag in body.find_all(True):
         attrs = {k: v for k, v in tag.attrs.items() if k in _KEEP_ATTRS}
