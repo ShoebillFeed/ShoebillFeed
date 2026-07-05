@@ -31,9 +31,10 @@ const DEFAULT_INTERVALS = [
 interface Props {
   source?: Source;
   onClose: () => void;
+  existingSources?: Source[];
 }
 
-export default function SourceForm({ source, onClose }: Props) {
+export default function SourceForm({ source, onClose, existingSources }: Props) {
   const { t } = useTranslation();
   const isEdit = Boolean(source);
   const create = useCreateSource();
@@ -101,7 +102,20 @@ export default function SourceForm({ source, onClose }: Props) {
               <button
                 key={id}
                 type="button"
-                onClick={() => { setType(id); setConfig({}); }}
+                onClick={() => {
+                  let newConfig: Record<string, string> = {};
+                  if (id === "reddit") {
+                    const existing = existingSources?.find((s) => s.source_type === "reddit");
+                    if (existing) {
+                      for (const k of ["client_id", "client_secret", "username", "password"]) {
+                        const v = existing.config[k];
+                        if (v) newConfig[k] = String(v);
+                      }
+                    }
+                  }
+                  setType(id);
+                  setConfig(newConfig);
+                }}
                 className={cn(
                   "px-3 py-2 text-sm rounded border transition-colors",
                   type === id
@@ -116,7 +130,7 @@ export default function SourceForm({ source, onClose }: Props) {
         </div>
       )}
 
-      <ConfigFields type={type} config={config} onChange={setConfigField} onRobotsBlocked={setRobotsBlocked} />
+      <ConfigFields type={type} config={config} onChange={setConfigField} onRobotsBlocked={setRobotsBlocked} existingSources={existingSources} />
 
       <div>
         <label className="block text-sm font-medium mb-1">{t("sourceForm.fetchInterval")}</label>
@@ -164,36 +178,57 @@ function ConfigFields({
   config,
   onChange,
   onRobotsBlocked,
+  existingSources,
 }: {
   type: SourceType;
   config: Record<string, string>;
   onChange: (k: string, v: string) => void;
   onRobotsBlocked?: (blocked: boolean) => void;
+  existingSources?: Source[];
 }) {
   const { t } = useTranslation();
   if (type === "rss") return (
     <Field label={t("sourceForm.feedUrl")} field="url" config={config} onChange={onChange} placeholder="https://example.com/feed.xml" required />
   );
-  if (type === "reddit") return (
-    <>
-      <Field label={t("sourceForm.subreddit")} field="subreddit" config={config} onChange={onChange} placeholder="MachineLearning" required />
-      <Field label={t("sourceForm.redditSort")} field="sort" config={config} onChange={onChange} placeholder="hot" />
-      <Field label={t("sourceForm.limit")} field="limit" config={config} onChange={onChange} placeholder="25" />
-      <div className="rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 px-3 py-2.5 flex gap-2 text-xs">
-        <span className="text-blue-400 shrink-0 mt-0.5">ℹ</span>
-        <div className="text-blue-700 dark:text-blue-300 space-y-1">
-          <p className="font-medium">{t("sourceForm.redditAuthTitle")}</p>
-          <p>{t("sourceForm.redditAuthBody")}</p>
-          <ol className="list-decimal list-inside space-y-0.5 text-blue-600 dark:text-blue-400">
-            <li>{t("sourceForm.redditAuthStep1")}</li>
-            <li>{t("sourceForm.redditAuthStep2")}</li>
-            <li>{t("sourceForm.redditAuthStep3")}</li>
-          </ol>
-          <p>{t("sourceForm.redditAuthEnv")}</p>
+  if (type === "reddit") {
+    const hasCreds = Boolean(config["client_id"] && config["client_secret"]);
+    const prefilled = Boolean(existingSources?.find((s) => s.source_type === "reddit" && s.config["client_id"]));
+    return (
+      <>
+        <Field label={t("sourceForm.subreddit")} field="subreddit" config={config} onChange={onChange} placeholder="MachineLearning" required />
+        <Field label={t("sourceForm.redditSort")} field="sort" config={config} onChange={onChange} placeholder="hot" />
+        <Field label={t("sourceForm.limit")} field="limit" config={config} onChange={onChange} placeholder="25" />
+        <div className="flex flex-col gap-3 pt-1 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{t("sourceForm.redditCredentials")}</span>
+            {prefilled && !hasCreds && (
+              <span className="text-xs text-indigo-500">{t("sourceForm.redditPrefilled")}</span>
+            )}
+            {hasCreds && (
+              <span className="text-xs text-green-600 dark:text-green-400">{t("sourceForm.redditCredsSet")}</span>
+            )}
+          </div>
+          <Field label={t("sourceForm.redditClientId")} field="client_id" config={config} onChange={onChange} placeholder="a1b2c3d4e5f6g7" required />
+          <Field label={t("sourceForm.redditClientSecret")} field="client_secret" config={config} onChange={onChange} placeholder="••••••••••••••••••••••••••••" type="password" required />
+          <Field label={t("sourceForm.redditUsername")} field="username" config={config} onChange={onChange} placeholder={t("sourceForm.redditUsernameHint")} />
+          <Field label={t("sourceForm.redditPassword")} field="password" config={config} onChange={onChange} placeholder="••••••••" type="password" />
+          <div className="rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 px-3 py-2.5 flex gap-2 text-xs">
+            <span className="text-blue-400 shrink-0 mt-0.5">ℹ</span>
+            <div className="text-blue-700 dark:text-blue-300 space-y-1">
+              <p className="font-medium">{t("sourceForm.redditAuthTitle")}</p>
+              <p>{t("sourceForm.redditAuthBody")}</p>
+              <ol className="list-decimal list-inside space-y-0.5 text-blue-600 dark:text-blue-400">
+                <li>{t("sourceForm.redditAuthStep1")}</li>
+                <li>{t("sourceForm.redditAuthStep2")}</li>
+                <li>{t("sourceForm.redditAuthStep3")}</li>
+              </ol>
+              <p className="text-blue-500 dark:text-blue-400">{t("sourceForm.redditAuthNote")}</p>
+            </div>
+          </div>
         </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  }
   if (type === "youtube") return (
     <>
       <Field label={t("sourceForm.channelId")} field="channel_id" config={config} onChange={onChange} placeholder="UCxxxxxxxxxxxxx" required />

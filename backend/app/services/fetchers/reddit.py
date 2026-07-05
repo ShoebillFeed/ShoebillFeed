@@ -48,18 +48,24 @@ class RedditFetcher(NewsFetcher):
         if not subreddit_name:
             raise ValueError("Reddit source missing 'subreddit' in config")
 
-        if not settings.reddit_client_id or not settings.reddit_client_secret:
+        # Per-source credentials take priority; fall back to global .env for backwards compat.
+        client_id = str(self.config.get("client_id") or settings.reddit_client_id or "")
+        client_secret = str(self.config.get("client_secret") or settings.reddit_client_secret or "")
+        username = str(self.config.get("username") or settings.reddit_username or "")
+        password = str(self.config.get("password") or settings.reddit_password or "")
+
+        if not client_id or not client_secret:
             raise ValueError(
-                "Reddit requires OAuth credentials. Set REDDIT_CLIENT_ID and "
-                "REDDIT_CLIENT_SECRET in your .env (create an app at reddit.com/prefs/apps)."
+                "Reddit requires OAuth credentials. Add client_id and client_secret to "
+                "this source's config (create an app at reddit.com/prefs/apps)."
             )
 
         try:
             token = _get_token(
-                settings.reddit_client_id,
-                settings.reddit_client_secret,
-                settings.reddit_username,
-                settings.reddit_password,
+                client_id,
+                client_secret,
+                username,
+                password,
                 settings.reddit_user_agent,
             )
         except Exception:
