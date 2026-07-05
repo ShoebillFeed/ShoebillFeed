@@ -179,6 +179,19 @@ function ConfigFields({
       <Field label={t("sourceForm.subreddit")} field="subreddit" config={config} onChange={onChange} placeholder="MachineLearning" required />
       <Field label={t("sourceForm.redditSort")} field="sort" config={config} onChange={onChange} placeholder="hot" />
       <Field label={t("sourceForm.limit")} field="limit" config={config} onChange={onChange} placeholder="25" />
+      <div className="rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 px-3 py-2.5 flex gap-2 text-xs">
+        <span className="text-blue-400 shrink-0 mt-0.5">ℹ</span>
+        <div className="text-blue-700 dark:text-blue-300 space-y-1">
+          <p className="font-medium">{t("sourceForm.redditAuthTitle")}</p>
+          <p>{t("sourceForm.redditAuthBody")}</p>
+          <ol className="list-decimal list-inside space-y-0.5 text-blue-600 dark:text-blue-400">
+            <li>{t("sourceForm.redditAuthStep1")}</li>
+            <li>{t("sourceForm.redditAuthStep2")}</li>
+            <li>{t("sourceForm.redditAuthStep3")}</li>
+          </ol>
+          <p>{t("sourceForm.redditAuthEnv")}</p>
+        </div>
+      </div>
     </>
   );
   if (type === "youtube") return (
