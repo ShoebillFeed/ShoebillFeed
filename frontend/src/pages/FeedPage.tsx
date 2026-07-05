@@ -44,7 +44,8 @@ export default function FeedPage() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const onScroll = () => setShowScrollTop(window.scrollY > 300);
+    const getScrollY = () => document.documentElement.scrollTop || document.body.scrollTop || window.scrollY || 0;
+    const onScroll = () => setShowScrollTop(getScrollY() > 300);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -243,8 +244,9 @@ export default function FeedPage() {
       {showScrollTop && (
         <button
           onClick={() => {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-            handleRefresh();
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            setTimeout(handleRefresh, 50);
           }}
           aria-label={t("feed.scrollToTop")}
           title={t("feed.scrollToTop")}
