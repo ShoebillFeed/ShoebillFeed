@@ -202,7 +202,8 @@ class WebScraperFetcher(NewsFetcher):
         link_selector = self.config.get("link_selector", DEFAULT_LINK_SELECTOR).strip()
         content_selector = self.config.get("content_selector", "").strip() or None
         base_url = self.config.get("base_url", url).strip() or url
-        fetch_full = self.config.get("fetch_full_articles", True)
+        raw_ff = self.config.get("fetch_full_articles", True)
+        fetch_full = raw_ff not in (False, "false", "0", 0)
 
         if not url:
             raise ValueError("Web scraper source missing 'url'")

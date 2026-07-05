@@ -83,7 +83,10 @@ def suggest_scraper_config(url: str) -> dict:
         if retry_items:
             config, items = retry_config, retry_items
 
-    preview = [{"title": i.title, "url": i.url} for i in items[:PREVIEW_LIMIT]]
+    preview = [
+        {"title": i.title, "url": i.url, "content": i.raw_content[:120].strip() if i.raw_content else ""}
+        for i in items[:PREVIEW_LIMIT]
+    ]
     return {
         "config": {
             "url": url,

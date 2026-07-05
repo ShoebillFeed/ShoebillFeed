@@ -24,6 +24,6 @@ export interface ScraperSuggestion {
     link_selector: string;
     content_selector: string;
   };
-  preview: { title: string; url: string }[];
+  preview: { title: string; url: string; content: string }[];
   item_count: number;
 }

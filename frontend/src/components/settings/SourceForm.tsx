@@ -307,33 +307,44 @@ function ScraperConfigFields({
   const [advancedOpen, setAdvancedOpen] = useState(Boolean(config["item_selector"]));
   const [detecting, setDetecting] = useState(false);
   const [detectError, setDetectError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<{ title: string; url: string }[] | null>(null);
+  const [robotsBlocked, setRobotsBlocked] = useState(false);
+  const [detectedSelectors, setDetectedSelectors] = useState<{ item: string; title: string; link: string; content: string } | null>(null);
+  const [preview, setPreview] = useState<{ title: string; url: string; content: string }[] | null>(null);
   const [itemCount, setItemCount] = useState<number | null>(null);
 
   const url = (config["url"] ?? "").trim();
+  const fetchFull = config["fetch_full_articles"] !== "false";
 
   const handleDetect = async () => {
     if (!url || detecting) return;
     setDetecting(true);
     setDetectError(null);
+    setRobotsBlocked(false);
     setPreview(null);
     setItemCount(null);
+    setDetectedSelectors(null);
     try {
       const result = await sourcesApi.suggestScraperConfig(url);
       onChange("item_selector", result.config.item_selector);
       onChange("title_selector", result.config.title_selector);
       onChange("link_selector", result.config.link_selector);
       onChange("content_selector", result.config.content_selector);
+      setDetectedSelectors({
+        item: result.config.item_selector,
+        title: result.config.title_selector,
+        link: result.config.link_selector,
+        content: result.config.content_selector,
+      });
       setPreview(result.preview);
       setItemCount(result.item_count);
       if (result.item_count === 0) setAdvancedOpen(true);
     } catch (err) {
-      const message =
-        isAxiosError(err) && err.response?.status === 403
-          ? t("sourceForm.scraperRobotsDisallowed")
-          : t("sourceForm.scraperDetectError");
-      setDetectError(message);
-      setAdvancedOpen(true);
+      if (isAxiosError(err) && err.response?.status === 403) {
+        setRobotsBlocked(true);
+      } else {
+        setDetectError(t("sourceForm.scraperDetectError"));
+        setAdvancedOpen(true);
+      }
     } finally {
       setDetecting(false);
     }
@@ -361,16 +372,40 @@ function ScraperConfigFields({
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">{t("sourceForm.scraperDetectHint")}</p>
       </div>
 
+      {robotsBlocked && (
+        <div className="rounded border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5 flex gap-2">
+          <span className="text-amber-500 shrink-0 mt-0.5">⚠</span>
+          <div>
+            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">{t("sourceForm.scraperRobotsTitle")}</p>
+            <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">{t("sourceForm.scraperRobotsBody")}</p>
+          </div>
+        </div>
+      )}
+
       {detectError && <p className="text-xs text-red-500">{detectError}</p>}
 
-      {itemCount !== null && itemCount > 0 && preview && (
-        <div className="rounded border border-gray-200 dark:border-gray-700 p-2.5">
-          <p className="text-xs font-medium mb-1.5 text-gray-600 dark:text-gray-300">
-            {t("sourceForm.scraperFoundItems", { count: itemCount })}
-          </p>
-          <ul className="flex flex-col gap-1">
+      {itemCount !== null && itemCount > 0 && preview && detectedSelectors && (
+        <div className="rounded border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-3 flex flex-col gap-2">
+          <div>
+            <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">
+              {t("sourceForm.scraperFoundItems", { count: itemCount })}
+            </p>
+            <p className="text-xs text-green-600 dark:text-green-500">
+              {t("sourceForm.scraperPreviewDesc", {
+                item: detectedSelectors.item,
+                title: detectedSelectors.title,
+                link: detectedSelectors.link,
+              })}
+            </p>
+          </div>
+          <ul className="flex flex-col gap-2">
             {preview.slice(0, 5).map((item, i) => (
-              <li key={i} className="truncate text-xs text-gray-500 dark:text-gray-400">{item.title}</li>
+              <li key={i} className="flex flex-col gap-0.5">
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{item.title}</span>
+                {item.content && (
+                  <span className="text-xs text-gray-400 dark:text-gray-500 line-clamp-2">{item.content}</span>
+                )}
+              </li>
             ))}
           </ul>
         </div>
@@ -379,6 +414,21 @@ function ScraperConfigFields({
       {itemCount === 0 && (
         <p className="text-xs text-amber-500">{t("sourceForm.scraperNoItemsFound")}</p>
       )}
+
+      <div>
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={fetchFull}
+            onChange={(e) => onChange("fetch_full_articles", e.target.checked ? "true" : "false")}
+            className="mt-0.5 rounded shrink-0"
+          />
+          <div>
+            <span className="text-sm font-medium">{t("sourceForm.scraperFetchFull")}</span>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t("sourceForm.scraperFetchFullDesc")}</p>
+          </div>
+        </label>
+      </div>
 
       <div>
         <button
