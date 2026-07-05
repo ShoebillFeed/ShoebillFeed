@@ -160,10 +160,12 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A app.tasks.celery_app beat --loglevel=info --scheduler celery.beat:PersistentScheduler --schedule /tmp/celerybeat-schedule
+    command: celery -A app.tasks.celery_app beat --loglevel=info --scheduler celery.beat:PersistentScheduler --schedule /var/lib/celerybeat/celerybeat-schedule
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-phoenix}
       REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./data/celerybeat:/var/lib/celerybeat
     depends_on:
       redis:
         condition: service_healthy

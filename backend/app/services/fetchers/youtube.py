@@ -48,5 +48,7 @@ class YouTubeFetcher(NewsFetcher):
                 ))
         except Exception:
             logger.exception("Error fetching YouTube channel %s", channel_id)
+        finally:
+            youtube.close()
 
         return items

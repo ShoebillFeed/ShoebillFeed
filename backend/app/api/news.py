@@ -227,6 +227,14 @@ def _build_feed(
             (NewsCluster.published_at >= cutoff) | (NewsCluster.read_later == True) | (NewsCluster.is_relevant == True)  # noqa: E712
         )
 
+    _LIMIT = 2000
+    if tab == "newest":
+        item_q = item_q.order_by(NewsItem.published_at.desc()).limit(_LIMIT)
+        cluster_q = cluster_q.order_by(NewsCluster.published_at.desc()).limit(_LIMIT)
+    else:
+        item_q = item_q.limit(_LIMIT)
+        cluster_q = cluster_q.limit(_LIMIT)
+
     standalone = list(db.scalars(item_q).unique().all())
     clusters = list(db.scalars(cluster_q).unique().all())
     all_entries = standalone + clusters

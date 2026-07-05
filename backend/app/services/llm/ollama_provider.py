@@ -108,6 +108,12 @@ class OllamaProvider(LLMProvider):
         result.model_name = self.model_name
         return result
 
+    def __del__(self):
+        try:
+            self.client.close()
+        except Exception:
+            pass
+
     def health_check(self) -> bool:
         try:
             resp = self.client.get(f"{self.base_url}/api/tags", timeout=5.0)

@@ -29,8 +29,11 @@ def health_check(db: Session = Depends(get_db)):
     try:
         settings = get_settings()
         r = redis_lib.from_url(settings.redis_url, socket_connect_timeout=2)
-        r.ping()
-        redis_ok = True
+        try:
+            r.ping()
+            redis_ok = True
+        finally:
+            r.close()
     except Exception:
         pass
 
