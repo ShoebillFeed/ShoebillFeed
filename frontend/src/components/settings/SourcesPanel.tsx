@@ -33,6 +33,14 @@ export default function SourcesPanel() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Source | null>(null);
   const [sharedSearch, setSharedSearch] = useState("");
+  const [fetchingIds, setFetchingIds] = useState<Set<string>>(new Set());
+
+  const handleFetchSource = (id: string) => {
+    setFetchingIds((prev) => new Set(prev).add(id));
+    fetchSource.mutate(id, {
+      onSettled: () => setTimeout(() => setFetchingIds((prev) => { const s = new Set(prev); s.delete(id); return s; }), 5000),
+    });
+  };
 
   const handleExport = async () => {
     const data = await sourcesApi.export();
@@ -134,8 +142,8 @@ export default function SourcesPanel() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
-                  <IconButton title={t("sources.fetchNow")} onClick={() => fetchSource.mutate(source.id)} disabled={fetchSource.isPending}>
-                    {fetchSource.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Play size={14} />}
+                  <IconButton title={t("sources.fetchNow")} onClick={() => handleFetchSource(source.id)} disabled={fetchingIds.has(source.id)}>
+                    {fetchingIds.has(source.id) ? <RefreshCw size={14} className="animate-spin" /> : <Play size={14} />}
                   </IconButton>
                   <IconButton title={t("common.edit")} onClick={() => { setEditing(source); setShowForm(false); }}>
                     <Pencil size={14} />
