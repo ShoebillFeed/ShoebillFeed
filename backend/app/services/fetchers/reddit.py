@@ -2,12 +2,39 @@ import logging
 from datetime import datetime, timezone
 
 import httpx
-import praw
 
 from app.config import get_settings
 from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher, socket_timeout
 
 logger = logging.getLogger(__name__)
+
+_TOKEN_URL = "https://www.reddit.com/api/v1/access_token"
+_API_BASE = "https://oauth.reddit.com"
+
+
+def _get_token(client_id: str, client_secret: str, username: str, password: str, user_agent: str) -> str:
+    """Exchange credentials for a bearer token.
+
+    Uses the 'password' grant when username+password are supplied (script app),
+    otherwise falls back to 'client_credentials' (app-only, read-only).
+    """
+    if username and password:
+        data = {"grant_type": "password", "username": username, "password": password}
+    else:
+        data = {"grant_type": "client_credentials"}
+
+    resp = httpx.post(
+        _TOKEN_URL,
+        data=data,
+        auth=(client_id, client_secret),
+        headers={"User-Agent": user_agent},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    token = resp.json().get("access_token")
+    if not token:
+        raise ValueError(f"Reddit token response missing access_token: {resp.text[:200]}")
+    return token
 
 
 @register_fetcher("reddit")
@@ -21,54 +48,39 @@ class RedditFetcher(NewsFetcher):
         if not subreddit_name:
             raise ValueError("Reddit source missing 'subreddit' in config")
 
-        if settings.reddit_client_id and settings.reddit_client_secret:
-            return self._fetch_via_praw(settings, subreddit_name, sort, limit)
-        else:
-            logger.debug("Reddit credentials not configured, using public JSON API for r/%s", subreddit_name)
-            return self._fetch_via_json(settings.reddit_user_agent, subreddit_name, sort, limit)
+        if not settings.reddit_client_id or not settings.reddit_client_secret:
+            raise ValueError(
+                "Reddit requires OAuth credentials. Set REDDIT_CLIENT_ID and "
+                "REDDIT_CLIENT_SECRET in your .env (create an app at reddit.com/prefs/apps)."
+            )
 
-    def _fetch_via_praw(self, settings, subreddit_name: str, sort: str, limit: int) -> list[RawNewsItem]:
-        kwargs: dict = {
-            "client_id": settings.reddit_client_id,
-            "client_secret": settings.reddit_client_secret,
-            "user_agent": settings.reddit_user_agent,
-        }
-        if settings.reddit_username and settings.reddit_password:
-            kwargs["username"] = settings.reddit_username
-            kwargs["password"] = settings.reddit_password
+        try:
+            token = _get_token(
+                settings.reddit_client_id,
+                settings.reddit_client_secret,
+                settings.reddit_username,
+                settings.reddit_password,
+                settings.reddit_user_agent,
+            )
+        except Exception:
+            logger.exception("Failed to obtain Reddit access token for r/%s", subreddit_name)
+            return []
 
-        reddit = praw.Reddit(**kwargs)
-        subreddit = reddit.subreddit(subreddit_name)
+        url = f"{_API_BASE}/r/{subreddit_name}/{sort}"
         items: list[RawNewsItem] = []
 
         try:
             with socket_timeout(60):
-                listing = list(getattr(subreddit, sort)(limit=limit))
-            for submission in listing:
-                content = submission.selftext or submission.title
-                items.append(RawNewsItem(
-                    title=submission.title,
-                    url=f"https://www.reddit.com{submission.permalink}",
-                    raw_content=content,
-                    published_at=datetime.fromtimestamp(submission.created_utc, tz=timezone.utc),
-                ))
-        except Exception:
-            logger.exception("Error fetching r/%s via PRAW", subreddit_name)
-
-        return items
-
-    def _fetch_via_json(self, user_agent: str, subreddit_name: str, sort: str, limit: int) -> list[RawNewsItem]:
-        url = f"https://www.reddit.com/r/{subreddit_name}/{sort}.json"
-        items: list[RawNewsItem] = []
-
-        try:
-            resp = httpx.get(
-                url,
-                params={"limit": limit, "raw_json": 1},
-                headers={"User-Agent": user_agent},
-                timeout=15,
-                follow_redirects=True,
-            )
+                resp = httpx.get(
+                    url,
+                    params={"limit": limit, "raw_json": 1},
+                    headers={
+                        "Authorization": f"bearer {token}",
+                        "User-Agent": settings.reddit_user_agent,
+                    },
+                    timeout=15,
+                    follow_redirects=True,
+                )
             resp.raise_for_status()
             children = resp.json().get("data", {}).get("children", [])
             for child in children:
@@ -89,6 +101,6 @@ class RedditFetcher(NewsFetcher):
                     published_at=published_at,
                 ))
         except Exception:
-            logger.exception("Error fetching r/%s via public JSON API", subreddit_name)
+            logger.exception("Error fetching r/%s", subreddit_name)
 
         return items
