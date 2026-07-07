@@ -528,6 +528,10 @@ const en = {
     resetSuccess: "Password reset successfully.",
     resetFailed: "Failed to reset password.",
   },
+  pwa: {
+    updateAvailable: "A new version is available.",
+    reload: "Update",
+  },
 } as const;
 
 export default en;

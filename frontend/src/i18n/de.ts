@@ -470,6 +470,10 @@ const de = {
     resetSuccess: "Passwort erfolgreich zurückgesetzt.",
     resetFailed: "Passwort konnte nicht zurückgesetzt werden.",
   },
+  pwa: {
+    updateAvailable: "Eine neue Version ist verfügbar.",
+    reload: "Aktualisieren",
+  },
 } as const;
 
 export default de;
