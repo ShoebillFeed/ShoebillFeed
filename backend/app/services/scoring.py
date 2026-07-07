@@ -1,7 +1,7 @@
 import math
 import uuid
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, update, delete, func, or_
 from sqlalchemy.orm import Session
 from app.models import NewsItem, CategoryWeight, KeywordWeight, Category
 from app.models.category_keyword_weight import CategoryKeywordWeight
@@ -148,45 +148,59 @@ def decay_learned_weights(db: Session, user_factors: dict) -> dict:
     """
     Apply per-user multiplicative decay to all learned keyword/category weights.
     user_factors: {user_id: daily_factor} — users absent or with factor >= 1.0 are skipped.
-    Returns counts of rows touched/pruned.
+    Uses bulk SQL UPDATE/DELETE to avoid StaleDataError from concurrent writes.
     """
     pruned_kw = decayed_kw = 0
     pruned_ckw = decayed_ckw = 0
     decayed_cat = 0
 
-    # --- Global keyword weights ---
-    for kw in db.scalars(select(KeywordWeight).execution_options(yield_per=500)):
-        factor = user_factors.get(kw.user_id, 1.0)
+    for user_id, factor in user_factors.items():
         if factor >= 1.0:
             continue
-        new_w = max(1.0, kw.weight * factor)
-        if new_w <= 1.001:
-            db.delete(kw)
-            pruned_kw += 1
-        else:
-            kw.weight = new_w
-            decayed_kw += 1
+        # Rows where max(1.0, weight*factor) <= 1.001 → weight*factor <= 1.001
+        prune_threshold = 1.001 / factor
 
-    # --- Per-category keyword weights ---
-    for ckw in db.scalars(select(CategoryKeywordWeight).execution_options(yield_per=500)):
-        factor = user_factors.get(ckw.user_id, 1.0)
-        if factor >= 1.0:
-            continue
-        new_w = max(1.0, ckw.weight * factor)
-        if new_w <= 1.001:
-            db.delete(ckw)
-            pruned_ckw += 1
-        else:
-            ckw.weight = new_w
-            decayed_ckw += 1
+        # --- Global keyword weights ---
+        r = db.execute(
+            delete(KeywordWeight).where(
+                KeywordWeight.user_id == user_id,
+                KeywordWeight.weight <= prune_threshold,
+            )
+        )
+        pruned_kw += r.rowcount
 
-    # --- Category weights (passive; overwritten on next like/read) ---
-    for cw in db.scalars(select(CategoryWeight).where(CategoryWeight.user_id != None).execution_options(yield_per=500)):  # noqa: E711
-        factor = user_factors.get(cw.user_id, 1.0)
-        if factor >= 1.0:
-            continue
-        cw.weight = max(0.0, cw.weight * factor)
-        decayed_cat += 1
+        r = db.execute(
+            update(KeywordWeight).where(
+                KeywordWeight.user_id == user_id,
+                KeywordWeight.weight > prune_threshold,
+            ).values(weight=KeywordWeight.weight * factor)
+        )
+        decayed_kw += r.rowcount
+
+        # --- Per-category keyword weights ---
+        r = db.execute(
+            delete(CategoryKeywordWeight).where(
+                CategoryKeywordWeight.user_id == user_id,
+                CategoryKeywordWeight.weight <= prune_threshold,
+            )
+        )
+        pruned_ckw += r.rowcount
+
+        r = db.execute(
+            update(CategoryKeywordWeight).where(
+                CategoryKeywordWeight.user_id == user_id,
+                CategoryKeywordWeight.weight > prune_threshold,
+            ).values(weight=CategoryKeywordWeight.weight * factor)
+        )
+        decayed_ckw += r.rowcount
+
+        # --- Category weights ---
+        r = db.execute(
+            update(CategoryWeight).where(
+                CategoryWeight.user_id == user_id,
+            ).values(weight=CategoryWeight.weight * factor)
+        )
+        decayed_cat += r.rowcount
 
     db.commit()
     return {
