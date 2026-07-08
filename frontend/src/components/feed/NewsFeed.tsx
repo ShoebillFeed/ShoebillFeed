@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { FeedEntry } from "../../types/news";
 import NewsCard from "./NewsCard";
@@ -32,6 +32,7 @@ export default function NewsFeed({
   const parentRef = useRef<HTMLDivElement>(null);
   const [pullY, setPullY] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const onRefreshRef = useRef(onRefresh);
   onRefreshRef.current = onRefresh;
@@ -123,16 +124,20 @@ export default function NewsFeed({
       }
     };
 
+    const onScroll = () => setShowScrollTop(el.scrollTop > 300);
+
     el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd, { passive: true });
     el.addEventListener("wheel", onWheel, { passive: true });
+    el.addEventListener("scroll", onScroll, { passive: true });
 
     return () => {
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("scroll", onScroll);
       if (wheelTimer) clearTimeout(wheelTimer);
     };
   }, [triggerRefresh]);
@@ -308,6 +313,20 @@ export default function NewsFeed({
           </>
         )}
       </div>
+      {showScrollTop && (
+        <button
+          onClick={() => {
+            if (parentRef.current) parentRef.current.scrollTop = 0;
+            setTimeout(() => onRefresh?.(), 50);
+          }}
+          aria-label={t("feed.scrollToTop")}
+          title={t("feed.scrollToTop")}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
+        >
+          <ArrowUp size={15} />
+          {t("feed.scrollToTop")}
+        </button>
+      )}
     </div>
   );
 }
