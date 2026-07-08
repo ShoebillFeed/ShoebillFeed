@@ -18,7 +18,6 @@ export default function NewsCard({ item }: { item: NewsItem }) {
   const { t } = useTranslation();
   const [hasImage, setHasImage] = useState(!!item.image_url);
   const [localRelevant, setLocalRelevant] = useState(item.is_relevant);
-  const [localDisliked, setLocalDisliked] = useState(item.is_disliked);
   const [copied, setCopied] = useState(false);
   const toggleRead = useToggleRead();
   const toggleRelevant = useToggleRelevant();
@@ -200,13 +199,13 @@ export default function NewsCard({ item }: { item: NewsItem }) {
           </ActionButton>
 
           <ActionButton
-            active={localDisliked}
+            active={item.is_disliked}
             activeColor="text-red-400"
             inactiveColor={hasImage ? "text-white/50 hover:text-red-400" : "text-gray-400 hover:text-red-500"}
-            onClick={() => { dislikeItem.mutate(item.id); setLocalDisliked(true); }}
+            onClick={() => dislikeItem.mutate(item.id)}
             title={t("card.dislike")}
           >
-            <ArrowBigDown size={15} fill={localDisliked ? "currentColor" : "none"} />
+            <ArrowBigDown size={15} fill={item.is_disliked ? "currentColor" : "none"} />
           </ActionButton>
 
           <ActionButton
