@@ -25,6 +25,7 @@ export interface NewsItem {
   llm_model: string | null;
   is_read: boolean;
   is_relevant: boolean;
+  is_disliked: boolean;
   read_later: boolean;
   published_at: string | null;
   fetched_at: string;
@@ -56,6 +57,7 @@ export interface NewsCluster {
   is_read: boolean;
   last_read_at: string | null;
   is_relevant: boolean;
+  is_disliked: boolean;
   read_later: boolean;
   llm_processed: boolean;
   llm_provider: string | null;

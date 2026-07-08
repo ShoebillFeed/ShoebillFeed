@@ -155,11 +155,33 @@ export function useDeleteNewsItem() {
 }
 
 export function useDislikeItem() {
-  return useMutation({ mutationFn: newsApi.dislike });
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: newsApi.dislike,
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      patchInfiniteItem(qc, id, (item) => ({ ...item, is_disliked: true, is_read: true }));
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
+    onSettled: () => invalidateFeeds(qc),
+  });
 }
 
 export function useDislikeCluster() {
-  return useMutation({ mutationFn: clustersApi.dislike });
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: clustersApi.dislike,
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["news", "infinite"] });
+      const ctx = snapshotInfinite(qc);
+      patchInfiniteItem(qc, id, (item) => ({ ...item, is_disliked: true, is_read: true }));
+      return ctx;
+    },
+    onError: (_err, _id, ctx) => restoreSnapshots(qc, ctx),
+    onSettled: () => invalidateFeeds(qc),
+  });
 }
 
 export function useToggleClusterRead() {
