@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     llm_batch_max_wait_minutes: int = 10
 
     jwt_secret: str = "change-me-in-production"
-    jwt_expire_hours: int = 168  # 7 days
+    jwt_expire_hours: int = 24
     admin_username: str = ""
     admin_password: str = ""
 

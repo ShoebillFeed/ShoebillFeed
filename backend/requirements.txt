@@ -21,3 +21,4 @@ json-repair==0.30.3
 nltk>=3.9
 pgvector>=0.3
 pywebpush==2.0.0
+slowapi==0.1.9

@@ -1,11 +1,13 @@
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.config import get_settings
+from app.limiter import limiter
 from app.models.user import User
 from app.models.news_item import NewsItem
 from app.models.source import Source
@@ -61,19 +63,21 @@ def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
 
 
 @router.post("/login")
-def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.username == payload.username, User.is_active == True))  # noqa: E712
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
+    settings = get_settings()
     token = create_token(user.id, user.username)
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        samesite="lax",
-        secure=False,
-        max_age=60 * 60 * 24 * 7,
+        samesite="strict",
+        secure=True,
+        max_age=settings.jwt_expire_hours * 3600,
     )
     return UserOut(id=str(user.id), username=user.username, is_admin=user.is_admin)
 

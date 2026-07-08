@@ -165,7 +165,7 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-phoenix}
       REDIS_URL: redis://redis:6379/0
     volumes:
-      - ./data/celerybeat:/var/lib/celerybeat
+      - celerybeat-data:/var/lib/celerybeat
     depends_on:
       redis:
         condition: service_healthy
@@ -192,4 +192,7 @@ networks:
     driver: bridge
   shoebill:
     external: true
+
+volumes:
+  celerybeat-data:
 
