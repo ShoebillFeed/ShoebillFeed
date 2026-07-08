@@ -23,6 +23,7 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [localRelevant, setLocalRelevant] = useState(cluster.is_relevant);
+  const [localDisliked, setLocalDisliked] = useState(false);
   const [copied, setCopied] = useState(false);
   const coverImageUrl = cluster.items.find((i) => i.image_url)?.image_url ?? null;
   const [hasImage, setHasImage] = useState(!!coverImageUrl);
@@ -291,10 +292,10 @@ export default function ClusterCard({ cluster }: { cluster: NewsCluster }) {
           active={false}
           activeColor="text-red-400"
           inactiveColor={hasImage ? "text-white/50 hover:text-red-400" : "text-gray-400 hover:text-red-500"}
-          onClick={() => dislikeCluster.mutate(cluster.id)}
+          onClick={() => { dislikeCluster.mutate(cluster.id); setLocalDisliked(true); }}
           title={t("card.dislike")}
         >
-          <ArrowBigDown size={15} />
+          <ArrowBigDown size={15} fill={localDisliked ? "currentColor" : "none"} />
         </ActionButton>
 
         <ActionButton
