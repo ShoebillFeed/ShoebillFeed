@@ -321,7 +321,7 @@ export default function NewsFeed({
           }}
           aria-label={t("feed.scrollToTop")}
           title={t("feed.scrollToTop")}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg bg-indigo-600/60 hover:bg-indigo-600/80 text-white text-sm font-medium transition-colors backdrop-blur-sm"
         >
           <ArrowUp size={15} />
           {t("feed.scrollToTop")}
