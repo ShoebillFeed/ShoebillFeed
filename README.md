@@ -12,6 +12,8 @@ A self-hosted news aggregator with LLM-powered categorisation and relevance scor
 - **Dark mode** — full light/dark theme support
 - **Multi-user** — separate feeds and preferences per account
 
+When adding a source (especially the generic scraper), make sure you're configuring it in line with that source's own terms of service — that's on whoever adds the source, not the software.
+
 ---
 
 ## Quick Start (Docker)
