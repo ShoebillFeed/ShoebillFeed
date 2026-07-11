@@ -14,8 +14,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_index("idx_news_clusters_user_published", "news_clusters", ["user_id", "published_at"])
-    op.create_index("idx_news_clusters_user_is_read", "news_clusters", ["user_id", "is_read"])
+    # idx_news_clusters_user_published and idx_news_clusters_feed (user_id, is_read)
+    # were already created by 0044_scalability_indexes. Only add the missing partial index.
     op.create_index(
         "idx_news_clusters_user_read_later",
         "news_clusters",
@@ -26,5 +26,3 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("idx_news_clusters_user_read_later", table_name="news_clusters")
-    op.drop_index("idx_news_clusters_user_is_read", table_name="news_clusters")
-    op.drop_index("idx_news_clusters_user_published", table_name="news_clusters")

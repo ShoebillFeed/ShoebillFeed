@@ -18,7 +18,7 @@ class NewsCluster(Base):
     __tablename__ = "news_clusters"
     __table_args__ = (
         Index("idx_news_clusters_user_published", "user_id", "published_at"),
-        Index("idx_news_clusters_user_is_read", "user_id", "is_read"),
+        Index("idx_news_clusters_feed", "user_id", "is_read"),
         Index("idx_news_clusters_user_read_later", "user_id", "read_later", postgresql_where="read_later = true"),
     )
 
