@@ -25,7 +25,24 @@ def list_sources(db: Session = Depends(get_db), current_user: User = Depends(get
     sources = db.scalars(
         select(Source).where(Source.user_id == current_user.id).order_by(Source.created_at)
     ).all()
-    return [_with_count(db, s) for s in sources]
+
+    # Single GROUP BY instead of N+1 per-source COUNT queries
+    ids = [s.id for s in sources]
+    counts: dict = {}
+    if ids:
+        rows = db.execute(
+            select(NewsItem.source_id, func.count().label("cnt"))
+            .where(NewsItem.source_id.in_(ids))
+            .group_by(NewsItem.source_id)
+        )
+        counts = {row.source_id: row.cnt for row in rows}
+
+    result = []
+    for s in sources:
+        out = SourceOut.model_validate(s)
+        out.item_count = counts.get(s.id, 0)
+        result.append(out)
+    return result
 
 
 def _check_scraper_robots(config: dict) -> None:

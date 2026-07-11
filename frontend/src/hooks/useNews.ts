@@ -81,6 +81,7 @@ export function useInfiniteNews(params: {
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.page < lastPage.pages ? lastPage.page + 1 : undefined,
+    staleTime: 60_000,
   });
 }
 

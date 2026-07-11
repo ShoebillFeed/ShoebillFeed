@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Text, Boolean, SmallInteger, DateTime, ForeignKey, String, func, ARRAY, Table, Column  # noqa: F401
+from sqlalchemy import Text, Boolean, SmallInteger, DateTime, ForeignKey, String, func, ARRAY, Table, Column, Index  # noqa: F401
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
@@ -16,6 +16,11 @@ news_cluster_categories = Table(
 
 class NewsCluster(Base):
     __tablename__ = "news_clusters"
+    __table_args__ = (
+        Index("idx_news_clusters_user_published", "user_id", "published_at"),
+        Index("idx_news_clusters_user_is_read", "user_id", "is_read"),
+        Index("idx_news_clusters_user_read_later", "user_id", "read_later", postgresql_where="read_later = true"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID | None] = mapped_column(

@@ -167,7 +167,7 @@ def _build_feed(
         select(NewsCluster)
         .where(_has_items, NewsCluster.user_id == user_id)
         .options(
-            joinedload(NewsCluster.items).joinedload(NewsItem.source),
+            selectinload(NewsCluster.items).joinedload(NewsItem.source),
             selectinload(NewsCluster.categories),
         )
     )
@@ -242,12 +242,20 @@ def _build_feed(
     decay_param = user_settings.time_decay_param if user_settings else 2.0
     show_decay = user_settings.show_decay_param if user_settings else 0.0
 
+    # Pre-fetch category weights once; used by relevant sort and the diversity pass.
+    _cw_rows = (
+        db.scalars(select(CategoryWeight).where(CategoryWeight.user_id == user_id)).all()
+        if tab != "newest"
+        else []
+    )
+    # learned_weights is indexed by just the adaptive weight (used by diversity pass)
+    learned_weights_precomputed = {cw.category_id: cw.weight for cw in _cw_rows}
+
     if tab == "newest":
         all_entries.sort(key=_sort_key_newest, reverse=True)
     elif tab == "relevant":
         cat_weights = {
-            cw.category_id: cw.weight * cw.manual_weight
-            for cw in db.scalars(select(CategoryWeight).where(CategoryWeight.user_id == user_id)).all()
+            cw.category_id: cw.weight * cw.manual_weight for cw in _cw_rows
         }
         # Global keyword weights (legacy signal, kept as a floor)
         kw_weights = {
@@ -314,11 +322,7 @@ def _build_feed(
         max_per_src = (user_settings.max_per_source if user_settings else 0) or 0
         explore_frac = (user_settings.exploration_fraction if user_settings else 0.0) or 0.0
         if max_per_cat or max_per_src or explore_frac > 0:
-            learned_weights = {
-                cw.category_id: cw.weight
-                for cw in db.scalars(select(CategoryWeight).where(CategoryWeight.user_id == user_id)).all()
-            }
-            all_entries = _apply_diversity(all_entries, learned_weights, max_per_cat, max_per_src, explore_frac)
+            all_entries = _apply_diversity(all_entries, learned_weights_precomputed, max_per_cat, max_per_src, explore_frac)
 
     return all_entries
 

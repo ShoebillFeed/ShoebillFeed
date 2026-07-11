@@ -41,7 +41,25 @@ def list_categories(
         .options(joinedload(Category.weight))
         .order_by(Category.name)
     ).unique().all()
-    return [_build_out(db, c, source_ids) for c in categories]
+
+    # Single GROUP BY instead of N+1 per-category COUNT queries
+    count_q = select(
+        news_item_categories.c.category_id,
+        func.count().label("cnt"),
+    ).select_from(news_item_categories)
+    if source_ids:
+        count_q = count_q.join(
+            NewsItem, NewsItem.id == news_item_categories.c.news_item_id
+        ).where(NewsItem.source_id.in_(source_ids))
+    count_q = count_q.group_by(news_item_categories.c.category_id)
+    counts = {row.category_id: row.cnt for row in db.execute(count_q)}
+
+    result = []
+    for c in categories:
+        out = CategoryOut.model_validate(c)
+        out.item_count = counts.get(c.id, 0)
+        result.append(out)
+    return result
 
 
 @router.post("", response_model=CategoryOut, status_code=201)
