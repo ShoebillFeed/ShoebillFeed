@@ -84,7 +84,10 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Sessi
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie("access_token")
+    # Must match set_cookie's attributes above (httponly/samesite/secure) --
+    # a deletion cookie with different attributes isn't guaranteed to be
+    # treated as clearing the same cookie by a real browser.
+    response.delete_cookie("access_token", httponly=True, samesite="strict", secure=True)
     return {"ok": True}
 
 
