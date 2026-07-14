@@ -2,8 +2,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 project = "Shoebill Feed"
-copyright = "Shoebill Feed contributors"
-author = "Shoebill Feed contributors"
+copyright = "2026, Sebastian Hoose"
+author = "Sebastian Hoose"
 
 extensions = [
     "myst_parser",
