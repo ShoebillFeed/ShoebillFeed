@@ -35,11 +35,9 @@ class ChartErrorBoundary extends Component<{ children: ReactNode }, { crashed: b
 const SOURCE_TYPE_LABEL: Record<string, string> = {
   rss: "RSS",
   reddit: "Reddit",
-  youtube: "YouTube",
   email: "Email",
   mastodon: "Mastodon",
   arxiv: "arXiv",
-  scholar: "Scholar",
 };
 
 const RANGE_OPTIONS = [

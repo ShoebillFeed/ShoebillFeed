@@ -14,7 +14,6 @@ _ARXIV_URL = "https://export.arxiv.org/api/query?search_query=all:{query}&max_re
 
 
 @register_fetcher("arxiv")
-@register_fetcher("scholar")  # keep for backward-compat with existing DB records
 class ScholarFetcher(NewsFetcher):
     """Fetches academic papers from arXiv via the official Atom API.
 

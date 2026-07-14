@@ -3,7 +3,7 @@ import { sourceTypeIcon } from "./sourceTypeIcon";
 
 describe("sourceTypeIcon", () => {
   it("returns a distinct icon for each known source type", () => {
-    const known = ["rss", "reddit", "youtube", "email", "mastodon"];
+    const known = ["rss", "reddit", "email", "mastodon", "arxiv"];
     const icons = known.map(sourceTypeIcon);
     expect(new Set(icons).size).toBe(known.length);
   });

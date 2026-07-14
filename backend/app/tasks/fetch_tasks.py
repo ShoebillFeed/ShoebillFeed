@@ -16,7 +16,6 @@ from app.services.fetchers.base import get_fetcher, RawNewsItem
 from app.services.clustering import cluster_new_items
 import app.services.fetchers.rss  # noqa: F401 — register fetchers
 import app.services.fetchers.reddit  # noqa: F401
-import app.services.fetchers.youtube  # noqa: F401
 import app.services.fetchers.email_imap  # noqa: F401
 import app.services.fetchers.mastodon  # noqa: F401
 import app.services.fetchers.scholar  # noqa: F401

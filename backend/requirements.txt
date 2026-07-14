@@ -14,7 +14,6 @@ httpx==0.28.1
 feedparser==6.0.11
 beautifulsoup4==4.13.4
 lxml==5.4.0
-google-api-python-client==2.170.0
 anthropic==0.52.0
 python-dotenv==1.1.0
 json-repair==0.30.3

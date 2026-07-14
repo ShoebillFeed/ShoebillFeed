@@ -37,12 +37,6 @@ See {doc}`llm-providers` for how the fallback chain and batch processing work.
 | `REDDIT_USER_AGENT` | `ShoebillFeed/1.0` | |
 | `REDDIT_USERNAME` / `REDDIT_PASSWORD` | — | Only needed for the OAuth "password" grant (script-type apps); without them Shoebill falls back to app-only `client_credentials` auth |
 
-## YouTube
-
-| Variable | Default | Description |
-|---|---|---|
-| `YOUTUBE_API_KEY` | — | A [YouTube Data API v3](https://console.cloud.google.com/) key. Required for any YouTube source — there's no per-source override. |
-
 ## Authentication
 
 | Variable | Default | Description |

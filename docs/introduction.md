@@ -9,8 +9,8 @@ sources you choose and organizes it around what you actually read and like.
 
 ## Core ideas
 
-- **You choose the sources.** RSS/Atom feeds, subreddits, YouTube channels,
-  email newsletters, Mastodon/Lemmy/Bluesky accounts and hashtags, GitHub
+- **You choose the sources.** RSS/Atom feeds, subreddits, email
+  newsletters, Mastodon/Lemmy/Bluesky accounts and hashtags, GitHub
   releases, Telegram channels, arXiv searches, or a generic scraper for
   sites without a feed. Nothing appears in your feed that you didn't
   deliberately add. See {doc}`sources`.

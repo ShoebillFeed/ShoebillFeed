@@ -229,12 +229,6 @@ function ConfigFields({
       </>
     );
   }
-  if (type === "youtube") return (
-    <>
-      <Field label={t("sourceForm.channelId")} field="channel_id" config={config} onChange={onChange} placeholder="UCxxxxxxxxxxxxx" required />
-      <Field label={t("sourceForm.maxResults")} field="max_results" config={config} onChange={onChange} placeholder="10" />
-    </>
-  );
   if (type === "email") return (
     <>
       <Field label={t("sourceForm.imapHost")} field="imap_host" config={config} onChange={onChange} placeholder="imap.gmail.com" required />
@@ -272,7 +266,7 @@ function ConfigFields({
       )}
     </>
   );
-  if (type === "arxiv" || type === "scholar") return (
+  if (type === "arxiv") return (
     <>
       <Field label={t("sourceForm.searchQuery")} field="query" config={config} onChange={onChange} placeholder="e.g. transformer architecture" required />
       <p className="text-xs text-gray-400 dark:text-gray-500 -mt-2">

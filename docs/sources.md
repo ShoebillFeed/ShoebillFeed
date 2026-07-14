@@ -1,7 +1,7 @@
 # Sources
 
-A **source** is one feed of content: an RSS feed, a subreddit, a YouTube
-channel, and so on. Each source has a `source_type` and a `config` object
+A **source** is one feed of content: an RSS feed, a subreddit, an arXiv
+search, and so on. Each source has a `source_type` and a `config` object
 whose shape depends on the type. This page documents every supported type.
 
 All sources share two common fields regardless of type:
@@ -47,29 +47,6 @@ difference between the two types.
 Adding a Reddit source in the UI auto-fills the credential fields from any
 Reddit source you've already configured, so you only enter your API
 credentials once even when adding several subreddits.
-
-## YouTube
-
-```{code-block} json
-{"channel_id": "UC...", "max_results": "10"}
-```
-
-| Field | Required | Default |
-|---|---|---|
-| `channel_id` | yes | — |
-| `max_results` | no | `10` |
-
-Requires the global `YOUTUBE_API_KEY` env var — there's no per-source
-override.
-
-```{note}
-As of this writing, "YouTube" isn't in the source-type picker in
-**Settings → Sources → Add Source** in the web UI, even though the
-backend and database fully support it end-to-end. A YouTube source can
-still be created directly via the API (`POST /api/sources` with
-`source_type: "youtube"`) or the MCP server (see {doc}`mcp-server`) — it
-just isn't reachable from the "Add Source" button yet.
-```
 
 ## Email (IMAP newsletters)
 
@@ -177,9 +154,10 @@ Two modes, chosen via `mode`:
 ```
 
 `query` is the only field — searches arXiv's official Atom API directly
-(not Google Scholar, despite the source type historically also being
-reachable as `"scholar"` — that name is kept only as a backward-compatible
-alias for existing database rows; new sources should use `"arxiv"`).
+(not Google Scholar, despite this fetcher historically also being
+reachable under a `"scholar"` type name — that legacy alias has since
+been removed; any existing sources that used it were migrated to
+`"arxiv"` automatically).
 
 ## Telegram
 

@@ -98,7 +98,7 @@ Embeddings (`services/embedding.py`) come from Ollama (`nomic-embed-text`, 768-d
 - **`api/`** — Route handlers: `news`, `sources`, `categories`, `settings`, `auth`, `clusters`, `stats`, `tabs`, `push`, `learning`, `tokens`
 - **`services/`**:
   - `llm/` — Pluggable provider factory + fallback wrapper (see above); `batch_service.py` handles Anthropic Batch API submission/result-application/cross-user propagation
-  - `fetchers/` — Registry/factory pattern (`register_fetcher("<type>")` decorator + `get_fetcher`): `RSSFetcher`, `RedditFetcher`, `YouTubeFetcher`, `IMAPFetcher` (newsletters), `MastodonFetcher`, `ScholarFetcher`, `AtomFetcher`, `LemmyFetcher`, `GitHubFetcher`, `BlueskyFetcher`, `TelegramFetcher`, `ScraperFetcher`. New fetchers register themselves on import — `fetch_tasks.py` imports every fetcher module for its side effect
+  - `fetchers/` — Registry/factory pattern (`register_fetcher("<type>")` decorator + `get_fetcher`): `RSSFetcher`, `RedditFetcher`, `IMAPFetcher` (newsletters), `MastodonFetcher`, `ScholarFetcher` (registered as `arxiv` — queries arXiv's API directly, not Google Scholar despite the class name), `AtomFetcher`, `LemmyFetcher`, `GitHubFetcher`, `BlueskyFetcher`, `TelegramFetcher`, `ScraperFetcher`. New fetchers register themselves on import — `fetch_tasks.py` imports every fetcher module for its side effect. YouTube and the `scholar` type-name alias were removed (migration `0050_remove_youtube_scholar_types`)
   - `clustering.py` — two-pass clustering, see above
   - `embedding.py` — Ollama embedding generation for semantic clustering
   - `scoring.py` — dynamic category/keyword weight computation; `decay_learned_weights` uses bulk SQL (`UPDATE`/`DELETE`, not ORM loops) to avoid `StaleDataError` under concurrent writes

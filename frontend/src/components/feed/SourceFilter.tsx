@@ -7,7 +7,6 @@ import { cn } from "../../lib/utils";
 const TYPE_ICON: Record<string, string> = {
   rss: "📰",
   reddit: "🔴",
-  youtube: "▶️",
   email: "✉️",
 };
 

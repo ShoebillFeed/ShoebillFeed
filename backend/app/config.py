@@ -31,8 +31,6 @@ class Settings(BaseSettings):
     reddit_username: str = ""
     reddit_password: str = ""
 
-    youtube_api_key: str = ""
-
     llm_batch_max_wait_minutes: int = 10
 
     jwt_secret: str = "change-me-in-production"
