@@ -1,16 +1,24 @@
 # Shoebill Feed
 
-A self-hosted news aggregator with LLM-powered categorisation and relevance scoring. Shoebill fetches articles from RSS feeds, Reddit, YouTube and email newsletters, uses a local or cloud LLM to summarise and categorise them, and learns which topics matter to you over time based on your feedback.
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
+[![Backend tests](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/backend-tests.yml)
+[![Frontend tests](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/frontend-tests.yml/badge.svg)](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/frontend-tests.yml)
+[![Docs](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/docs.yml/badge.svg)](https://shoebillfeed.github.io/ShoebillFeed/)
+
+A self-hosted, open-source news aggregator with LLM-powered summarisation, clustering, and relevance scoring. Shoebill pulls articles from RSS/Atom feeds, Reddit, Mastodon, Lemmy, Bluesky, Telegram, GitHub releases, arXiv, email newsletters, and a generic scraper for sites without a feed — then uses a local (Ollama) or cloud (Anthropic) LLM to summarise, categorise, and cluster them, and learns which topics matter to you over time from nothing but your own 👍/👎 feedback.
+
+Full documentation: **https://shoebillfeed.github.io/ShoebillFeed/**
 
 ## Features
 
-- **Multiple source types** — RSS/Atom, Reddit, YouTube, IMAP email
-- **LLM processing** — automatic summaries, keyword extraction, category assignment, impact scoring
-- **Relevance learning** — the more you like/dislike articles, the better the feed gets ranked
-- **Clustering** — related articles from different sources are grouped together
+- **Multiple source types** — RSS/Atom, Reddit, Mastodon, Lemmy, Bluesky, Telegram, GitHub releases, arXiv, IMAP email newsletters, or a generic scraper for anything else
+- **LLM processing** — automatic summaries, keyword extraction, category assignment, relevance/impact scoring, via a local model (Ollama) or a cloud provider (Anthropic), your choice
+- **Relevance learning** — the more you like/dislike articles, the better the feed gets ranked; every learned weight is visible and adjustable in Settings, never a black box
+- **Clustering** — related articles from different sources are grouped into one card with a synthesized summary of the common ground
 - **Push notifications** — browser push for high-relevance articles
 - **Dark mode** — full light/dark theme support
-- **Multi-user** — separate feeds and preferences per account
+- **Multi-user** — separate accounts, feeds, and learned preferences on one instance
+- **No ads, no tracking** — nobody but you ever runs your instance
 
 When adding a source (especially the generic scraper), make sure you're configuring it in line with that source's own terms of service — that's on whoever adds the source, not the software.
 
@@ -21,7 +29,7 @@ When adding a source (especially the generic scraper), make sure you're configur
 ### 1. Clone and configure
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/ShoebillFeed/ShoebillFeed.git shoebill_feed
 cd shoebill_feed
 cp .env.example .env
 ```
@@ -90,6 +98,18 @@ alembic upgrade head
 alembic revision --autogenerate -m "description"
 ```
 
+### Tests
+
+```bash
+# Backend tests run against a real Postgres+pgvector instance:
+docker run -d --rm -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=shoebill_test pgvector/pgvector:pg17
+cd backend
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/shoebill_test pytest
+
+cd ../frontend
+npm test     # Vitest
+```
+
 ---
 
 ## LLM Setup
@@ -138,7 +158,7 @@ LLM_PROVIDERS=ollama,anthropic   # try Ollama first, fall back to Anthropic
 | `postgres` | Primary data store (PostgreSQL 17 + pgvector) |
 | `redis` | Celery broker and result backend |
 | `backend` | FastAPI REST API |
-| `celery-worker` | Fetch queue (RSS, Reddit, YouTube, email) |
+| `celery-worker` | Fetch queue (all source types) |
 | `celery-worker-process` | LLM processing queue (single-concurrency for GPU) |
 | `celery-beat` | Cron scheduler — fetch every 5 min, process every 15 min |
 | `frontend` | React app served by Nginx, proxies `/api` to backend |
@@ -148,3 +168,9 @@ LLM_PROVIDERS=ollama,anthropic   # try Ollama first, fall back to Anthropic
 ## Environment Variables
 
 See `.env.example` for the full list with descriptions.
+
+---
+
+## License
+
+[AGPLv3](LICENSE) — the same license Nextcloud uses, chosen specifically so that anyone hosting a modified version keeps their changes open too.
