@@ -641,3 +641,17 @@ def decay_weights(self) -> dict:
         raise self.retry(exc=exc, countdown=300)
     finally:
         db.close()
+
+
+@celery_app.task(name="app.tasks.process_tasks.generate_category_prompt_task", queue="process")
+def generate_category_prompt_task(
+    name: str, keywords: list[str], existing_categories: list[str], max_chars: int
+) -> str:
+    """Runs off the request path so a slow/unresponsive LLM can never block a gunicorn worker."""
+    provider = get_llm_provider()
+    return provider.generate_category_prompt(
+        name=name,
+        keywords=keywords,
+        existing_categories=existing_categories,
+        max_chars=max_chars,
+    ).strip()

@@ -20,10 +20,17 @@ export const categoriesApi = {
     client.patch<Category>(`/categories/${id}`, data).then((r) => r.data),
   delete: (id: string) => client.delete(`/categories/${id}`),
   resetWeights: () => client.post("/categories/reset-weights").then((r) => r.data),
+  // Runs as a Celery task rather than inline: this call kicks it off and returns a
+  // task_id immediately; poll generatePromptResult until it's done. Keeps a slow/
+  // unresponsive LLM from ever blocking a web request.
   generatePrompt: (name: string, keywords: string[], max_chars = 500, existing_categories: string[] = []) =>
     client
-      .post<{ prompt: string }>("/categories/generate-prompt", { name, keywords, max_chars, existing_categories }, { timeout: 120_000 })
-      .then((r) => r.data.prompt),
+      .post<{ task_id: string }>("/categories/generate-prompt", { name, keywords, max_chars, existing_categories })
+      .then((r) => r.data.task_id),
+  generatePromptResult: (taskId: string) =>
+    client
+      .get<{ status: "pending" } | { status: "done"; prompt: string }>(`/categories/generate-prompt/${taskId}`)
+      .then((r) => r.data),
   setManualWeight: (id: string, manual_weight: number) =>
     client.patch<Category>(`/categories/${id}/weight`, { manual_weight }).then((r) => r.data),
   export: () => client.get<CategoryExportItem[]>("/categories/export").then((r) => r.data),

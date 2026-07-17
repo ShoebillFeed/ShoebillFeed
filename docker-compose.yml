@@ -58,9 +58,10 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     command: >
-      sh -c "alembic upgrade head && gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
+      sh -c "alembic upgrade head && gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --timeout 60 --access-logfile - --error-logfile - --capture-output"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/api/settings/health || exit 1"]
+      # python:3.12-slim has no wget/curl; urllib is stdlib so this needs no extra package.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/settings/health', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,4 +1,5 @@
 import uuid
+from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -10,7 +11,8 @@ from app.models import Category, CategoryWeight, NewsItem
 from app.models.news_item import news_item_categories
 from app.models.user import User
 from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryOut
-from app.services.llm.factory import get_llm_provider
+from app.tasks.celery_app import celery_app
+from app.tasks.process_tasks import generate_category_prompt_task
 
 router = APIRouter()
 
@@ -141,17 +143,24 @@ class GeneratePromptRequest(BaseModel):
 def generate_prompt(payload: GeneratePromptRequest, _: User = Depends(get_current_user)):
     if not payload.name.strip():
         raise HTTPException(status_code=422, detail="Category name is required")
-    try:
-        provider = get_llm_provider()
-        prompt = provider.generate_category_prompt(
-            name=payload.name.strip(),
-            keywords=payload.keywords,
-            existing_categories=payload.existing_categories,
-            max_chars=payload.max_chars,
-        )
-        return {"prompt": prompt.strip()}
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"LLM error: {exc}") from exc
+    # Dispatched to Celery rather than called inline: this LLM call previously ran
+    # synchronously inside the gunicorn worker, so a slow/unresponsive Ollama could
+    # hang a worker well past its timeout instead of failing cleanly.
+    task = generate_category_prompt_task.apply_async(
+        args=[payload.name.strip(), payload.keywords, payload.existing_categories, payload.max_chars],
+        queue="process",
+    )
+    return {"task_id": task.id}
+
+
+@router.get("/generate-prompt/{task_id}")
+def get_generate_prompt_result(task_id: str, _: User = Depends(get_current_user)):
+    result = AsyncResult(task_id, app=celery_app)
+    if not result.ready():
+        return {"status": "pending"}
+    if result.failed():
+        raise HTTPException(status_code=502, detail=f"LLM error: {result.result}")
+    return {"status": "done", "prompt": result.result}
 
 
 @router.get("/export")

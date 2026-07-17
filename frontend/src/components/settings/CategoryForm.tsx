@@ -7,6 +7,12 @@ import { categoriesApi } from "../../api/categories";
 import { cn } from "../../lib/utils";
 
 const PROMPT_MAX_CHARS = 500;
+const GENERATE_POLL_INTERVAL_MS = 1500;
+const GENERATE_TIMEOUT_MS = 120_000;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const PRESET_COLORS = [
   "#6366f1", "#ec4899", "#f59e0b", "#10b981", "#3b82f6",
@@ -60,6 +66,8 @@ export default function CategoryForm({ category, taxonomyName, taxonomyId, defau
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const promptManuallyEdited = useRef(Boolean(category?.prompt || defaultPrompt));
+  const unmounted = useRef(false);
+  useEffect(() => () => { unmounted.current = true; }, []);
 
   useEffect(() => {
     if (!promptManuallyEdited.current) {
@@ -86,13 +94,23 @@ export default function CategoryForm({ category, taxonomyName, taxonomyId, defau
     promptManuallyEdited.current = false;
 
     try {
-      const generated = await categoriesApi.generatePrompt(trimmedName, keywordList, PROMPT_MAX_CHARS, existingNames);
-      setPrompt(generated);
+      const taskId = await categoriesApi.generatePrompt(trimmedName, keywordList, PROMPT_MAX_CHARS, existingNames);
+
+      const deadline = Date.now() + GENERATE_TIMEOUT_MS;
+      let result: Awaited<ReturnType<typeof categoriesApi.generatePromptResult>>;
+      do {
+        await sleep(GENERATE_POLL_INTERVAL_MS);
+        if (unmounted.current) return;
+        result = await categoriesApi.generatePromptResult(taskId);
+      } while (result.status === "pending" && Date.now() < deadline);
+
+      if (result.status !== "done") throw new Error("Prompt generation timed out");
+      setPrompt(result.prompt);
     } catch {
       setGenerateError(t("categoryForm.generationFailed"));
       setPrompt(buildFallbackPrompt(trimmedName, keywords));
     } finally {
-      setGenerating(false);
+      if (!unmounted.current) setGenerating(false);
     }
   };
 
