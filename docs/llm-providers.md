@@ -43,6 +43,51 @@ container restart — settings are cached for the process lifetime and the
 web UI's LLM config panel is read-only, for display only.
 ```
 
+## Recommended models
+
+Every call in the pipeline (see {doc}`configuration`) is short: a
+classify-only pass on ~600 characters, or a summarize pass on one
+article/cluster. You don't need a large model to get good results here,
+and a large model mainly costs you latency and RAM/VRAM rather than
+buying much summary quality for this specific task.
+
+### Ollama (local)
+
+Rule of thumb for a 4-bit quantized model (Ollama's default): budget
+roughly 1 GB of RAM/VRAM per billion parameters, plus a couple GB of
+headroom for context and the embedding model running alongside it.
+
+| Tier | Model | Approx. RAM/VRAM | Notes |
+|---|---|---|---|
+| Minimal / CPU-only | `gemma3:4b` or `qwen3:4b` | ~4-6 GB | Usable on a machine with no dedicated GPU; noticeably weaker categorization on ambiguous articles |
+| **Balanced (default)** | `qwen3:8b` | ~8 GB | Shoebill's `OLLAMA_MODEL` default. Good accuracy-to-resource ratio for most self-hosted setups |
+| Higher quality | `gemma3:12b` or `qwen2.5:14b` | ~12-16 GB | Noticeably better summaries and category calls; still fits a single consumer GPU (e.g. RTX 3060 12GB and up) |
+| Best local quality | `qwen3:32b` or `gemma3:27b` | ~24-32 GB | Diminishing returns for this task; only worth it if the hardware is already sitting there |
+
+Regardless of which model you pick for text generation, embeddings always
+use `nomic-embed-text` (see below) — it's small (~275MB) and runs
+alongside any of the above without materially changing the sizing table.
+
+Run `ollama pull` wherever Ollama itself is actually running — on your
+own host if you installed Ollama natively, or inside the `ollama`
+container if you're using the provided `docker-compose.ollama.yml`
+(`docker compose exec ollama ollama pull ...`):
+
+```bash
+ollama pull qwen3:8b   # or any model from the table above
+ollama pull nomic-embed-text
+```
+
+### Anthropic (cloud)
+
+`claude-haiku-4-5` (the default) is the right choice for almost every
+setup: the pipeline makes many small, short calls per fetch cycle, and a
+larger model (Sonnet/Opus) meaningfully increases cost without much
+quality gain on 600-character classification or single-article
+summarization. Consider a larger model only if you rely heavily on
+**translation mode** (full-content, higher-stakes generation) and find
+translation quality lacking with Haiku.
+
 ## What gets sent to the LLM
 
 Only the article's title and content (and, for clusters, the same for

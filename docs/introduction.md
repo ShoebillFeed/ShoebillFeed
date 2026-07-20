@@ -14,11 +14,15 @@ sources you choose and organizes it around what you actually read and like.
   releases, Telegram channels, arXiv searches, or a generic scraper for
   sites without a feed. Nothing appears in your feed that you didn't
   deliberately add. See {doc}`sources`.
+- **Custom categories.** Define your own topics with a name, color,
+  keywords, and an optional prompt fragment telling the LLM what belongs
+  in it — or pull ready-made ones from a built-in IPTC-based taxonomy
+  instead of writing them by hand. See {doc}`user-guide`.
 - **LLM-powered processing.** Every article gets a plain-language summary,
   extracted keywords, a category assignment, and relevance/impact scores —
   via either a local model (Ollama) or a cloud provider (Anthropic), your
   choice. See {doc}`llm-providers`.
-- **Learns from your feedback, not from ads.** A 👍/👎 on an article
+- **Learns what interests you, not what sells ads.** A 👍/👎 on an article
   quietly reshapes how your feed is ranked over time, using nothing but
   your own signal. Every learned weight is visible and adjustable — never
   a black box. See {doc}`learning-and-scoring`.

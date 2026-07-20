@@ -1,8 +1,8 @@
 # Configuration
 
-All configuration is via environment variables, read from `.env` (copy
-`.env.example` to start). This page documents every variable; defaults
-shown are from `backend/app/config.py`.
+Configuration is organized by setting environment variables, read from
+`.env` (copy `.env.example` to start). This page documents every
+variable; defaults shown are from `backend/app/config.py`.
 
 ## Database & cache
 

@@ -10,7 +10,7 @@
 ## 1. Clone and configure
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/ShoebillFeed/ShoebillFeed.git shoebill_feed
 cd shoebill_feed
 cp .env.example .env
 ```
@@ -24,7 +24,7 @@ Edit `.env` and set at minimum:
 | `ADMIN_PASSWORD` | Initial admin account password |
 | `LLM_PROVIDERS` | `ollama` or `anthropic` — see {doc}`llm-providers` |
 
-The full variable reference is in {doc}`configuration`.
+The full variable reference can be found in {doc}`configuration`.
 
 ## 2. Start the stack
 
@@ -54,30 +54,18 @@ Use the credentials from `ADMIN_USERNAME`/`ADMIN_PASSWORD` in your `.env`.
 To reset the admin password later, change `ADMIN_PASSWORD` and restart —
 the new password is applied automatically on startup.
 
-## 4. Add your first source
+## 4. Add your first categories
+
+In **Settings → Categories**, define a few topics you care about — each
+needs a name, and optionally a color, keywords, and a prompt fragment
+giving the LLM extra context on what belongs in it. Don't want to write
+them by hand? The "Default Categories" browser lets you pull ready-made
+ones from a built-in IPTC-based taxonomy instead. See {doc}`user-guide`
+for details.
+
+## 5. Add your first source
 
 In **Settings → Sources**, add an RSS feed, a subreddit, or any other
 source type (see {doc}`sources` for the full list and each type's exact
 configuration). Sources are fetched on a schedule (every 5 minutes by
 default) and new items are processed by the LLM shortly after.
-
-## Development setup
-
-For local frontend development with hot reload:
-
-```bash
-cd frontend
-npm install
-npm run dev        # Vite dev server on http://localhost:5173
-```
-
-For the full stack with hot reload for both frontend and backend:
-
-```bash
-docker compose up
-```
-
-`docker-compose.override.yml` (auto-loaded by `docker compose up`) mounts
-source directories and enables hot reload (Vite for the frontend, uvicorn
-`--reload` for the backend). See {doc}`development` for running the test
-suite, writing migrations, and contributing.

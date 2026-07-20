@@ -16,8 +16,11 @@ Full documentation: **https://shoebillfeed.github.io/ShoebillFeed/**
 - **Relevance learning** — the more you like/dislike articles, the better the feed gets ranked; every learned weight is visible and adjustable in Settings, never a black box
 - **Clustering** — related articles from different sources are grouped into one card with a synthesized summary of the common ground
 - **Push notifications** — browser push for high-relevance articles
+- **Installable PWA** — add it to your home screen or desktop, works offline with your last-synced feed, and prompts you when an update is available
 - **Dark mode** — full light/dark theme support
 - **Multi-user** — separate accounts, feeds, and learned preferences on one instance
+- **Article translation** — set a per-user output language in Settings and article titles/summaries are translated automatically as the LLM processes them
+- **21 languages** — full UI translation: English, German, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Ukrainian, Chinese, Japanese, Korean, Turkish, Czech, Danish, Finnish, Hungarian, Norwegian Bokmål, Romanian, Swedish
 - **No ads, no tracking** — nobody but you ever runs your instance
 
 When adding a source (especially the generic scraper), make sure you're configuring it in line with that source's own terms of service — that's on whoever adds the source, not the software.
