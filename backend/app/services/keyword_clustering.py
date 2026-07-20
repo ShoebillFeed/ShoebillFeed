@@ -24,7 +24,6 @@ from sqlalchemy.orm import Session
 from app.models import Category, NewsItem
 from app.models.category_keyword_weight import CategoryKeywordWeight
 from app.models.keyword_cluster import KeywordCluster
-from app.models.keyword_cluster_snapshot import KeywordClusterSnapshot
 from app.models.news_item import news_item_categories
 from app.services.normalization import normalize_keyword
 
@@ -259,53 +258,6 @@ def refresh_clusters_for_user(db: Session, user_id: uuid.UUID) -> None:
             total_clusters += n
         except Exception:
             logger.exception("Cluster refresh failed for category %s", cat.id)
-
-    # Write weight snapshots for all current clusters so score-over-time charts have data.
-    for cat in categories:
-        clusters_for_cat = db.execute(
-            select(
-                KeywordCluster.cluster_index,
-                KeywordCluster.cluster_label,
-                KeywordCluster.keyword,
-                KeywordCluster.score,
-                KeywordCluster.cluster_size,
-            )
-            .where(KeywordCluster.user_id == user_id, KeywordCluster.category_id == cat.id)
-            .order_by(KeywordCluster.cluster_index, KeywordCluster.score.desc())
-        ).all()
-
-        if not clusters_for_cat:
-            continue
-
-        # For each cluster, use its stored label; collect all keywords
-        seen_clusters: dict[int, str] = {}
-        cluster_sizes: dict[int, int] = {}
-        cluster_keywords: dict[int, list[str]] = defaultdict(list)
-        for row in clusters_for_cat:
-            if row.cluster_index not in seen_clusters:
-                seen_clusters[row.cluster_index] = row.cluster_label or row.keyword
-                cluster_sizes[row.cluster_index] = row.cluster_size
-            cluster_keywords[row.cluster_index].append(row.keyword)
-
-        for ci, label in seen_clusters.items():
-            weights = db.execute(
-                select(CategoryKeywordWeight.weight)
-                .where(
-                    CategoryKeywordWeight.user_id == user_id,
-                    CategoryKeywordWeight.category_id == cat.id,
-                    CategoryKeywordWeight.keyword.in_(cluster_keywords[ci]),
-                )
-            ).scalars().all()
-            max_weight = max(weights, default=1.0)
-
-            db.add(KeywordClusterSnapshot(
-                id=uuid.uuid4(),
-                user_id=user_id,
-                category_id=cat.id,
-                cluster_label=label,
-                weight=max_weight,
-                cluster_size=cluster_sizes[ci],
-            ))
 
     db.commit()
     logger.info("Keyword cluster refresh for user %s: %d clusters across %d categories", user_id, total_clusters, len(categories))

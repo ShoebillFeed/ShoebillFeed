@@ -36,13 +36,6 @@ export function useSourceClusters(days: number) {
   });
 }
 
-export function useKeywordClusterHistory(days: number) {
-  return useQuery({
-    queryKey: ["stats", "keyword-cluster-history", days],
-    queryFn: () => statsApi.keywordClusterHistory(days),
-  });
-}
-
 export function useKeywordClusterMap() {
   return useQuery({
     queryKey: ["stats", "keyword-cluster-map"],

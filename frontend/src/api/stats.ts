@@ -63,14 +63,6 @@ export interface SourceClusterPair {
   categories: SourceClusterCategory[];
 }
 
-export interface KeywordClusterHistory {
-  category_name: string;
-  category_color: string;
-  cluster_label: string;
-  current_weight: number;
-  snapshots: { date: string; weight: number }[];
-}
-
 export interface KeywordInCluster {
   keyword: string;
   score: number;
@@ -96,8 +88,6 @@ export const statsApi = {
     client.get<CategoryWeightHistory[]>("/stats/weight-history", { params: { days } }).then((r) => r.data),
   sourceClusters: (days: number) =>
     client.get<SourceClusterPair[]>("/stats/source-clusters", { params: { days } }).then((r) => r.data),
-  keywordClusterHistory: (days: number) =>
-    client.get<KeywordClusterHistory[]>("/stats/keyword-cluster-history", { params: { days } }).then((r) => r.data),
   keywordClusterMap: () =>
     client.get<KeywordClusterMapEntry[]>("/stats/keyword-cluster-map").then((r) => r.data),
   refreshClusters: () =>
