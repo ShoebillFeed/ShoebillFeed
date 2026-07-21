@@ -25,6 +25,14 @@ def health_check(db: Session = Depends(get_db)):
         db_ok = True
     except Exception:
         pass
+    finally:
+        # Nothing below needs the DB. Release the pooled connection now
+        # instead of holding it for the redis ping + LLM health checks
+        # (which can each take several seconds) -- otherwise, under load,
+        # this endpoint alone can help exhaust the pool since it's hit
+        # repeatedly by the Docker healthcheck every 30s regardless of
+        # what else is happening on the same worker.
+        db.close()
 
     try:
         settings = get_settings()

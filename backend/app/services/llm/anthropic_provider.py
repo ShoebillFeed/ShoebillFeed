@@ -181,7 +181,11 @@ class AnthropicProvider(LLMProvider):
 
     def health_check(self) -> bool:
         try:
-            self.client.models.list()
+            # Explicit timeout: the SDK's default is ~10 minutes, and this is
+            # called from a request holding a DB connection open (see
+            # api/settings.py's health_check) -- an unreachable/slow API must
+            # not be able to tie that up anywhere near that long.
+            self.client.models.list(timeout=5.0)
             return True
         except Exception:
             return False
