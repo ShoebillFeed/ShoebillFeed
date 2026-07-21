@@ -477,7 +477,10 @@ def parse_newsletter_response(text: str, known_categories: list[str]) -> Newslet
         text = text.split("```")[1]
         if text.startswith("json"):
             text = text[4:]
-    data = json.loads(text)
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = json.loads(repair_json(text))
     raw_items = data.get("items", [])
     if not isinstance(raw_items, list):
         return NewsletterResult(items=[])
