@@ -11,6 +11,17 @@ with hot reload — Vite for the frontend, uvicorn `--reload` for the
 backend. Frontend: `http://localhost:5173`. Backend API:
 `http://localhost:8000`.
 
+Unlike `docker-compose.yml` on its own (which pulls the published
+`sebhoos/shoebill-backend`/`sebhoos/shoebill-frontend` images from Docker
+Hub — see {doc}`deployment`), the override builds both images from your
+local source instead, so code changes take effect without waiting on a
+published image. Rebuild explicitly after changing a `Dockerfile` or
+dependency file:
+
+```bash
+docker compose up --build
+```
+
 For frontend-only work without the rest of the stack:
 
 ```bash
