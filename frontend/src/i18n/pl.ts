@@ -145,6 +145,9 @@ const pl = {
   tabForm: {
     tabName: "Nazwa karty",
     placeholder: "Moja niestandardowa karta",
+    icon: "Ikona",
+    noIcon: "Brak ikony",
+    noIconAbbr: "—",
     sortBy: "Sortuj według",
     filterCategories: "Filtruj według kategorii",
     filterSources: "Filtruj według źródeł",

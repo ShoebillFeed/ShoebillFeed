@@ -145,6 +145,9 @@ const uk = {
   tabForm: {
     tabName: "Назва вкладки",
     placeholder: "Моя вкладка",
+    icon: "Значок",
+    noIcon: "Без значка",
+    noIconAbbr: "—",
     sortBy: "Сортувати за",
     filterCategories: "Фільтр за категоріями",
     filterSources: "Фільтр за джерелами",

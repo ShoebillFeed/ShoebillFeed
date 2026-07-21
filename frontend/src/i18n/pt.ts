@@ -144,6 +144,9 @@ const pt = {
   tabForm: {
     tabName: "Nome do separador",
     placeholder: "O meu separador personalizado",
+    icon: "Ícone",
+    noIcon: "Sem ícone",
+    noIconAbbr: "—",
     sortBy: "Ordenar por",
     filterCategories: "Filtrar por categorias",
     filterSources: "Filtrar por fontes",

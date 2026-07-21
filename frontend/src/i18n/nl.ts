@@ -144,6 +144,9 @@ const nl = {
   tabForm: {
     tabName: "Tabbladnaam",
     placeholder: "Mijn aangepaste tabblad",
+    icon: "Pictogram",
+    noIcon: "Geen pictogram",
+    noIconAbbr: "—",
     sortBy: "Sorteren op",
     filterCategories: "Filteren op categorieën",
     filterSources: "Filteren op bronnen",

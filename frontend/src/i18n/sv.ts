@@ -144,6 +144,9 @@ const sv = {
   tabForm: {
     tabName: "Fliknamn",
     placeholder: "Min anpassade flik",
+    icon: "Ikon",
+    noIcon: "Ingen ikon",
+    noIconAbbr: "—",
     sortBy: "Sortera efter",
     filterCategories: "Filtrera efter kategorier",
     filterSources: "Filtrera efter källor",

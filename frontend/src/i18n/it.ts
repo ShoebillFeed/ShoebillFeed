@@ -144,6 +144,9 @@ const it = {
   tabForm: {
     tabName: "Nome scheda",
     placeholder: "La mia scheda personalizzata",
+    icon: "Icona",
+    noIcon: "Nessuna icona",
+    noIconAbbr: "—",
     sortBy: "Ordina per",
     filterCategories: "Filtra per categorie",
     filterSources: "Filtra per fonti",

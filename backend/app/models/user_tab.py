@@ -22,3 +22,4 @@ class UserTab(Base):
     )
     unread_only: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    icon: Mapped[str | None] = mapped_column(String(32), nullable=True)

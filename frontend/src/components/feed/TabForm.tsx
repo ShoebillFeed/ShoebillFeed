@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useCategories } from "../../hooks/useCategories";
 import { useSources } from "../../hooks/useSources";
 import { cn } from "../../lib/utils";
-import type { UserTab, UserTabCreate, TabSort } from "../../types/tabs";
+import { TAB_ICONS, TAB_ICON_NAMES } from "../../lib/tabIcons";
+import type { UserTab, UserTabCreate, TabSort, TabIconName } from "../../types/tabs";
 
 const SORT_IDS: { value: TabSort; icon: typeof Clock }[] = [
   { value: "newest", icon: Clock },
@@ -30,6 +31,7 @@ export default function TabForm({
   const [categoryIds, setCategoryIds] = useState<string[]>(tab?.category_ids ?? []);
   const [sourceIds, setSourceIds] = useState<string[]>(tab?.source_ids ?? []);
   const [unreadOnly, setUnreadOnly] = useState(tab?.unread_only ?? false);
+  const [icon, setIcon] = useState<TabIconName | null>(tab?.icon ?? null);
 
   const toggleId = (list: string[], id: string, set: (v: string[]) => void) => {
     set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
@@ -38,7 +40,14 @@ export default function TabForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave({ name: name.trim(), sort, category_ids: categoryIds, source_ids: sourceIds, unread_only: unreadOnly });
+    onSave({
+      name: name.trim(),
+      sort,
+      category_ids: categoryIds,
+      source_ids: sourceIds,
+      unread_only: unreadOnly,
+      icon,
+    });
   };
 
   const SORT_LABELS: Record<TabSort, string> = {
@@ -62,6 +71,48 @@ export default function TabForm({
           placeholder={t("tabForm.placeholder")}
           className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
+      </div>
+
+      {/* Icon */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+          {t("tabForm.icon")}
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setIcon(null)}
+            title={t("tabForm.noIcon")}
+            className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-full border text-[10px] font-medium transition-colors",
+              icon === null
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-600 hover:border-indigo-400",
+            )}
+          >
+            {t("tabForm.noIconAbbr")}
+          </button>
+          {TAB_ICON_NAMES.map((name) => {
+            const Icon = TAB_ICONS[name];
+            const selected = icon === name;
+            return (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setIcon(name)}
+                title={name}
+                className={cn(
+                  "flex items-center justify-center w-8 h-8 rounded-full border transition-colors",
+                  selected
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-indigo-400",
+                )}
+              >
+                <Icon size={14} />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Sort */}

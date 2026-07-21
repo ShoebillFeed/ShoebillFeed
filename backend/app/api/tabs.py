@@ -12,6 +12,17 @@ from app.models.user_tab import UserTab
 
 router = APIRouter()
 
+# Curated so a custom tab's icon is never confused with an icon that already
+# means something specific elsewhere in the app (e.g. Bookmark = Read Later,
+# TrendingUp = Impact sort). Keep in sync with frontend/src/lib/tabIcons.ts.
+TAB_ICONS = (
+    "star", "heart", "flag", "globe", "compass", "flame", "rocket", "coffee",
+    "home", "briefcase", "music", "camera", "gamepad2", "sparkles", "trophy",
+    "lightbulb", "gift", "graduationcap", "mic", "rss", "layers", "mappin",
+    "leaf", "pawprint",
+)
+TabIcon = Literal[TAB_ICONS]
+
 
 class UserTabOut(BaseModel):
     id: uuid.UUID
@@ -21,6 +32,7 @@ class UserTabOut(BaseModel):
     source_ids: list[uuid.UUID] = []
     unread_only: bool = False
     position: int = 0
+    icon: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -31,6 +43,7 @@ class UserTabCreate(BaseModel):
     category_ids: list[uuid.UUID] = []
     source_ids: list[uuid.UUID] = []
     unread_only: bool = False
+    icon: TabIcon | None = None
 
 
 class UserTabUpdate(BaseModel):
@@ -40,6 +53,7 @@ class UserTabUpdate(BaseModel):
     source_ids: list[uuid.UUID] | None = None
     unread_only: bool | None = None
     position: int | None = None
+    icon: TabIcon | None = None
 
 
 def _get(tab_id: uuid.UUID, db: Session, user_id: uuid.UUID) -> UserTab:
@@ -76,6 +90,7 @@ def create_tab(
         category_ids=payload.category_ids,
         source_ids=payload.source_ids,
         unread_only=payload.unread_only,
+        icon=payload.icon,
         position=max_pos + 1,
     )
     db.add(tab)

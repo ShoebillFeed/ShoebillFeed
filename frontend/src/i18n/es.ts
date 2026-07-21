@@ -144,6 +144,9 @@ const es = {
   tabForm: {
     tabName: "Nombre de la pestaña",
     placeholder: "Mi pestaña personalizada",
+    icon: "Icono",
+    noIcon: "Sin icono",
+    noIconAbbr: "—",
     sortBy: "Ordenar por",
     filterCategories: "Filtrar por categorías",
     filterSources: "Filtrar por fuentes",

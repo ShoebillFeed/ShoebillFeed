@@ -145,6 +145,9 @@ const ru = {
   tabForm: {
     tabName: "Название вкладки",
     placeholder: "Моя вкладка",
+    icon: "Значок",
+    noIcon: "Без значка",
+    noIconAbbr: "—",
     sortBy: "Сортировать по",
     filterCategories: "Фильтр по категориям",
     filterSources: "Фильтр по источникам",

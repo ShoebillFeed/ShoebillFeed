@@ -144,6 +144,9 @@ const hu = {
   tabForm: {
     tabName: "Lap neve",
     placeholder: "Saját egyéni lap",
+    icon: "Ikon",
+    noIcon: "Nincs ikon",
+    noIconAbbr: "—",
     sortBy: "Rendezés",
     filterCategories: "Szűrés kategória szerint",
     filterSources: "Szűrés forrás szerint",

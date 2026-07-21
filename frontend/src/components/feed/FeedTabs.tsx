@@ -3,6 +3,7 @@ import { Zap, TrendingUp, Clock, Bookmark, Plus, Pencil, Trash2 } from "lucide-r
 import { useToast } from "../ui/Toaster";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
+import { TAB_ICONS } from "../../lib/tabIcons";
 import type { FeedTab } from "../../types/news";
 import type { UserTab, UserTabCreate } from "../../types/tabs";
 import { useUserTabs, useCreateTab, useUpdateTab, useDeleteTab } from "../../hooks/useTabs";
@@ -86,6 +87,7 @@ export default function FeedTabs({
         {/* Custom tabs */}
         {customTabs?.map((tab) => {
           const isActive = activeCustomTabId === tab.id;
+          const TabIcon = tab.icon ? TAB_ICONS[tab.icon] : null;
           return (
             <div key={tab.id} className="flex items-center shrink-0">
               <button
@@ -97,6 +99,7 @@ export default function FeedTabs({
                     : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
                 )}
               >
+                {TabIcon && <TabIcon size={14} />}
                 {tab.name}
               </button>
               <div className={cn(

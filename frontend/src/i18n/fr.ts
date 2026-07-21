@@ -144,6 +144,9 @@ const fr = {
   tabForm: {
     tabName: "Nom de l'onglet",
     placeholder: "Mon onglet personnalisé",
+    icon: "Icône",
+    noIcon: "Aucune icône",
+    noIconAbbr: "—",
     sortBy: "Trier par",
     filterCategories: "Filtrer par catégories",
     filterSources: "Filtrer par sources",

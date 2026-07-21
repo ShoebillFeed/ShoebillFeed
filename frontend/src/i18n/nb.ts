@@ -144,6 +144,9 @@ const nb = {
   tabForm: {
     tabName: "Fanenavn",
     placeholder: "Min tilpassede fane",
+    icon: "Ikon",
+    noIcon: "Ikke noe ikon",
+    noIconAbbr: "—",
     sortBy: "Sorter etter",
     filterCategories: "Filtrer etter kategorier",
     filterSources: "Filtrer etter kilder",
