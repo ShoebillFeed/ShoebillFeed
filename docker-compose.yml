@@ -1,3 +1,8 @@
+# Images are pulled from Docker Hub (sebhoos/shoebill-backend,
+# sebhoos/shoebill-frontend) rather than built locally. Set SHOEBILL_TAG in
+# .env to pin a version: `latest` (default, tracks main) or `stable` (tracks
+# the most recent tagged release) -- see docs/deployment.md.
+
 services:
 
   postgres:
@@ -54,9 +59,7 @@ services:
 #    restart: on-failure
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: sebhoos/shoebill-backend:${SHOEBILL_TAG:-latest}
     command: >
       sh -c "alembic upgrade head && gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --timeout 60 --access-logfile - --error-logfile - --capture-output"
     healthcheck:
@@ -94,9 +97,7 @@ services:
     restart: unless-stopped
 
   celery-worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: sebhoos/shoebill-backend:${SHOEBILL_TAG:-latest}
     command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=4 -Q fetch,default
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-phoenix}
@@ -123,9 +124,7 @@ services:
     restart: unless-stopped
 
   celery-worker-process:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: sebhoos/shoebill-backend:${SHOEBILL_TAG:-latest}
     # Dedicated single-concurrency worker for the `process` queue: Ollama serializes
     # LLM calls on one GPU, so concurrency>1 here just causes FIFO queue spikes
     # (one Celery task waiting behind 3 others' LLM calls) without any throughput gain.
@@ -155,9 +154,7 @@ services:
     restart: unless-stopped
 
   celery-beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: sebhoos/shoebill-backend:${SHOEBILL_TAG:-latest}
     command: celery -A app.tasks.celery_app beat --loglevel=info --scheduler celery.beat:PersistentScheduler --schedule /var/lib/celerybeat/celerybeat-schedule
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-phoenix}
@@ -171,9 +168,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: sebhoos/shoebill-frontend:${SHOEBILL_TAG:-latest}
     networks: [shoebill_internal, shoebill]
     restart: unless-stopped
     labels:

@@ -12,6 +12,25 @@ container serves the built React app via Nginx and proxies `/api` to the
 backend — it publishes no host port by default, since it's meant to sit
 behind a reverse proxy.
 
+### Image tags
+
+`backend`, `celery-worker`, `celery-worker-process`, `celery-beat`, and
+`frontend` all run pre-built images from Docker Hub
+([sebhoos/shoebill-backend](https://hub.docker.com/r/sebhoos/shoebill-backend),
+[sebhoos/shoebill-frontend](https://hub.docker.com/r/sebhoos/shoebill-frontend))
+rather than building locally. Set `SHOEBILL_TAG` in `.env` to choose which
+tag to run:
+
+| Tag | Tracks |
+|---|---|
+| `latest` (default) | The `main` branch — newest, but less tested |
+| `stable` | The most recent tagged release — recommended for production |
+
+```bash
+# .env
+SHOEBILL_TAG=stable
+```
+
 ## Reverse proxy
 
 Point a reverse proxy at the `frontend` container on port 80, terminating
@@ -86,12 +105,17 @@ startup — remove it and let Docker recreate it with the correct ownership:
 ## Upgrading
 
 Migrations run automatically as part of the backend image's startup.
-Pull the new images (or rebuild), then:
+Pull the new images, then:
 
 ```bash
-docker compose pull   # or: docker compose build
+docker compose pull
 docker compose up -d
 ```
 
+If you're running `SHOEBILL_TAG=stable`, this picks up whatever the most
+recent tagged release published; on `latest`, it picks up the newest
+build from `main`.
+
 See {doc}`development` for how migrations are written, if you're running
-a fork with local schema changes.
+a fork with local schema changes (which requires building from source
+instead of using the published images).

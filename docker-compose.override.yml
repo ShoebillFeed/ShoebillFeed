@@ -1,0 +1,58 @@
+# Auto-loaded by `docker compose up` alongside docker-compose.yml. Builds
+# images from source instead of pulling from Docker Hub, mounts source
+# directories for hot reload, and exposes dev ports directly (no reverse
+# proxy needed). Not used in production -- see docs/deployment.md.
+#
+# First run (or after a Dockerfile/dependency change), rebuild explicitly:
+#   docker compose up --build
+
+services:
+  backend:
+    image: shoebill-backend:dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+  celery-worker:
+    image: shoebill-backend:dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+
+  celery-worker-process:
+    image: shoebill-backend:dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+
+  celery-beat:
+    image: shoebill-backend:dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    image: shoebill-frontend:dev
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    command: npm run dev -- --host 0.0.0.0
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
