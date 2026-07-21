@@ -145,8 +145,6 @@ const da = {
     tabName: "Fanenavn",
     placeholder: "Min brugerdefinerede fane",
     icon: "Ikon",
-    noIcon: "Intet ikon",
-    noIconAbbr: "—",
     sortBy: "Sortér efter",
     filterCategories: "Filtrer efter kategorier",
     filterSources: "Filtrer efter kilder",

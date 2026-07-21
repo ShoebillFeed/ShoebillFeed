@@ -39,7 +39,7 @@ export default function TabForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !icon) return;
     onSave({
       name: name.trim(),
       sort,
@@ -76,22 +76,9 @@ export default function TabForm({
       {/* Icon */}
       <div>
         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-          {t("tabForm.icon")}
+          {t("tabForm.icon")} <span className="text-red-500">*</span>
         </label>
         <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => setIcon(null)}
-            title={t("tabForm.noIcon")}
-            className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-full border text-[10px] font-medium transition-colors",
-              icon === null
-                ? "bg-indigo-600 text-white border-indigo-600"
-                : "bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-600 hover:border-indigo-400",
-            )}
-          >
-            {t("tabForm.noIconAbbr")}
-          </button>
           {TAB_ICON_NAMES.map((name) => {
             const Icon = TAB_ICONS[name];
             const selected = icon === name;
@@ -213,7 +200,7 @@ export default function TabForm({
       <div className="flex gap-2 pt-1">
         <button
           type="submit"
-          disabled={!name.trim()}
+          disabled={!name.trim() || !icon}
           className="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-40 transition-colors"
         >
           {tab ? t("common.save") : t("common.create")}

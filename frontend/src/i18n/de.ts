@@ -147,8 +147,6 @@ const de = {
     tabName: "Tab-Name",
     placeholder: "Mein benutzerdefinierter Tab",
     icon: "Symbol",
-    noIcon: "Kein Symbol",
-    noIconAbbr: "—",
     sortBy: "Sortieren nach",
     filterCategories: "Nach Kategorien filtern",
     filterSources: "Nach Quellen filtern",

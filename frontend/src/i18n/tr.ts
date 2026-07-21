@@ -145,8 +145,6 @@ const tr = {
     tabName: "Sekme adı",
     placeholder: "Özel sekmem",
     icon: "Simge",
-    noIcon: "Simge yok",
-    noIconAbbr: "—",
     sortBy: "Sıralama ölçütü",
     filterCategories: "Kategoriye göre filtrele",
     filterSources: "Kaynağa göre filtrele",

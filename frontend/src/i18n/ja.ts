@@ -145,8 +145,6 @@ const ja = {
     tabName: "タブ名",
     placeholder: "マイカスタムタブ",
     icon: "アイコン",
-    noIcon: "アイコンなし",
-    noIconAbbr: "—",
     sortBy: "並べ替え",
     filterCategories: "カテゴリでフィルター",
     filterSources: "ソースでフィルター",

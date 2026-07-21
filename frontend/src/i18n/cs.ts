@@ -145,8 +145,6 @@ const cs = {
     tabName: "Název záložky",
     placeholder: "Moje vlastní záložka",
     icon: "Ikona",
-    noIcon: "Bez ikony",
-    noIconAbbr: "—",
     sortBy: "Seřadit podle",
     filterCategories: "Filtrovat podle kategorií",
     filterSources: "Filtrovat podle zdrojů",

@@ -2,18 +2,20 @@ import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useFilterStore } from "../stores/filterStore";
 import { useInfiniteNews, useSearchNews } from "../hooks/useNews";
-import { useUserTabs } from "../hooks/useTabs";
-import FeedTabs from "../components/feed/FeedTabs";
+import { useUserTabs, useCreateTab, useUpdateTab, useDeleteTab } from "../hooks/useTabs";
+import FeedTabs, { type FormMode } from "../components/feed/FeedTabs";
 import CategoryFilter from "../components/feed/CategoryFilter";
 import SourceFilter from "../components/feed/SourceFilter";
 import NewsFeed from "../components/feed/NewsFeed";
 import NewsCard from "../components/feed/NewsCard";
 import NewsCardSkeleton from "../components/feed/NewsCardSkeleton";
-import { Eye, RefreshCw, Search, Tag, X } from "lucide-react";
+import { Eye, RefreshCw, Search, Tag, X, Pencil, Trash2 } from "lucide-react";
 import { sourcesApi } from "../api/sources";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "../components/ui/Toaster";
 import type { FeedEntry } from "../types/news";
 import type { ApiTab } from "../api/news";
+import type { UserTab, UserTabCreate } from "../types/tabs";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -34,8 +36,13 @@ export default function FeedPage() {
     showUncategorizedOnly, setShowUncategorizedOnly,
   } = useFilterStore();
   const qc = useQueryClient();
+  const toast = useToast();
 
   const { data: customTabs } = useUserTabs();
+  const createTab = useCreateTab();
+  const updateTab = useUpdateTab();
+  const deleteTab = useDeleteTab();
+  const [tabForm, setTabForm] = useState<FormMode>(null);
 
   const [searchInput, setSearchInput] = useState("");
   const searchQuery = useDebounce(searchInput, 300);
@@ -94,6 +101,25 @@ export default function FeedPage() {
   const handleRefresh = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["news"] });
   }, [qc]);
+
+  const handleSaveTab = (data: UserTabCreate) => {
+    if (tabForm?.kind === "edit") {
+      updateTab.mutate({ id: tabForm.tab.id, data });
+    } else {
+      createTab.mutate(data, {
+        onSuccess: (newTab) => setCustomTab(newTab.id),
+      });
+    }
+    setTabForm(null);
+  };
+
+  const handleDeleteTab = (tab: UserTab) => {
+    toast.confirm(t("tabs.deleteConfirm", { name: tab.name }), () => {
+      if (activeCustomTabId === tab.id) setCustomTab(null);
+      deleteTab.mutate(tab.id);
+      if (tabForm?.kind === "edit" && tabForm.tab.id === tab.id) setTabForm(null);
+    });
+  };
 
   return (
     <div>
@@ -166,6 +192,9 @@ export default function FeedPage() {
         activeCustomTabId={activeCustomTabId}
         onChange={setTab}
         onCustomTabChange={setCustomTab}
+        form={tabForm}
+        onFormChange={setTabForm}
+        onSave={handleSaveTab}
       />
 
       {!activeCustomTab && (
@@ -202,17 +231,35 @@ export default function FeedPage() {
       ) : (
         <>
           {activeCustomTab && (
-            <div className="flex flex-wrap gap-1.5 mb-3 text-xs text-gray-400 dark:text-gray-500">
-              {activeCustomTab.category_ids.length === 0 && activeCustomTab.source_ids.length === 0 && !activeCustomTab.unread_only && (
-                <span>{t("feed.allArticles", { sort: activeCustomTab.sort })}</span>
-              )}
-              {activeCustomTab.category_ids.length > 0 && (
-                <span>{t("feed.categoriesCount", { count: activeCustomTab.category_ids.length })}</span>
-              )}
-              {activeCustomTab.source_ids.length > 0 && (
-                <span>{t("feed.sourcesCount", { count: activeCustomTab.source_ids.length })}</span>
-              )}
-              {activeCustomTab.unread_only && <span>{t("feed.unreadOnlyFilter")}</span>}
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex flex-wrap gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+                {activeCustomTab.category_ids.length === 0 && activeCustomTab.source_ids.length === 0 && !activeCustomTab.unread_only && (
+                  <span>{t("feed.allArticles", { sort: activeCustomTab.sort })}</span>
+                )}
+                {activeCustomTab.category_ids.length > 0 && (
+                  <span>{t("feed.categoriesCount", { count: activeCustomTab.category_ids.length })}</span>
+                )}
+                {activeCustomTab.source_ids.length > 0 && (
+                  <span>{t("feed.sourcesCount", { count: activeCustomTab.source_ids.length })}</span>
+                )}
+                {activeCustomTab.unread_only && <span>{t("feed.unreadOnlyFilter")}</span>}
+              </div>
+              <div className="flex items-center gap-0.5 shrink-0 -mt-1">
+                <button
+                  onClick={() => setTabForm({ kind: "edit", tab: activeCustomTab })}
+                  title={t("tabs.editTab")}
+                  className="p-1.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => handleDeleteTab(activeCustomTab)}
+                  title={t("tabs.deleteTab")}
+                  className="p-1.5 rounded text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
           )}
 

@@ -145,8 +145,6 @@ const zh = {
     tabName: "标签页名称",
     placeholder: "我的自定义标签页",
     icon: "图标",
-    noIcon: "无图标",
-    noIconAbbr: "—",
     sortBy: "排序方式",
     filterCategories: "按分类筛选",
     filterSources: "按来源筛选",

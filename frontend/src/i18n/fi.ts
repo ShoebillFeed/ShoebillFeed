@@ -145,8 +145,6 @@ const fi = {
     tabName: "Välilehden nimi",
     placeholder: "Oma mukautettu välilehti",
     icon: "Kuvake",
-    noIcon: "Ei kuvaketta",
-    noIconAbbr: "—",
     sortBy: "Lajitteluperuste",
     filterCategories: "Suodata kategorioiden mukaan",
     filterSources: "Suodata lähteiden mukaan",

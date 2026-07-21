@@ -147,8 +147,6 @@ const en = {
     tabName: "Tab name",
     placeholder: "My custom tab",
     icon: "Icon",
-    noIcon: "No icon",
-    noIconAbbr: "—",
     sortBy: "Sort by",
     filterCategories: "Filter by categories",
     filterSources: "Filter by sources",

@@ -19,6 +19,7 @@ Full documentation: **https://shoebillfeed.github.io/ShoebillFeed/**
 - **Installable PWA** — add it to your home screen or desktop, works offline with your last-synced feed, and prompts you when an update is available
 - **Dark mode** — full light/dark theme support
 - **Multi-user** — separate accounts, feeds, and learned preferences on one instance
+- **Custom feed tabs** — save a named view filtered by category, source, sort order, and/or unread-only, each with its own icon
 - **Article translation** — set a per-user output language in Settings and article titles/summaries are translated automatically as the LLM processes them
 - **21 languages** — full UI translation: English, German, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Ukrainian, Chinese, Japanese, Korean, Turkish, Czech, Danish, Finnish, Hungarian, Norwegian Bokmål, Romanian, Swedish
 - **No ads, no tracking** — nobody but you ever runs your instance

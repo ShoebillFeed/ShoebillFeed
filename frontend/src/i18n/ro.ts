@@ -145,8 +145,6 @@ const ro = {
     tabName: "Numele filei",
     placeholder: "Fila mea personalizată",
     icon: "Pictogramă",
-    noIcon: "Fără pictogramă",
-    noIconAbbr: "—",
     sortBy: "Sortați după",
     filterCategories: "Filtrați după categorii",
     filterSources: "Filtrați după surse",

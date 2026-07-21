@@ -43,7 +43,7 @@ class UserTabCreate(BaseModel):
     category_ids: list[uuid.UUID] = []
     source_ids: list[uuid.UUID] = []
     unread_only: bool = False
-    icon: TabIcon | None = None
+    icon: TabIcon
 
 
 class UserTabUpdate(BaseModel):

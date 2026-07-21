@@ -145,8 +145,6 @@ const ko = {
     tabName: "탭 이름",
     placeholder: "내 사용자 지정 탭",
     icon: "아이콘",
-    noIcon: "아이콘 없음",
-    noIconAbbr: "—",
     sortBy: "정렬 기준",
     filterCategories: "카테고리로 필터",
     filterSources: "소스로 필터",

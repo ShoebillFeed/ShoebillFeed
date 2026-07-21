@@ -27,7 +27,7 @@ export interface UserTabCreate {
   category_ids: string[];
   source_ids: string[];
   unread_only: boolean;
-  icon?: TabIconName | null;
+  icon: TabIconName;
 }
 
 export interface UserTabUpdate {
