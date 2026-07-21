@@ -4,6 +4,7 @@
 [![Backend tests](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/backend-tests.yml)
 [![Frontend tests](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/frontend-tests.yml/badge.svg)](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/frontend-tests.yml)
 [![Docs](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/docs.yml/badge.svg)](https://shoebillfeed.github.io/ShoebillFeed/)
+[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-sebhoos-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/repositories/sebhoos)
 
 A self-hosted, open-source news aggregator with LLM-powered summarisation, clustering, and relevance scoring. Shoebill pulls articles from RSS/Atom feeds, Reddit, Mastodon, Lemmy, Bluesky, Telegram, GitHub releases, arXiv, email newsletters, and a generic scraper for sites without a feed — then uses a local (Ollama) or cloud (Anthropic) LLM to summarise, categorise, and cluster them, and learns which topics matter to you over time from nothing but your own 👍/👎 feedback.
 
