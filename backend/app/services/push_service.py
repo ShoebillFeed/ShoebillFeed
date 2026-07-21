@@ -2,9 +2,9 @@ import json
 import logging
 import math
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.push_subscription import PushSubscription
 from app.models.user_settings import UserSettings
@@ -273,3 +273,35 @@ def notify_cluster(db: Session, cluster: NewsCluster, items: list) -> None:
     for item in pending:
         item.notified_at = now
     db.commit()
+
+
+def count_recent_matches(db: Session, user_id, days: int) -> int:
+    """How many recently-fetched items/clusters would have been eligible for
+    a notification under the user's *current* settings. Used for the settings
+    page preview so filter changes are checked against real recent data
+    instead of taken on faith. Approximate, not an exact replay of dispatch:
+    counts one match per eligible cluster regardless of push_cluster_per_source,
+    and doesn't account for items already notified."""
+    s = db.scalar(select(UserSettings).where(UserSettings.user_id == user_id))
+    if not s or not s.push_enabled:
+        return 0
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    standalone_items = db.scalars(
+        select(NewsItem).where(
+            NewsItem.user_id == user_id,
+            NewsItem.cluster_id.is_(None),
+            NewsItem.fetched_at >= since,
+        )
+    ).all()
+    count = sum(1 for item in standalone_items if _item_eligible(s, item, db))
+
+    clusters = db.scalars(
+        select(NewsCluster)
+        .options(selectinload(NewsCluster.items))
+        .where(NewsCluster.user_id == user_id, NewsCluster.created_at >= since)
+    ).all()
+    count += sum(1 for cluster in clusters if _cluster_eligible(s, cluster, cluster.items, db))
+
+    return count

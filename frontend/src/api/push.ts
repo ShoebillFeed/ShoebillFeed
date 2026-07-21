@@ -11,6 +11,11 @@ export interface PushSubscriptionCreate {
   auth: string;
 }
 
+export interface DryRunResult {
+  count: number;
+  days: number;
+}
+
 export const pushApi = {
   getVapidPublicKey: () =>
     client.get<VapidPublicKey>("/push/vapid-public-key").then((r) => r.data),
@@ -20,4 +25,7 @@ export const pushApi = {
 
   deleteSubscription: (endpoint: string) =>
     client.delete("/push/subscription", { params: { endpoint } }),
+
+  dryRun: (days = 7) =>
+    client.get<DryRunResult>("/push/dry-run", { params: { days } }).then((r) => r.data),
 };

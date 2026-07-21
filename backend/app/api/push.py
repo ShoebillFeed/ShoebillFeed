@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from typing import Annotated
 
 from app.api.deps import get_db, get_current_user
 from app.config import get_settings
 from app.models.push_subscription import PushSubscription
 from app.models.user import User
 from app.schemas.push import PushSubscriptionCreate, VapidPublicKeyOut
+from app.services.push_service import count_recent_matches
 
 router = APIRouter()
 
@@ -60,3 +62,14 @@ def delete_subscription(
     )
     db.commit()
     return {"status": "ok"}
+
+
+@router.get("/dry-run")
+def dry_run(
+    days: Annotated[int, Query(ge=1, le=30)] = 7,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """How many recent items would have matched the user's current
+    notification settings — used as a live preview in Settings."""
+    return {"count": count_recent_matches(db, user.id, days), "days": days}
