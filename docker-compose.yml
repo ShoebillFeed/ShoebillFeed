@@ -169,22 +169,15 @@ services:
 
   frontend:
     image: sebhoos/shoebill-frontend:${SHOEBILL_TAG:-latest}
-    networks: [shoebill_internal, shoebill]
+    networks: [shoebill_internal]
     restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.shoebill.rule=Host(`shoebill.s-hoose.de`)"
-      - "traefik.http.routers.shoebill.entrypoints=web"
-      - "traefik.http.routers.shoebill-secure.rule=Host(`shoebill.s-hoose.de`)"
-      - "traefik.http.routers.shoebill-secure.entrypoints=web-secure"
-      - "traefik.http.routers.shoebill-secure.tls=true"
-      - "traefik.http.routers.shoebill-secure.tls.certresolver=letsencrypt"
+    # No host port published by default -- put a reverse proxy (Traefik,
+    # Nginx) in front, or add a port mapping here for local testing. See
+    # docs/deployment.md for a Traefik labels example.
 
 networks:
   shoebill_internal:
     driver: bridge
-  shoebill:
-    external: true
 
 volumes:
   celerybeat-data:
