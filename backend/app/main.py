@@ -14,6 +14,7 @@ from app.api import auth as auth_router
 from app.api import push as push_router
 from app.api import learning as learning_router
 from app.api import tokens as tokens_router
+from app.api import podcasts as podcasts_router
 
 logger = logging.getLogger(__name__)
 
@@ -93,3 +94,4 @@ app.include_router(tabs_router.router, prefix="/api/tabs", tags=["tabs"])
 app.include_router(push_router.router, prefix="/api/push", tags=["push"])
 app.include_router(learning_router.router, prefix="/api/learning", tags=["learning"])
 app.include_router(tokens_router.router, prefix="/api/tokens", tags=["tokens"])
+app.include_router(podcasts_router.router, prefix="/api/podcasts", tags=["podcasts"])

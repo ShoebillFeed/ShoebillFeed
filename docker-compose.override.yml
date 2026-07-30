@@ -35,6 +35,14 @@ services:
     volumes:
       - ./backend:/app
 
+  celery-worker-podcast:
+    image: shoebill-backend:dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+
   celery-beat:
     image: shoebill-backend:dev
     build:

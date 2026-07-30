@@ -11,6 +11,7 @@ celery_app = Celery(
     include=[
         "app.tasks.fetch_tasks",
         "app.tasks.process_tasks",
+        "app.tasks.podcast_tasks",
     ],
 )
 
@@ -53,6 +54,16 @@ celery_app.conf.update(
         "decay-learned-weights": {
             "task": "app.tasks.process_tasks.decay_weights",
             "schedule": crontab(hour=4, minute=0),
+            "options": {"queue": "default"},
+        },
+        "dispatch-due-podcasts": {
+            "task": "app.tasks.podcast_tasks.dispatch_due_podcasts",
+            "schedule": crontab(minute="*/15"),
+            "options": {"queue": "podcast"},
+        },
+        "cleanup-old-podcast-episodes": {
+            "task": "app.tasks.podcast_tasks.cleanup_old_podcast_episodes",
+            "schedule": crontab(hour=3, minute=30),
             "options": {"queue": "default"},
         },
     },

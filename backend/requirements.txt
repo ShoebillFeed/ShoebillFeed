@@ -21,3 +21,5 @@ nltk>=3.9
 pgvector>=0.3
 pywebpush==2.0.0
 slowapi==0.1.9
+piper-tts==1.6.0
+tzdata==2026.2

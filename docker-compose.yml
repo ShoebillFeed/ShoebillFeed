@@ -86,6 +86,11 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@localhost}
+      TTS_PROVIDER: ${TTS_PROVIDER:-piper}
+      PIPER_MODEL_DIR: /data/piper-voices
+      PODCAST_AUDIO_DIR: /data/podcast-audio
+    volumes:
+      - podcast-audio:/data/podcast-audio
     depends_on:
       postgres:
         condition: service_healthy
@@ -153,6 +158,36 @@ services:
     networks: [shoebill_internal]
     restart: unless-stopped
 
+  celery-worker-podcast:
+    image: sebhoos/shoebill-backend:${SHOEBILL_TAG:-latest}
+    # Dedicated queue: podcast generation (LLM script call + CPU-bound Piper
+    # synthesis + ffmpeg encode) can take a while per episode and must not
+    # compete with or delay the `process` queue's news pipeline.
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2 -Q podcast
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-phoenix}
+      REDIS_URL: redis://redis:6379/0
+      LLM_PROVIDERS: ${LLM_PROVIDERS:-${LLM_PROVIDER:-ollama}}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
+      TTS_PROVIDER: ${TTS_PROVIDER:-piper}
+      PIPER_MODEL_DIR: /data/piper-voices
+      PODCAST_AUDIO_DIR: /data/podcast-audio
+    volumes:
+      - piper-voices:/data/piper-voices
+      - podcast-audio:/data/podcast-audio
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+#      ollama:
+#        condition: service_healthy
+    networks: [shoebill_internal]
+    restart: unless-stopped
+
   celery-beat:
     image: sebhoos/shoebill-backend:${SHOEBILL_TAG:-latest}
     command: celery -A app.tasks.celery_app beat --loglevel=info --scheduler celery.beat:PersistentScheduler --schedule /var/lib/celerybeat/celerybeat-schedule
@@ -181,4 +216,6 @@ networks:
 
 volumes:
   celerybeat-data:
+  piper-voices:
+  podcast-audio:
 

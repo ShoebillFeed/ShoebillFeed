@@ -104,3 +104,36 @@ export function ScoreSlider({
     </div>
   );
 }
+
+export function RangeSlider({
+  value,
+  onChange,
+  min,
+  max,
+  step = 1,
+  unit = "",
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+  unit?: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 w-full max-w-xs">
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="flex-1 h-4 appearance-none bg-gray-200 dark:bg-gray-700 rounded-full cursor-pointer accent-indigo-600"
+      />
+      <span className="text-sm font-medium w-14 text-right shrink-0 text-gray-800 dark:text-gray-200">
+        {value}{unit}
+      </span>
+    </div>
+  );
+}

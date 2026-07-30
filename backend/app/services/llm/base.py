@@ -138,6 +138,28 @@ Respond ONLY with valid JSON. No markdown fences, no extra text.""".format(
 )
 
 
+PODCAST_SCRIPT_SYSTEM_PROMPT = """You are writing the script for a {host_count}-host conversational news podcast. The hosts discuss the stories below together — reacting to each other, handing off between stories, asking follow-up questions — like a real podcast, not a series of solo summaries.
+
+Hosts:
+{hosts_block}
+
+Each host has a distinct character described above — write their lines to match that character's tone, vocabulary, and personality consistently throughout.
+
+Structure:
+- Open with a brief, natural welcome (all hosts can participate).
+- Discuss each story in turn, with genuine back-and-forth between hosts — not just one host reading a summary while the others stay silent.
+- Close with a brief, natural sign-off.
+- Base everything strictly on the story content given below — do not invent facts, quotes, or details not present in the source material.
+- Aim for an overall spoken length of approximately {target_minutes} minute(s) at a natural conversational pace (~150 words/minute across all hosts combined). Pace the discussion accordingly — do not rush through everything in a few lines, and do not pad with filler.
+
+Return a JSON object with exactly this shape:
+{{"turns": [{{"host_id": "<id from the hosts list above>", "text": "<what this host says>"}}, ...]}}
+
+Each array entry is one host's uninterrupted line. Use only the host ids given above.
+
+Respond ONLY with valid JSON. No markdown fences, no extra text."""
+
+
 LANGUAGE_NAMES: dict[str, str] = {
     "en": "English",
     "de": "German",
@@ -221,6 +243,19 @@ class NewsletterItem:
 @dataclass
 class NewsletterResult:
     items: list[NewsletterItem]
+    provider_name: str = ""
+    model_name: str = ""
+
+
+@dataclass
+class PodcastScriptTurn:
+    host_id: str
+    text: str
+
+
+@dataclass
+class PodcastScriptResult:
+    turns: list[PodcastScriptTurn]
     provider_name: str = ""
     model_name: str = ""
 
@@ -507,6 +542,38 @@ def parse_newsletter_response(text: str, known_categories: list[str]) -> Newslet
     return NewsletterResult(items=items)
 
 
+def parse_podcast_script_response(text: str, valid_host_ids: list[str]) -> PodcastScriptResult:
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = json.loads(repair_json(text))
+
+    raw_turns = data.get("turns", []) if isinstance(data, dict) else []
+    if not isinstance(raw_turns, list):
+        raw_turns = []
+
+    valid = set(valid_host_ids)
+    turns: list[PodcastScriptTurn] = []
+    for entry in raw_turns:
+        if not isinstance(entry, dict):
+            continue
+        host_id = str(entry.get("host_id", "")).strip()
+        text_val = str(entry.get("text", "")).strip()
+        if not host_id or not text_val:
+            continue
+        if host_id not in valid:
+            logger.warning("Podcast script returned unrecognised host_id %r (known: %s)", host_id, valid_host_ids)
+            continue
+        turns.append(PodcastScriptTurn(host_id=host_id, text=text_val))
+
+    return PodcastScriptResult(turns=turns)
+
+
 def parse_scraper_selector_response(text: str) -> dict:
     """Parse an LLM response suggesting CSS selectors for the web scraper.
     Raises ValueError if no usable item_selector was returned."""
@@ -689,6 +756,39 @@ class LLMProvider(ABC):
             max_tokens=300,
         )
         return result[:max_chars]
+
+    def generate_podcast_script(
+        self,
+        hosts: list[dict],
+        stories: list[dict],
+        target_minutes: int,
+        language: str,
+    ) -> PodcastScriptResult:
+        """Generate a conversational multi-host podcast script covering `stories`.
+
+        `hosts` = [{"id": ..., "name": ..., "character_prompt": ...}, ...]
+        `stories` = [{"title": ..., "content": ..., "source_name": ...}, ...]
+        """
+        hosts_block = "\n".join(
+            f"- {h['name']} (id: {h['id']}): {h['character_prompt']}" for h in hosts
+        )
+        system = PODCAST_SCRIPT_SYSTEM_PROMPT.format(
+            host_count=len(hosts), hosts_block=hosts_block, target_minutes=target_minutes,
+        )
+        name = LANGUAGE_NAMES.get(language, language)
+        system += f"\n\nIMPORTANT: All spoken dialogue (the \"text\" field of every turn) MUST be written in grammatically correct, standard {name}, regardless of the source stories' original language."
+
+        parts = []
+        for i, story in enumerate(stories):
+            content = (story.get("content") or story["title"])[:1200]
+            parts.append(f"Story {i} (Source: {story['source_name']}):\nTitle: {story['title']}\nContent: {content}")
+        user = "\n\n".join(parts)
+
+        text = self._complete(system=system, user=user, max_tokens=4096)
+        result = parse_podcast_script_response(text, [h["id"] for h in hosts])
+        result.provider_name = self.provider_name
+        result.model_name = self.model_name
+        return result
 
     @abstractmethod
     def health_check(self) -> bool: ...

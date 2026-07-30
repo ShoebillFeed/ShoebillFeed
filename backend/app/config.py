@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     vapid_private_key: str = ""
     vapid_subject: str = "mailto:admin@localhost"
 
+    # Podcast text-to-speech provider. Currently only 'piper' (self-hosted, CPU/ONNX).
+    tts_provider: str = "piper"
+    piper_model_dir: str = "/data/piper-voices"
+    podcast_audio_dir: str = "/data/podcast-audio"
+
 
     @property
     def llm_provider(self) -> str:
