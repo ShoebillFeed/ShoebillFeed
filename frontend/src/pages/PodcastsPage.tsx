@@ -5,14 +5,8 @@ import { ChevronDown, ChevronRight, Podcast, Trash2 } from "lucide-react";
 import { usePodcastEpisodes, useDeletePodcastEpisode } from "../hooks/usePodcasts";
 import { useToast } from "../components/ui/Toaster";
 import { cn } from "../lib/utils";
+import { formatDuration } from "../lib/podcastFormat";
 import type { PodcastEpisode, PodcastEpisodeStatus } from "../types/podcast";
-
-function formatDuration(seconds: number | null): string {
-  if (!seconds && seconds !== 0) return "";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
 
 function StatusBadge({ status }: { status: PodcastEpisodeStatus }) {
   const { t } = useTranslation();

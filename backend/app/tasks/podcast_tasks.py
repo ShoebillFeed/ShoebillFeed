@@ -2,7 +2,6 @@ import logging
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
@@ -12,11 +11,10 @@ from app.models.news_item import NewsItem
 from app.models.news_cluster import NewsCluster
 from app.models.podcast_show import PodcastShow
 from app.models.podcast_episode import PodcastEpisode
+from app.services.podcast_scheduling import due_shows
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
-
-_DISPATCH_WINDOW_MINUTES = 15
 
 
 @celery_app.task(name="app.tasks.podcast_tasks.dispatch_due_podcasts", queue="podcast")
@@ -24,40 +22,11 @@ def dispatch_due_podcasts() -> int:
     """Beat task (every 15 min): scans active shows and dispatches generation
     for any show whose local schedule_time has just passed."""
     db = SessionLocal()
-    dispatched = 0
     try:
-        shows = db.scalars(select(PodcastShow).where(PodcastShow.is_active == True)).all()  # noqa: E712
-        now_utc = datetime.now(timezone.utc)
+        shows = due_shows(db, datetime.now(timezone.utc))
         for show in shows:
-            try:
-                tz = ZoneInfo(show.timezone)
-            except Exception:
-                logger.warning("Podcast show %s has invalid timezone %r, skipping", show.id, show.timezone)
-                continue
-            local_now = now_utc.astimezone(tz)
-            try:
-                sched_h, sched_m = (int(x) for x in show.schedule_time.split(":"))
-            except (ValueError, AttributeError):
-                logger.warning("Podcast show %s has invalid schedule_time %r, skipping", show.id, show.schedule_time)
-                continue
-            scheduled_today_local = local_now.replace(hour=sched_h, minute=sched_m, second=0, microsecond=0)
-            window_end = scheduled_today_local + timedelta(minutes=_DISPATCH_WINDOW_MINUTES)
-            if not (scheduled_today_local <= local_now < window_end):
-                continue
-
-            scheduled_today_utc = scheduled_today_local.astimezone(timezone.utc)
-            exists_today = db.scalar(
-                select(PodcastEpisode.id).where(
-                    PodcastEpisode.show_id == show.id,
-                    PodcastEpisode.created_at >= scheduled_today_utc,
-                ).limit(1)
-            )
-            if exists_today:
-                continue
-
             generate_podcast_episode.apply_async(args=[str(show.id)], queue="podcast")
-            dispatched += 1
-        return dispatched
+        return len(shows)
     finally:
         db.close()
 
