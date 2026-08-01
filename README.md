@@ -16,6 +16,7 @@ Full documentation: **https://shoebillfeed.github.io/ShoebillFeed/**
 - **LLM processing** — automatic summaries, keyword extraction, category assignment, relevance/impact scoring, via a local model (Ollama) or a cloud provider (Anthropic), your choice
 - **Relevance learning** — the more you like/dislike articles, the better the feed gets ranked; every learned weight is visible and adjustable in Settings, never a black box
 - **Clustering** — related articles from different sources are grouped into one card with a synthesized summary of the common ground
+- **AI podcast** — configure up to three AI hosts, each with a text-promptable character, to discuss your top stories on a daily schedule; voices are generated locally with Piper, no cloud TTS service required
 - **Push notifications** — browser push for high-relevance articles
 - **Installable PWA** — add it to your home screen or desktop, works offline with your last-synced feed, and prompts you when an update is available
 - **Dark mode** — full light/dark theme support
@@ -165,6 +166,7 @@ LLM_PROVIDERS=ollama,anthropic   # try Ollama first, fall back to Anthropic
 | `backend` | FastAPI REST API |
 | `celery-worker` | Fetch queue (all source types) |
 | `celery-worker-process` | LLM processing queue (single-concurrency for GPU) |
+| `celery-worker-podcast` | Podcast episode generation queue (script + TTS + audio encoding) |
 | `celery-beat` | Cron scheduler — fetch every 5 min, process every 15 min |
 | `frontend` | React app served by Nginx, proxies `/api` to backend |
 

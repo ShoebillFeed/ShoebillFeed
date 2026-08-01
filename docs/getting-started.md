@@ -32,9 +32,9 @@ The full variable reference can be found in {doc}`configuration`.
 docker compose up -d
 ```
 
-This starts Postgres (with pgvector), Redis, the FastAPI backend, two
-Celery workers (fetch and LLM-processing queues), Celery Beat, and the
-frontend.
+This starts Postgres (with pgvector), Redis, the FastAPI backend, three
+Celery workers (fetch, LLM-processing, and podcast-generation queues),
+Celery Beat, and the frontend.
 
 The app is served by the `frontend` container on port 80. Wire it up
 behind a reverse proxy (Traefik, Nginx — see {doc}`deployment`), or for

@@ -29,6 +29,16 @@ variable; defaults shown are from `backend/app/config.py`.
 
 See {doc}`llm-providers` for how the fallback chain and batch processing work.
 
+## Podcast (text-to-speech)
+
+| Variable | Default | Description |
+|---|---|---|
+| `TTS_PROVIDER` | `piper` | Text-to-speech backend for generated podcast episodes. Currently only `piper` — a self-hosted, CPU-only engine (no GPU or API key needed). Voice models are downloaded automatically on first use into the `piper-voices` Docker volume. |
+
+`PIPER_MODEL_DIR` and `PODCAST_AUDIO_DIR` are fixed container paths (not
+meant to be overridden) backed by the `piper-voices` and `podcast-audio`
+named volumes — see {doc}`deployment`.
+
 ## Reddit
 
 | Variable | Default | Description |

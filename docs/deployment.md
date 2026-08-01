@@ -14,8 +14,8 @@ behind a reverse proxy.
 
 ### Image tags
 
-`backend`, `celery-worker`, `celery-worker-process`, `celery-beat`, and
-`frontend` all run pre-built images from Docker Hub
+`backend`, `celery-worker`, `celery-worker-process`, `celery-worker-podcast`,
+`celery-beat`, and `frontend` all run pre-built images from Docker Hub
 ([sebhoos/shoebill-backend](https://hub.docker.com/r/sebhoos/shoebill-backend),
 [sebhoos/shoebill-frontend](https://hub.docker.com/r/sebhoos/shoebill-frontend))
 rather than building locally. Set `SHOEBILL_TAG` in `.env` to choose which
@@ -77,6 +77,8 @@ be unauthenticated.
 |---|---|
 | `postgres` data volume | All application data |
 | `celerybeat-data` | The Beat scheduler's persisted schedule, so scheduled tasks don't reset on restart |
+| `piper-voices` | Downloaded Piper TTS voice models, cached after first use per language |
+| `podcast-audio` | Generated podcast episode MP3s |
 
 Back up the Postgres volume; everything else is reproducible from
 config + migrations.
@@ -101,6 +103,10 @@ startup — remove it and let Docker recreate it with the correct ownership:
 - Fetches for identical sources shared across users are automatically
   deduplicated (see {doc}`architecture`), so adding more users doesn't
   multiply outbound HTTP requests to the same feeds.
+- `celery-worker-podcast` runs on its own `podcast` queue specifically so
+  episode generation (an LLM call plus CPU-bound TTS synthesis and ffmpeg
+  encoding, potentially tens of seconds per episode) never delays
+  `celery-worker-process`'s news pipeline.
 
 ## Upgrading
 

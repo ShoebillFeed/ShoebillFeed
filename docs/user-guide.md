@@ -22,6 +22,26 @@ category, a source, a sort order) as a named, one-click tab — useful for
 "just my work-relevant categories" or "just this one source" views you
 switch to often.
 
+## Podcast
+
+**Podcasts** (top-level nav, next to Feed) is where generated episodes
+appear, each with an inline audio player, a status badge
+(queued/generating/ready/failed), and an expandable transcript.
+
+Configure shows under **Settings → Podcast**: a name, up to three hosts
+(each with a name, a free-text character prompt describing their
+personality, and a voice), which categories and feeds to draw stories
+from (empty = all), a time window, a target length (up to 15 minutes), a
+language, and a daily generation time plus timezone. "Generate now"
+triggers an episode immediately instead of waiting for the schedule.
+
+The character prompt shapes how each host's lines are *written* by the
+LLM — tone, vocabulary, personality — not how the voice *sounds*. Voices
+are rendered by [Piper](https://github.com/OHF-Voice/piper1-gpl), a
+self-hosted, offline text-to-speech engine, so two hosts sharing the only
+voice available for a language will sound identical even with very
+different character prompts.
+
 ## Categories
 
 **Settings → Categories** is where you define the topics Shoebill sorts

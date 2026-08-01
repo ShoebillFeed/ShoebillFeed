@@ -36,7 +36,7 @@ Follow the existing naming convention (`revision` = filename stem). Set `down_re
 
 To check the current head: `docker compose run --rm backend alembic heads`
 
-There is no test suite currently.
+**Tests**: `backend/tests/` (pytest, run against a real Postgres+pgvector instance — see `.github/workflows/backend-tests.yml`) and `frontend/src/**/*.test.{ts,tsx}` (Vitest, `npm test`). Both run in CI on every push/PR touching their respective directory. The backend suite uses a `db_session` fixture (SAVEPOINT-scoped, rolled back per test) and an `auth_client` fixture for authenticated `TestClient` requests — see `backend/tests/conftest.py`. Frontend tests are narrow in scope by convention: pure functions/stores and fully self-contained presentational components only — nothing here mocks network or TanStack Query state.
 
 ## Architecture Overview
 
@@ -51,6 +51,7 @@ There is no test suite currently.
 | `backend` | FastAPI REST API on :8000 |
 | `celery-worker` | `fetch` + `default` queues, concurrency 4 |
 | `celery-worker-process` | `process` queue only, concurrency 1 — deliberately serialized because Ollama runs LLM calls on one GPU; higher concurrency here just causes FIFO queue spikes with no throughput gain |
+| `celery-worker-podcast` | `podcast` queue only — podcast script generation (LLM) + CPU-bound TTS synthesis + ffmpeg encoding; kept off `process` so it never delays news processing |
 | `celery-beat` | Cron scheduler; schedule persisted to named volume `celerybeat-data` |
 | `frontend` | Nginx serving built React app, proxies `/api` |
 
@@ -64,6 +65,7 @@ There is no test suite currently.
 4. **Keyword cluster refresh** (`refresh_keyword_clusters`, daily 2am UTC): recomputes `KeywordCluster` groupings per user.
 5. **Weight decay** (`decay_weights`, daily 4am UTC): multiplicative decay of learned category/keyword weights via bulk SQL (see Key Design Decisions).
 6. **Cleanup** (`cleanup_old_items`, daily 3am UTC): deletes non-relevant, non-read-later items older than 30 days, then removes clusters left with zero items.
+7. **Podcast dispatch** (`dispatch_due_podcasts`, every 15 min): per-user, timezone-aware — see "Podcast pipeline" below. **Podcast episode cleanup** (`cleanup_old_podcast_episodes`, daily 3:30am UTC): deletes episodes (and their audio files on disk) older than 30 days.
 
 ### LLM processing pipeline (`tasks/process_tasks.py`)
 
@@ -88,30 +90,45 @@ Two distinct clustering passes:
 
 Embeddings (`services/embedding.py`) come from Ollama (`nomic-embed-text`, 768-dim, hardcoded — changing the model requires a schema migration) regardless of which provider is configured for text generation; embedding failures are non-fatal and clustering falls back to keywords.
 
+### Podcast pipeline (`tasks/podcast_tasks.py`, `services/podcast_*.py`, `services/tts/`)
+
+A `PodcastShow` is a saved config (up to 3 hosts, category/source filters, time window, target length ≤15 min, language, daily `schedule_time` + IANA `timezone`); each run produces a `PodcastEpisode` (status `pending`/`generating`/`ready`/`failed`).
+
+- **Scheduling** (`services/podcast_scheduling.py::due_shows`): the *first* per-user, timezone-aware schedule in this codebase — every other Beat entry is a fixed global UTC crontab. Beat itself stays static (`dispatch_due_podcasts` ticks every 15 min); `due_shows(db, now_utc)` converts each active show's local `schedule_time` via `zoneinfo.ZoneInfo(show.timezone)` and checks whether local-now falls in `[scheduled_today, scheduled_today + 15min)`. Idempotency (no double-dispatch across overlapping ticks) is a plain "does an episode already exist with `created_at >= scheduled_today_utc`" check — good enough since there's exactly one `celery-beat` process; not a distributed lock.
+- **Item selection** (`services/podcast_script.py::select_episode_items`): reuses `services/feed_ranking.py::build_feed(tab="relevant", ...)` — the exact same personalized ranking as the feed's Relevant tab — filtered further by the show's `category_ids`/`source_ids`, then by `time_window_hours`, then capped by `estimate_story_count(target_length_minutes, host_count)` (a `~150 wpm` word-budget heuristic, capped at 15 stories). This is a pre-generation bound, not a post-hoc truncation — the LLM is told the target length and paces itself.
+- **Script generation**: `build_script()` calls `LLMProvider.generate_podcast_script(hosts, stories, target_minutes, language)` — a concrete (non-abstract) method on the `LLMProvider` base class (same pattern as `process_short_item`/`generate_category_prompt`), so it's free on `FallbackProvider` too. Follows the existing structured-output convention exactly: `PODCAST_SCRIPT_SYSTEM_PROMPT` + `parse_podcast_script_response()` (fence-strip → `json.loads` → `json_repair.repair_json` fallback, same as every other `parse_*_response`). Produces a list of `{host_id, text}` turns — a scripted *dialogue* across all hosts, not independent per-host segments.
+- **TTS** (`services/tts/`): pluggable provider behind `TTSProvider` (2 abstract methods: `list_voices`, `synthesize`; `pick_distinct_voices` is concrete on the base class and handles graceful degradation — cycles through available voices if a language has fewer than the host count). `piper_provider.py` is the only implementation: Piper (self-hosted, CPU/ONNX, GPL-3.0 — compatible with this project's AGPLv3) via the `piper-tts` PyPI package's `PiperVoice.load()` / `voice.synthesize_wav(text, wav_file, syn_config=SynthesisConfig(speaker_id=...))` API. `piper_voices.py` is a static language → Piper-model catalog (`PIPER_VOICE_CATALOG`); languages with no known Piper voice return `[]` from `list_voices()` rather than silently substituting the wrong language. Voice `.onnx`/`.onnx.json` files are lazily downloaded from Hugging Face into the `piper-voices` volume on first use, cached per-process thereafter.
+  - **Important tradeoff**: a host's `character_prompt` only shapes how the *script* is written (tone, vocabulary, personality) — Piper has no delivery/emotion control, so voice timbre is just a mechanically assigned speaker. Two hosts sharing a language's only available voice sound identical despite different character prompts. Surfaced directly in the settings form's copy, not hidden.
+- **Audio assembly** (`services/tts/audio_assembly.py`): per-turn WAVs are concatenated (with a short silence gap between turns) and encoded to one MP3 via an `ffmpeg` subprocess (`concat` demuxer + `libmp3lame`), not `pydub` — ffmpeg is needed for compression anyway, so no reason to add a second dependency for concatenation.
+- **Generation task** (`generate_podcast_episode`, queue `podcast`): creates the episode row as `generating` immediately, then select→script→synthesize→assemble; any exception anywhere in that chain is caught and sets `status="failed"` + `error_message` — the episode never gets stuck at `generating`. Per-task time limits are overridden (`soft_time_limit=1500, time_limit=1800`) since a first-run voice-model download plus a full 15-minute episode's synthesis can exceed the global 900s default.
+- **Serving**: `services/range_streaming.py::range_response()` implements HTTP Range (206 Partial Content) so the frontend `<audio>` element's native seek/scrub works against `GET /api/podcasts/episodes/{id}/audio`.
+
 ### Backend (`backend/app/`)
 
 - **`main.py`** — FastAPI app; mounts routers under `/api`; slowapi rate-limit middleware on `/api/auth`; creates/repairs the default admin user from `ADMIN_USERNAME`/`ADMIN_PASSWORD` at startup (`_ensure_default_user`)
 - **`config.py`** — All settings loaded from `.env` via Pydantic `Settings`, `lru_cache`d
 - **`limiter.py`** — slowapi `Limiter` instance (login: 5/minute)
-- **`models/`** — SQLAlchemy models: `NewsItem`, `NewsCluster`, `Source`, `Category`, `CategoryWeight`, `KeywordWeight`, `CategoryKeywordWeight`, `KeywordCluster` (+ snapshots), `LLMBatch`, `PushSubscription`, `ApiToken`, `UserSettings`, `UserTab`, `User`
+- **`models/`** — SQLAlchemy models: `NewsItem`, `NewsCluster`, `Source`, `Category`, `CategoryWeight`, `KeywordWeight`, `CategoryKeywordWeight`, `KeywordCluster` (+ snapshots), `LLMBatch`, `PushSubscription`, `ApiToken`, `UserSettings`, `UserTab`, `User`, `PodcastShow`, `PodcastEpisode`
 - **`schemas/`** — Pydantic request/response DTOs
-- **`api/`** — Route handlers: `news`, `sources`, `categories`, `settings`, `auth`, `clusters`, `stats`, `tabs`, `push`, `learning`, `tokens`
+- **`api/`** — Route handlers: `news`, `sources`, `categories`, `settings`, `auth`, `clusters`, `stats`, `tabs`, `push`, `learning`, `tokens`, `podcasts`
 - **`services/`**:
-  - `llm/` — Pluggable provider factory + fallback wrapper (see above); `batch_service.py` handles Anthropic Batch API submission/result-application/cross-user propagation
+  - `llm/` — Pluggable provider factory + fallback wrapper (see above); `batch_service.py` handles Anthropic Batch API submission/result-application/cross-user propagation; `generate_podcast_script` (concrete on `LLMProvider`) for podcast scripts
   - `fetchers/` — Registry/factory pattern (`register_fetcher("<type>")` decorator + `get_fetcher`): `RSSFetcher`, `RedditFetcher`, `IMAPFetcher` (newsletters), `MastodonFetcher`, `ScholarFetcher` (registered as `arxiv` — queries arXiv's API directly, not Google Scholar despite the class name), `AtomFetcher`, `LemmyFetcher`, `GitHubFetcher`, `BlueskyFetcher`, `TelegramFetcher`, `ScraperFetcher`. New fetchers register themselves on import — `fetch_tasks.py` imports every fetcher module for its side effect. YouTube and the `scholar` type-name alias were removed (migration `0050_remove_youtube_scholar_types`)
   - `clustering.py` — two-pass clustering, see above
   - `embedding.py` — Ollama embedding generation for semantic clustering
   - `scoring.py` — dynamic category/keyword weight computation; `decay_learned_weights` uses bulk SQL (`UPDATE`/`DELETE`, not ORM loops) to avoid `StaleDataError` under concurrent writes
   - `keyword_clustering.py` — groups related learned keywords into `KeywordCluster`s
+  - `feed_ranking.py` — `build_feed()`, the Relevant/Impact/Newest ranking; shared by the feed API and podcast item selection
   - `deduplication.py` — SHA256 of canonicalized URL (tracking/session/cache-busting params stripped, sorted, fragment dropped) for `url_hash`; separate `content_hash` (first 2000 chars) catches same content re-published under a different URL
   - `push_service.py` — Web Push (VAPID) notifications for high-relevance items/clusters
   - `scraper_assist.py` — helper for the generic `ScraperFetcher`
   - `normalization.py` — keyword normalization shared by clustering/scoring
-- **`tasks/`** — `celery_app.py` defines the Celery app + full beat schedule; `fetch_tasks.py` and `process_tasks.py` hold the task implementations described above; three queues: `fetch`, `process`, `default`
+  - `podcast_script.py`, `podcast_scheduling.py`, `range_streaming.py`, `tts/` — see "Podcast pipeline" above
+- **`tasks/`** — `celery_app.py` defines the Celery app + full beat schedule; `fetch_tasks.py`, `process_tasks.py`, `podcast_tasks.py` hold the task implementations described above; four queues: `fetch`, `process`, `podcast`, `default`
 
 ### Frontend (`frontend/src/`)
 
-- **`App.tsx`** — React Router: `/login` → `LoginPage`, `/` → `FeedPage`, `/settings` → `SettingsPage`, wrapped in `RequireAuth` (redirects to `/login` only on a real 401 — network/5xx errors show a retry screen instead) and a PWA update banner (`registerType: "prompt"`)
+- **`App.tsx`** — React Router: `/login` → `LoginPage`, `/` → `FeedPage`, `/podcasts` → `PodcastsPage`, `/settings` → `SettingsPage`, wrapped in `RequireAuth` (redirects to `/login` only on a real 401 — network/5xx errors show a retry screen instead) and a PWA update banner (`registerType: "prompt"`)
 - **`api/`** — Axios HTTP client and typed endpoint wrappers, one file per resource
 - **`stores/`** — Zustand: `filterStore` (active tab, category/source filters), `preferencesStore` (theme, etc.)
 - **`hooks/`** — TanStack Query hooks for server state; `useInfiniteNews` has `staleTime: 60_000`
@@ -137,6 +154,8 @@ Embeddings (`services/embedding.py`) come from Ollama (`nomic-embed-text`, 768-d
 - **ORM loading strategy**: use `selectinload` for collection relationships (e.g. `NewsCluster.items`, `NewsItem.categories`). `joinedload` on a collection causes a cartesian product when items have sub-relationships; it's fine for to-one relationships (e.g. `NewsItem.source`).
 - **N+1 prevention**: `list_categories` and `list_sources` use a single `GROUP BY` query for counts, not per-row queries. Follow this pattern for any new list endpoint needing aggregated counts.
 - **Auth cookie**: `secure=True`, `httponly=True`, `samesite="strict"`. `secure` is safe behind a Traefik/Nginx TLS proxy because the proxy terminates TLS and forwards over HTTP internally — the browser still sets the cookie over HTTPS.
+- **Pluggable TTS**: mirrors the pluggable-LLM pattern (`services/tts/`, `TTS_PROVIDER` env var). Only `piper` exists today; the interface (`list_voices`/`synthesize`) is deliberately minimal so a cloud provider (OpenAI TTS/ElevenLabs) could be added later without redesign.
+- **Per-user timezone scheduling**: podcast dispatch is the only feature where Beat's fixed global UTC crontabs aren't enough — see "Podcast pipeline" above for how the per-show variability is pushed into `due_shows()` instead of Beat config.
 
 ## Environment Variables
 
@@ -157,4 +176,5 @@ YOUTUBE_API_KEY
 JWT_SECRET / JWT_EXPIRE_HOURS  # jwt_expire_hours defaults to 24
 ADMIN_USERNAME / ADMIN_PASSWORD
 VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT   # web push
+TTS_PROVIDER                 # default: piper (self-hosted; no other provider exists yet)
 ```
