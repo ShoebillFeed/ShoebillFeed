@@ -3,6 +3,11 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+// No @types/node in this project -- this file is the only place needing
+// process.env, so a minimal local ambient declaration beats adding a
+// dependency for one line.
+declare const process: { env: Record<string, string | undefined> };
+
 export default defineConfig({
   plugins: [
     react(),
@@ -62,6 +67,14 @@ export default defineConfig({
     }),
   ],
   server: {
+    // Vite 6 rejects requests whose Host header isn't localhost/127.0.0.1 by
+    // default (DNS-rebinding protection) -- fatal behind a reverse proxy
+    // terminating a real domain. Opt in per-deployment via env var rather
+    // than hardcoding a domain here, since this file is shared by everyone
+    // running the dev stack.
+    allowedHosts: process.env.VITE_ALLOWED_HOSTS
+      ? process.env.VITE_ALLOWED_HOSTS.split(",").map((h: string) => h.trim())
+      : undefined,
     proxy: {
       "/api": {
         target: "http://backend:8000",

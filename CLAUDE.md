@@ -10,6 +10,7 @@ docker compose up
 ```
 - Backend: http://localhost:8000
 - Frontend: http://localhost:5173 (Vite dev server, proxies `/api` to `backend:8000`)
+- Behind a reverse proxy on a real domain (e.g. testing on a server before merge): Vite 6 rejects any request whose `Host` header isn't `localhost`/`127.0.0.1` by default, surfacing as a `403 Blocked request` for every single request regardless of path/method. Set `VITE_ALLOWED_HOSTS` (comma-separated) in `.env` — `docker-compose.override.yml` passes it to the `frontend` service automatically. See `docs/development.md` (`allowedHosts` in `frontend/vite.config.ts`). Doesn't affect production (Nginx serves prebuilt static files, no dev-server host check).
 
 **Production**:
 ```bash
@@ -177,4 +178,5 @@ JWT_SECRET / JWT_EXPIRE_HOURS  # jwt_expire_hours defaults to 24
 ADMIN_USERNAME / ADMIN_PASSWORD
 VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT   # web push
 TTS_PROVIDER                 # default: piper (self-hosted; no other provider exists yet)
+VITE_ALLOWED_HOSTS            # dev stack only; comma-separated Host headers Vite's dev server will accept
 ```
