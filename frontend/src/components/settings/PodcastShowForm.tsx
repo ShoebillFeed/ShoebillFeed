@@ -26,9 +26,21 @@ type IntlWithSupportedValuesOf = typeof Intl & { supportedValuesOf?: (input: str
 const TIMEZONES: string[] = (Intl as IntlWithSupportedValuesOf).supportedValuesOf?.("timeZone") ?? ["UTC"];
 const BROWSER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
+function generateHostId(): string {
+  // crypto.randomUUID() only exists in secure contexts (HTTPS or localhost).
+  // This id is just a local React key / a way to pair a host with its script
+  // turns -- not security-sensitive -- so fall back to Math.random rather
+  // than breaking the form when accessed over plain HTTP on a non-localhost
+  // address.
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `host-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function newHost(index: number): PodcastHost {
   return {
-    id: crypto.randomUUID(),
+    id: generateHostId(),
     name: `Host ${index + 1}`,
     character_prompt: "",
     voice: "",
