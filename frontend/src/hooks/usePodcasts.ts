@@ -46,6 +46,30 @@ export function useGeneratePodcastNow() {
   });
 }
 
+export function useEnablePublicFeed() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: podcastsApi.enablePublicFeed,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["podcast-shows"] }),
+  });
+}
+
+export function useDisablePublicFeed() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: podcastsApi.disablePublicFeed,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["podcast-shows"] }),
+  });
+}
+
+export function useRegeneratePublicFeed() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: podcastsApi.regeneratePublicFeed,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["podcast-shows"] }),
+  });
+}
+
 export function usePodcastEpisodes(page = 1, pageSize = 20) {
   return useQuery({
     queryKey: ["podcast-episodes", page, pageSize],

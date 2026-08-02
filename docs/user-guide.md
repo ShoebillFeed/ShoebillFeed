@@ -42,6 +42,23 @@ self-hosted, offline text-to-speech engine, so two hosts sharing the only
 voice available for a language will sound identical even with very
 different character prompts.
 
+### Listening in a podcast app
+
+Each show has an RSS feed icon next to it in **Settings → Podcast**. Click
+it, then "Enable link" to generate a private feed URL — add that URL
+directly in Apple Podcasts, Overcast, Pocket Casts, or any other podcast
+app, no login required. This requires the server to have `PUBLIC_BASE_URL`
+configured (see {doc}`configuration`); if it isn't, enabling shows an
+error explaining that.
+
+The link only works while the feed is enabled and only exposes that one
+show's ready episodes — nothing else in your account. "Regenerate" issues
+a new link and immediately invalidates the old one, useful if you shared
+it somewhere you didn't mean to; apps using the old link will simply stop
+getting new episodes until you update it there too. Disabling (rather than
+regenerating) pauses the feed without discarding the link, so re-enabling
+later restores the same URL.
+
 ## Categories
 
 **Settings → Categories** is where you define the topics Shoebill sorts

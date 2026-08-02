@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     piper_model_dir: str = "/data/piper-voices"
     podcast_audio_dir: str = "/data/podcast-audio"
 
+    # Required to enable a podcast show's public feed link (RSS enclosure/link
+    # URLs must be fully-qualified for podcast apps to consume them). No
+    # trailing slash, e.g. https://shoebill.example.com
+    public_base_url: str = ""
+
 
     @property
     def llm_provider(self) -> str:

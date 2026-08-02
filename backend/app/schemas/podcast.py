@@ -47,6 +47,11 @@ class PodcastShowOut(PodcastShowBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    public_feed_enabled: bool = False
+    # Server-computed from public_feed_token + settings.public_base_url at
+    # response time -- the raw token is never exposed as its own field, only
+    # this assembled URL (or null when disabled/not yet generated).
+    public_feed_url: str | None = None
 
     model_config = {"from_attributes": True}
 

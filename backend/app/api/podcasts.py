@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user
 from app.config import get_settings
+from app.limiter import limiter
 from app.models.user import User
 from app.models.podcast_show import PodcastShow
 from app.models.podcast_episode import PodcastEpisode
@@ -19,6 +20,7 @@ from app.schemas.podcast import (
     VoiceOut,
 )
 from app.schemas.pagination import Page
+from app.services.podcast_feed import generate_feed_token, render_rss_feed
 from app.services.range_streaming import range_response
 
 router = APIRouter()
@@ -40,6 +42,27 @@ def _get_episode(episode_id: uuid.UUID, db: Session, user: User) -> PodcastEpiso
     return episode
 
 
+def _get_show_by_feed_token(feed_token: str, db: Session) -> PodcastShow:
+    show = db.scalar(
+        select(PodcastShow).where(
+            PodcastShow.public_feed_token == feed_token, PodcastShow.public_feed_enabled == True  # noqa: E712
+        )
+    )
+    if not show:
+        # 404, not 401/403 -- an invalid/guessed/disabled token should look
+        # indistinguishable from a URL that never existed.
+        raise HTTPException(status_code=404, detail="Podcast feed not found")
+    return show
+
+
+def _show_out(show: PodcastShow) -> PodcastShowOut:
+    out = PodcastShowOut.model_validate(show)
+    base = get_settings().public_base_url.rstrip("/")
+    if show.public_feed_enabled and show.public_feed_token and base:
+        out.public_feed_url = f"{base}/api/podcasts/public/{show.public_feed_token}/feed.xml"
+    return out
+
+
 def _episode_out(episode: PodcastEpisode, show_name: str) -> PodcastEpisodeOut:
     out = PodcastEpisodeOut.model_validate(episode)
     out.show_name = show_name
@@ -57,9 +80,10 @@ def _delete_episode_audio(episode: PodcastEpisode) -> None:
 
 @router.get("/shows", response_model=list[PodcastShowOut])
 def list_shows(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.scalars(
+    shows = db.scalars(
         select(PodcastShow).where(PodcastShow.user_id == current_user.id).order_by(PodcastShow.created_at)
     ).all()
+    return [_show_out(s) for s in shows]
 
 
 @router.post("/shows", response_model=PodcastShowOut, status_code=201)
@@ -68,12 +92,12 @@ def create_show(payload: PodcastShowCreate, db: Session = Depends(get_db), curre
     db.add(show)
     db.commit()
     db.refresh(show)
-    return show
+    return _show_out(show)
 
 
 @router.get("/shows/{show_id}", response_model=PodcastShowOut)
 def get_show(show_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return _get_show(show_id, db, current_user)
+    return _show_out(_get_show(show_id, db, current_user))
 
 
 @router.patch("/shows/{show_id}", response_model=PodcastShowOut)
@@ -88,7 +112,40 @@ def update_show(
         setattr(show, field, value)
     db.commit()
     db.refresh(show)
-    return show
+    return _show_out(show)
+
+
+@router.post("/shows/{show_id}/public-feed", response_model=PodcastShowOut)
+def enable_public_feed(show_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    show = _get_show(show_id, db, current_user)
+    if not get_settings().public_base_url:
+        raise HTTPException(status_code=400, detail="PUBLIC_BASE_URL is not configured on the server")
+    if not show.public_feed_token:
+        show.public_feed_token = generate_feed_token()
+    show.public_feed_enabled = True
+    db.commit()
+    db.refresh(show)
+    return _show_out(show)
+
+
+@router.delete("/shows/{show_id}/public-feed", response_model=PodcastShowOut)
+def disable_public_feed(show_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    show = _get_show(show_id, db, current_user)
+    show.public_feed_enabled = False
+    db.commit()
+    db.refresh(show)
+    return _show_out(show)
+
+
+@router.post("/shows/{show_id}/public-feed/regenerate", response_model=PodcastShowOut)
+def regenerate_public_feed(show_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    show = _get_show(show_id, db, current_user)
+    if not show.public_feed_enabled:
+        raise HTTPException(status_code=400, detail="Public feed is not enabled for this show")
+    show.public_feed_token = generate_feed_token()
+    db.commit()
+    db.refresh(show)
+    return _show_out(show)
 
 
 @router.delete("/shows/{show_id}", status_code=204)
@@ -184,3 +241,36 @@ def list_voices(language: str = Query(...), _: User = Depends(get_current_user))
     from app.services.tts.factory import get_tts_provider
     voices = get_tts_provider().list_voices(language)
     return [VoiceOut(id=v.id, label=v.label) for v in voices]
+
+
+# --- Public routes (no auth -- consumed by podcast apps, scoped only by the
+# per-show feed token embedded in the URL path itself). ---------------------
+
+@router.get("/public/{feed_token}/feed.xml")
+@limiter.limit("60/minute")
+def public_feed_xml(feed_token: str, request: Request, db: Session = Depends(get_db)):
+    show = _get_show_by_feed_token(feed_token, db)
+    settings = get_settings()
+    episodes = db.scalars(
+        select(PodcastEpisode)
+        .where(PodcastEpisode.show_id == show.id, PodcastEpisode.status == "ready")
+        .order_by(PodcastEpisode.created_at.desc())
+    ).all()
+    xml = render_rss_feed(show, episodes, settings.public_base_url.rstrip("/"), settings.podcast_audio_dir)
+    return Response(content=xml, media_type="application/rss+xml")
+
+
+@router.get("/public/{feed_token}/episodes/{episode_id}/audio")
+@limiter.limit("60/minute")
+def public_episode_audio(feed_token: str, episode_id: uuid.UUID, request: Request, db: Session = Depends(get_db)):
+    show = _get_show_by_feed_token(feed_token, db)
+    episode = db.scalar(
+        select(PodcastEpisode).where(PodcastEpisode.id == episode_id, PodcastEpisode.show_id == show.id)
+    )
+    if not episode or episode.status != "ready" or not episode.audio_path:
+        raise HTTPException(status_code=404, detail="Episode audio not available")
+    settings = get_settings()
+    full_path = os.path.join(settings.podcast_audio_dir, episode.audio_path)
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="Episode audio file missing")
+    return range_response(request, full_path, media_type="audio/mpeg")

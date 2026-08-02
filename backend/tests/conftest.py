@@ -130,6 +130,19 @@ def podcast_dirs(tmp_path, monkeypatch):
 
 
 @pytest.fixture()
+def public_base_url(monkeypatch):
+    """Sets settings.public_base_url for tests exercising the podcast public
+    feed feature, which requires it to be configured. Not requesting this
+    fixture leaves it at the default empty string, for the "not configured"
+    error-path test."""
+    from app.config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "public_base_url", "https://podcast.test")
+    return settings.public_base_url
+
+
+@pytest.fixture()
 def auth_client(client, make_user, db_session):
     """A TestClient already carrying a valid session cookie for a fresh user.
 

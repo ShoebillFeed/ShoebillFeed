@@ -15,6 +15,10 @@ export const podcastsApi = {
     client.patch<PodcastShow>(`/podcasts/shows/${id}`, data).then((r) => r.data),
   deleteShow: (id: string) => client.delete(`/podcasts/shows/${id}`),
   generateNow: (id: string) => client.post(`/podcasts/shows/${id}/generate`).then((r) => r.data),
+  enablePublicFeed: (id: string) => client.post<PodcastShow>(`/podcasts/shows/${id}/public-feed`).then((r) => r.data),
+  disablePublicFeed: (id: string) => client.delete<PodcastShow>(`/podcasts/shows/${id}/public-feed`).then((r) => r.data),
+  regeneratePublicFeed: (id: string) =>
+    client.post<PodcastShow>(`/podcasts/shows/${id}/public-feed/regenerate`).then((r) => r.data),
   listShowEpisodes: (showId: string) =>
     client.get<PodcastEpisode[]>(`/podcasts/shows/${showId}/episodes`).then((r) => r.data),
   listEpisodes: (params: { page?: number; page_size?: number } = {}) =>

@@ -19,6 +19,8 @@ export interface PodcastShow {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  public_feed_enabled: boolean;
+  public_feed_url: string | null;
 }
 
 export interface PodcastShowCreate {

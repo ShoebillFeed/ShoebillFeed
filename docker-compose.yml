@@ -89,6 +89,7 @@ services:
       TTS_PROVIDER: ${TTS_PROVIDER:-piper}
       PIPER_MODEL_DIR: /data/piper-voices
       PODCAST_AUDIO_DIR: /data/podcast-audio
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
     volumes:
       - podcast-audio:/data/podcast-audio
     depends_on:

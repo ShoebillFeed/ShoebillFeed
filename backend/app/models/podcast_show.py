@@ -28,6 +28,12 @@ class PodcastShow(Base):
     schedule_time: Mapped[str] = mapped_column(String(5), nullable=False, default="07:00")
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="UTC")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    public_feed_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Plaintext by design (unlike ApiToken.token_hash) -- users need to
+    # re-view/re-copy this URL repeatedly without breaking existing podcast
+    # app subscriptions. Still a CSPRNG token (secrets.token_urlsafe(32)),
+    # equally unguessable; only retrievability differs. See services/podcast_feed.py.
+    public_feed_token: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
