@@ -5,7 +5,9 @@ from pydantic import BaseModel, Field
 
 
 class PodcastHostSchema(BaseModel):
-    id: str = Field(..., max_length=32)
+    # crypto.randomUUID() (used client-side) produces a 36-char string
+    # (8-4-4-4-12 hex + 4 hyphens) -- give real headroom above that.
+    id: str = Field(..., max_length=64)
     name: str = Field(..., max_length=50)
     character_prompt: str = Field(..., max_length=1000)
     voice: str = Field(..., max_length=100)
