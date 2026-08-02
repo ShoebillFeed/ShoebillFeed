@@ -18,4 +18,4 @@ data/
 /tmp/celerybeat-schedule
 .claude/
 claude.md
-docker-compose.traefik.yml
+docker-compose.test.yml

@@ -204,7 +204,7 @@ services:
 
   frontend:
     image: sebhoos/shoebill-frontend:${SHOEBILL_TAG:-latest}
-    networks: [shoebill_internal]
+    networks: [shoebill_internal, shoebill]
     restart: unless-stopped
     # No host port published by default -- put a reverse proxy (Traefik,
     # Nginx) in front, or add a port mapping here for local testing. See
@@ -213,6 +213,8 @@ services:
 networks:
   shoebill_internal:
     driver: bridge
+  shoebill:
+    external: true
 
 volumes:
   celerybeat-data:
