@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from app.services.tts.base import TTSProvider, VoiceInfo
@@ -71,8 +73,35 @@ class _StubProvider(TTSProvider):
     def list_voices(self, language):
         return self._voices
 
-    def synthesize(self, text, voice_id, out_path):
+    def synthesize(self, text, voice_id, out_path, speech_rate=1.0):
         raise NotImplementedError
+
+
+class TestPiperProviderSynthesizeSpeechRate:
+    """length_scale is Piper's own knob and is inverted from our listener-
+    facing speed (< 1 = faster). Voice loading and actual WAV I/O are mocked
+    out -- only the SynthesisConfig passed to synthesize_wav is under test."""
+
+    def _synthesize(self, tmp_path, **kwargs):
+        provider = PiperProvider(model_dir=str(tmp_path))
+        fake_voice = MagicMock()
+        provider._loaded_voices["m"] = fake_voice
+        fake_wav = MagicMock()
+        fake_wav.getnframes.return_value = 0
+        fake_wav.getframerate.return_value = 1
+        with patch.object(provider, "_parse_voice_id", return_value=("m", None)), \
+                patch("app.services.tts.piper_provider.wave.open") as mock_open:
+            mock_open.return_value.__enter__.return_value = fake_wav
+            provider.synthesize("hi", "m", str(tmp_path / "out.wav"), **kwargs)
+        return fake_voice.synthesize_wav.call_args.kwargs["syn_config"]
+
+    def test_double_speed_halves_length_scale(self, tmp_path):
+        syn_config = self._synthesize(tmp_path, speech_rate=2.0)
+        assert syn_config.length_scale == pytest.approx(0.5)
+
+    def test_default_speech_rate_leaves_length_scale_at_one(self, tmp_path):
+        syn_config = self._synthesize(tmp_path)
+        assert syn_config.length_scale == pytest.approx(1.0)
 
 
 class TestPickDistinctVoicesDefault:

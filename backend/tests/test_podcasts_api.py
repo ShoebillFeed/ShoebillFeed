@@ -89,6 +89,40 @@ def test_create_show_rejects_malformed_schedule_time(auth_client):
     assert resp.status_code == 422
 
 
+def test_create_show_defaults_description_and_speech_rate(auth_client):
+    resp = auth_client.post("/api/podcasts/shows", json=_show_payload())
+    body = resp.json()
+    assert body["description"] is None
+    assert body["speech_rate"] == 1.0
+    assert body["cover_image_url"] is None
+
+
+def test_create_show_accepts_description_and_speech_rate(auth_client):
+    resp = auth_client.post(
+        "/api/podcasts/shows", json=_show_payload(description="Focus on market impact.", speech_rate=1.25)
+    )
+    body = resp.json()
+    assert body["description"] == "Focus on market impact."
+    assert body["speech_rate"] == 1.25
+
+
+def test_create_show_rejects_speech_rate_out_of_range(auth_client):
+    resp = auth_client.post("/api/podcasts/shows", json=_show_payload(speech_rate=2.0))
+    assert resp.status_code == 422
+
+
+def test_update_show_can_change_description_and_speech_rate(auth_client):
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    resp = auth_client.patch(
+        f"/api/podcasts/shows/{created['id']}",
+        json={"description": "New concept", "speech_rate": 0.8},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["description"] == "New concept"
+    assert body["speech_rate"] == 0.8
+
+
 def test_get_show(auth_client):
     created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
     resp = auth_client.get(f"/api/podcasts/shows/{created['id']}")
@@ -104,6 +138,118 @@ def test_update_show_partial(auth_client):
     assert body["is_active"] is False
     assert body["target_length_minutes"] == 5
     assert body["name"] == "Morning Briefing"  # untouched fields preserved
+
+
+# --- Cover image -------------------------------------------------------------
+
+def test_upload_cover_sets_url_and_is_retrievable(auth_client, podcast_dirs):
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+
+    resp = auth_client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.png", b"fake png bytes", "image/png")},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["cover_image_url"] == f"/api/podcasts/shows/{created['id']}/cover"
+
+    get_resp = auth_client.get(body["cover_image_url"])
+    assert get_resp.status_code == 200
+    assert get_resp.content == b"fake png bytes"
+
+
+def test_upload_cover_rejects_unsupported_content_type(auth_client, podcast_dirs):
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+
+    resp = auth_client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.gif", b"gif bytes", "image/gif")},
+    )
+
+    assert resp.status_code == 400
+
+
+def test_upload_cover_rejects_oversized_file(auth_client, podcast_dirs):
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    oversized = b"x" * (5 * 1024 * 1024 + 1)
+
+    resp = auth_client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.png", oversized, "image/png")},
+    )
+
+    assert resp.status_code == 400
+
+
+def test_upload_cover_replaces_previous_cover_file(auth_client, podcast_dirs):
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    auth_client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.png", b"first", "image/png")},
+    )
+
+    resp = auth_client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.jpg", b"second", "image/jpeg")},
+    )
+    body = resp.json()
+
+    get_resp = auth_client.get(body["cover_image_url"])
+    assert get_resp.content == b"second"
+
+
+def test_delete_cover_clears_url_and_removes_file(auth_client, podcast_dirs):
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    uploaded = auth_client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.png", b"bytes", "image/png")},
+    ).json()
+
+    resp = auth_client.delete(f"/api/podcasts/shows/{created['id']}/cover")
+
+    assert resp.status_code == 200
+    assert resp.json()["cover_image_url"] is None
+    assert auth_client.get(uploaded["cover_image_url"]).status_code == 404
+
+
+def test_get_cover_404s_when_none_set(auth_client, podcast_dirs):
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    resp = auth_client.get(f"/api/podcasts/shows/{created['id']}/cover")
+    assert resp.status_code == 404
+
+
+def test_delete_show_removes_cover_image_file(auth_client, db_session, podcast_dirs):
+    from app.models.podcast_show import PodcastShow
+
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    auth_client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.png", b"bytes", "image/png")},
+    )
+    show = db_session.get(PodcastShow, uuid.UUID(created["id"]))
+    cover_path = os.path.join(podcast_dirs.podcast_audio_dir, show.cover_image_path)
+    assert os.path.exists(cover_path)
+
+    auth_client.delete(f"/api/podcasts/shows/{created['id']}")
+
+    assert not os.path.exists(cover_path)
+
+
+def test_user_cannot_access_another_users_show_cover(client, make_user, podcast_dirs):
+    from app.services.auth import create_token
+
+    user1 = make_user(username="user1")
+    user2 = make_user(username="user2")
+    client.cookies.set("access_token", create_token(user1.id, user1.username))
+    created = client.post("/api/podcasts/shows", json=_show_payload()).json()
+
+    client.cookies.set("access_token", create_token(user2.id, user2.username))
+    resp = client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.png", b"bytes", "image/png")},
+    )
+    assert resp.status_code == 404
 
 
 def test_delete_show(auth_client):

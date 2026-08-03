@@ -70,6 +70,22 @@ export function useRegeneratePublicFeed() {
   });
 }
 
+export function useUploadPodcastCover() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => podcastsApi.uploadCover(id, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["podcast-shows"] }),
+  });
+}
+
+export function useDeletePodcastCover() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: podcastsApi.deleteCover,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["podcast-shows"] }),
+  });
+}
+
 export function usePodcastEpisodes(page = 1, pageSize = 20) {
   return useQuery({
     queryKey: ["podcast-episodes", page, pageSize],

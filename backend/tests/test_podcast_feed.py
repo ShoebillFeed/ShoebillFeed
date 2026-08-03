@@ -88,6 +88,87 @@ class TestRenderRssFeed:
         root = fromstring(xml)
         assert root.find("channel").findall("item") == []
 
+    def test_channel_description_defaults_without_a_show_description(self, db_session, make_user, podcast_dirs):
+        from app.models.podcast_show import PodcastShow
+
+        user = make_user()
+        show = PodcastShow(**_show_payload(), user_id=user.id, public_feed_token="tok123", public_feed_enabled=True)
+        db_session.add(show)
+        db_session.flush()
+
+        xml = render_rss_feed(show, [], "https://podcast.test", podcast_dirs.podcast_audio_dir)
+
+        root = fromstring(xml)
+        assert "Morning Briefing" in root.find("channel").find("description").text
+
+    def test_channel_description_uses_show_description_when_set(self, db_session, make_user, podcast_dirs):
+        from app.models.podcast_show import PodcastShow
+
+        user = make_user()
+        show = PodcastShow(
+            **_show_payload(), user_id=user.id, public_feed_token="tok123", public_feed_enabled=True,
+            description="Skeptical daily markets briefing.",
+        )
+        db_session.add(show)
+        db_session.flush()
+
+        xml = render_rss_feed(show, [], "https://podcast.test", podcast_dirs.podcast_audio_dir)
+
+        root = fromstring(xml)
+        assert root.find("channel").find("description").text == "Skeptical daily markets briefing."
+
+    def test_itunes_image_defaults_to_app_icon_without_a_cover(self, db_session, make_user, podcast_dirs):
+        from app.models.podcast_show import PodcastShow
+
+        user = make_user()
+        show = PodcastShow(**_show_payload(), user_id=user.id, public_feed_token="tok123", public_feed_enabled=True)
+        db_session.add(show)
+        db_session.flush()
+
+        xml = render_rss_feed(show, [], "https://podcast.test", podcast_dirs.podcast_audio_dir)
+
+        root = fromstring(xml)
+        image = root.find("channel").find("{http://www.itunes.com/dtds/podcast-1.0.dtd}image")
+        assert image.attrib["href"] == "https://podcast.test/icon-512.png"
+
+    def test_itunes_image_uses_public_cover_route_when_set(self, db_session, make_user, podcast_dirs):
+        from app.models.podcast_show import PodcastShow
+
+        user = make_user()
+        show = PodcastShow(
+            **_show_payload(), user_id=user.id, public_feed_token="tok123", public_feed_enabled=True,
+            cover_image_path="covers/some-show.png",
+        )
+        db_session.add(show)
+        db_session.flush()
+
+        xml = render_rss_feed(show, [], "https://podcast.test", podcast_dirs.podcast_audio_dir)
+
+        root = fromstring(xml)
+        image = root.find("channel").find("{http://www.itunes.com/dtds/podcast-1.0.dtd}image")
+        assert image.attrib["href"] == "https://podcast.test/api/podcasts/public/tok123/cover"
+
+    def test_episode_description_lists_shownotes_with_sources_when_present(self, db_session, make_user, podcast_dirs):
+        from app.models.podcast_show import PodcastShow
+
+        user = make_user()
+        show = PodcastShow(**_show_payload(), user_id=user.id, public_feed_token="tok123", public_feed_enabled=True)
+        db_session.add(show)
+        db_session.flush()
+        episode = _make_ready_episode(db_session, podcast_dirs, show)
+        episode.shownotes = [
+            {"title": "Big Story", "source_name": "The Daily", "url": "https://example.com/1", "start_seconds": 12.0},
+        ]
+        db_session.commit()
+
+        xml = render_rss_feed(show, [episode], "https://podcast.test", podcast_dirs.podcast_audio_dir)
+
+        root = fromstring(xml)
+        description = root.find("channel").find("item").find("description").text
+        assert "Big Story" in description
+        assert "The Daily" in description
+        assert "https://example.com/1" in description
+
 
 # --- Enable / disable / regenerate (authenticated) ---------------------------
 
@@ -263,6 +344,40 @@ def test_public_audio_404s_for_episode_belonging_to_a_different_show(auth_client
     auth_client.cookies.clear()
     resp = auth_client.get(f"/api/podcasts/public/{token_a}/episodes/{other_episode.id}/audio")
 
+    assert resp.status_code == 404
+
+
+# --- Public cover route (unauthenticated) -------------------------------------
+
+def test_public_cover_streams_for_valid_token(auth_client, public_base_url, podcast_dirs):
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    enabled = auth_client.post(f"/api/podcasts/shows/{created['id']}/public-feed").json()
+    auth_client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.png", b"cover bytes", "image/png")},
+    )
+    token = enabled["public_feed_url"].split("/")[-2]
+
+    auth_client.cookies.clear()
+    resp = auth_client.get(f"/api/podcasts/public/{token}/cover")
+
+    assert resp.status_code == 200
+    assert resp.content == b"cover bytes"
+
+
+def test_public_cover_404s_when_no_cover_set(auth_client, public_base_url):
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    enabled = auth_client.post(f"/api/podcasts/shows/{created['id']}/public-feed").json()
+    token = enabled["public_feed_url"].split("/")[-2]
+
+    auth_client.cookies.clear()
+    resp = auth_client.get(f"/api/podcasts/public/{token}/cover")
+
+    assert resp.status_code == 404
+
+
+def test_public_cover_404s_for_unknown_token(client):
+    resp = client.get("/api/podcasts/public/not-a-real-token/cover")
     assert resp.status_code == 404
 
 

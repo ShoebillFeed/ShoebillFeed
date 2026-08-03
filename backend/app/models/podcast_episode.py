@@ -20,8 +20,12 @@ class PodcastEpisode(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
-    # [{"host_id": "h1", "text": "..."}, ...]
+    # [{"host_id": "h1", "story_index": 0 | null, "text": "..."}, ...]
     script: Mapped[list[dict] | None] = mapped_column(JSONB, nullable=True)
+    # [{"title": "...", "source_name": "...", "url": "...", "start_seconds": 12.3}, ...]
+    # one entry per story actually discussed (a selected story the LLM never
+    # got to isn't included), in first-mention order.
+    shownotes: Mapped[list[dict] | None] = mapped_column(JSONB, nullable=True)
     news_item_ids: Mapped[list[uuid.UUID]] = mapped_column(
         ARRAY(UUID(as_uuid=True)), nullable=False, server_default="{}"
     )

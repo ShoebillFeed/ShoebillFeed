@@ -139,7 +139,7 @@ Respond ONLY with valid JSON. No markdown fences, no extra text.""".format(
 
 
 PODCAST_SCRIPT_SYSTEM_PROMPT = """You are writing the script for a {host_count}-host conversational news podcast. The hosts discuss the stories below together — reacting to each other, handing off between stories, asking follow-up questions — like a real podcast, not a series of solo summaries.
-
+{show_description_block}
 Hosts:
 {hosts_block}
 
@@ -153,11 +153,23 @@ Structure:
 - Aim for an overall spoken length of approximately {target_minutes} minute(s) at a natural conversational pace (~150 words/minute across all hosts combined). Pace the discussion accordingly — do not rush through everything in a few lines, and do not pad with filler.
 
 Return a JSON object with exactly this shape:
-{{"turns": [{{"host_id": "<id from the hosts list above>", "text": "<what this host says>"}}, ...]}}
+{{"turns": [{{"host_id": "<id from the hosts list above>", "story_index": <0-based index of the "Story N" below this line is mainly about, or null for the welcome/sign-off/banter>, "text": "<what this host says>"}}, ...]}}
 
 Each array entry is one host's uninterrupted line. Use only the host ids given above.
 
 Respond ONLY with valid JSON. No markdown fences, no extra text."""
+
+
+def podcast_script_max_tokens(target_minutes: int) -> int:
+    """Output token budget for a podcast script generation call.
+
+    A fixed budget silently truncates longer episodes: json_repair closes the
+    cut-off JSON instead of erroring, so the script (and the resulting audio)
+    quietly ends up far shorter than target_minutes. Anthropic bills by tokens
+    actually generated, not by this ceiling, so scaling generously with the
+    target length costs nothing when unused.
+    """
+    return min(8192, max(2048, target_minutes * 600))
 
 
 LANGUAGE_NAMES: dict[str, str] = {
@@ -251,6 +263,7 @@ class NewsletterResult:
 class PodcastScriptTurn:
     host_id: str
     text: str
+    story_index: int | None = None
 
 
 @dataclass
@@ -542,7 +555,7 @@ def parse_newsletter_response(text: str, known_categories: list[str]) -> Newslet
     return NewsletterResult(items=items)
 
 
-def parse_podcast_script_response(text: str, valid_host_ids: list[str]) -> PodcastScriptResult:
+def parse_podcast_script_response(text: str, valid_host_ids: list[str], story_count: int = 0) -> PodcastScriptResult:
     text = text.strip()
     if text.startswith("```"):
         text = text.split("```")[1]
@@ -569,7 +582,14 @@ def parse_podcast_script_response(text: str, valid_host_ids: list[str]) -> Podca
         if host_id not in valid:
             logger.warning("Podcast script returned unrecognised host_id %r (known: %s)", host_id, valid_host_ids)
             continue
-        turns.append(PodcastScriptTurn(host_id=host_id, text=text_val))
+        story_index = entry.get("story_index")
+        try:
+            story_index = int(story_index)
+            if not (0 <= story_index < story_count):
+                story_index = None
+        except (TypeError, ValueError):
+            story_index = None
+        turns.append(PodcastScriptTurn(host_id=host_id, text=text_val, story_index=story_index))
 
     return PodcastScriptResult(turns=turns)
 
@@ -763,17 +783,25 @@ class LLMProvider(ABC):
         stories: list[dict],
         target_minutes: int,
         language: str,
+        show_description: str | None = None,
     ) -> PodcastScriptResult:
         """Generate a conversational multi-host podcast script covering `stories`.
 
         `hosts` = [{"id": ..., "name": ..., "character_prompt": ...}, ...]
         `stories` = [{"title": ..., "content": ..., "source_name": ...}, ...]
+        `show_description` is a free-text concept/angle for the show as a whole
+        (distinct from each host's own character_prompt) -- e.g. "focus on
+        market impact, skeptical tone, skip celebrity gossip".
         """
         hosts_block = "\n".join(
             f"- {h['name']} (id: {h['id']}): {h['character_prompt']}" for h in hosts
         )
+        show_description_block = (
+            f"\nShow concept: {show_description.strip()}\n" if show_description and show_description.strip() else ""
+        )
         system = PODCAST_SCRIPT_SYSTEM_PROMPT.format(
             host_count=len(hosts), hosts_block=hosts_block, target_minutes=target_minutes,
+            show_description_block=show_description_block,
         )
         name = LANGUAGE_NAMES.get(language, language)
         system += f"\n\nIMPORTANT: All spoken dialogue (the \"text\" field of every turn) MUST be written in grammatically correct, standard {name}, regardless of the source stories' original language."
@@ -784,8 +812,8 @@ class LLMProvider(ABC):
             parts.append(f"Story {i} (Source: {story['source_name']}):\nTitle: {story['title']}\nContent: {content}")
         user = "\n\n".join(parts)
 
-        text = self._complete(system=system, user=user, max_tokens=4096)
-        result = parse_podcast_script_response(text, [h["id"] for h in hosts])
+        text = self._complete(system=system, user=user, max_tokens=podcast_script_max_tokens(target_minutes))
+        result = parse_podcast_script_response(text, [h["id"] for h in hosts], story_count=len(stories))
         result.provider_name = self.provider_name
         result.model_name = self.model_name
         return result

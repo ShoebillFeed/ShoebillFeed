@@ -15,6 +15,9 @@ class PodcastHostSchema(BaseModel):
 
 class PodcastShowBase(BaseModel):
     name: str = Field(..., max_length=200)
+    # Shapes what the LLM talks about and how, on top of each host's own
+    # character_prompt -- e.g. "focus on market impact, skip celebrity gossip".
+    description: str | None = Field(None, max_length=1000)
     hosts: list[PodcastHostSchema] = Field(..., min_length=1, max_length=3)
     category_ids: list[uuid.UUID] = Field(default_factory=list)
     source_ids: list[uuid.UUID] = Field(default_factory=list)
@@ -23,6 +26,10 @@ class PodcastShowBase(BaseModel):
     language: str = Field(default="en", max_length=10)
     schedule_time: str = Field(default="07:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     timezone: str = Field(default="UTC", max_length=64)
+    # Listener-facing speed (1.0 = normal); see PodcastShow.speech_rate for the
+    # length_scale conversion at the TTS call site. 0.75-1.5 keeps Piper output
+    # intelligible at either extreme -- more than that starts to distort.
+    speech_rate: float = Field(default=1.0, ge=0.75, le=1.5)
     is_active: bool = True
 
 
@@ -32,6 +39,7 @@ class PodcastShowCreate(PodcastShowBase):
 
 class PodcastShowUpdate(BaseModel):
     name: str | None = Field(None, max_length=200)
+    description: str | None = Field(None, max_length=1000)
     hosts: list[PodcastHostSchema] | None = Field(None, min_length=1, max_length=3)
     category_ids: list[uuid.UUID] | None = None
     source_ids: list[uuid.UUID] | None = None
@@ -40,6 +48,7 @@ class PodcastShowUpdate(BaseModel):
     language: str | None = Field(None, max_length=10)
     schedule_time: str | None = Field(None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     timezone: str | None = Field(None, max_length=64)
+    speech_rate: float | None = Field(None, ge=0.75, le=1.5)
     is_active: bool | None = None
 
 
@@ -52,13 +61,26 @@ class PodcastShowOut(PodcastShowBase):
     # response time -- the raw token is never exposed as its own field, only
     # this assembled URL (or null when disabled/not yet generated).
     public_feed_url: str | None = None
+    # Server-computed from cover_image_path at response time -- same
+    # never-expose-the-raw-path convention as public_feed_url above.
+    cover_image_url: str | None = None
 
     model_config = {"from_attributes": True}
 
 
 class PodcastScriptTurnSchema(BaseModel):
     host_id: str
+    # Absent on episodes generated before this field existed.
+    host_name: str | None = None
+    story_index: int | None = None
     text: str
+
+
+class PodcastShownoteSchema(BaseModel):
+    title: str
+    source_name: str
+    url: str | None = None
+    start_seconds: float
 
 
 class PodcastEpisodeOut(BaseModel):
@@ -67,6 +89,7 @@ class PodcastEpisodeOut(BaseModel):
     show_name: str = ""
     status: Literal["pending", "generating", "ready", "failed"]
     script: list[PodcastScriptTurnSchema] | None = None
+    shownotes: list[PodcastShownoteSchema] | None = None
     news_item_ids: list[uuid.UUID] = []
     news_cluster_ids: list[uuid.UUID] = []
     duration_seconds: int | None = None

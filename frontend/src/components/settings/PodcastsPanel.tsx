@@ -65,6 +65,13 @@ export default function PodcastsPanel() {
           ) : (
             <div key={show.id} className="flex flex-col gap-2">
               <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+                {show.cover_image_url && (
+                  <img
+                    src={show.cover_image_url}
+                    alt=""
+                    className="w-10 h-10 rounded-md object-cover border border-gray-200 dark:border-gray-700 shrink-0"
+                  />
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-medium truncate ${!show.is_active ? "text-gray-400 dark:text-gray-500" : ""}`}>

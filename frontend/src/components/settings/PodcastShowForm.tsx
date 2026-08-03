@@ -1,11 +1,17 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Check, Plus, Trash2, Upload, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { CONTENT_LANGUAGES } from "../../lib/languages";
 import { useCategories } from "../../hooks/useCategories";
 import { useSources } from "../../hooks/useSources";
-import { useCreatePodcastShow, useUpdatePodcastShow, usePodcastVoices } from "../../hooks/usePodcasts";
+import {
+  useCreatePodcastShow,
+  useUpdatePodcastShow,
+  usePodcastVoices,
+  useUploadPodcastCover,
+  useDeletePodcastCover,
+} from "../../hooks/usePodcasts";
 import { RangeSlider } from "./SettingsControls";
 import type { PodcastShow, PodcastHost } from "../../types/podcast";
 
@@ -57,10 +63,14 @@ export default function PodcastShowForm({ show, onClose }: Props) {
   const isEdit = Boolean(show);
   const create = useCreatePodcastShow();
   const update = useUpdatePodcastShow();
+  const uploadCover = useUploadPodcastCover();
+  const deleteCover = useDeletePodcastCover();
   const { data: categories = [] } = useCategories();
   const { data: sources = [] } = useSources();
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(show?.name ?? "");
+  const [description, setDescription] = useState(show?.description ?? "");
   const [hosts, setHosts] = useState<PodcastHost[]>(show?.hosts ?? [newHost(0)]);
   const [categoryIds, setCategoryIds] = useState<string[]>(show?.category_ids ?? []);
   const [sourceIds, setSourceIds] = useState<string[]>(show?.source_ids ?? []);
@@ -69,6 +79,7 @@ export default function PodcastShowForm({ show, onClose }: Props) {
   const [language, setLanguage] = useState(show?.language ?? "en");
   const [scheduleTime, setScheduleTime] = useState(show?.schedule_time ?? "07:00");
   const [timezone, setTimezone] = useState(show?.timezone ?? BROWSER_TIMEZONE);
+  const [speechRate, setSpeechRate] = useState(show?.speech_rate ?? 1.0);
   const [isActive, setIsActive] = useState(show?.is_active ?? true);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -97,6 +108,7 @@ export default function PodcastShowForm({ show, onClose }: Props) {
     }
     const payload = {
       name,
+      description: description.trim() || null,
       hosts,
       category_ids: categoryIds,
       source_ids: sourceIds,
@@ -105,6 +117,7 @@ export default function PodcastShowForm({ show, onClose }: Props) {
       language,
       schedule_time: scheduleTime,
       timezone,
+      speech_rate: speechRate,
       is_active: isActive,
     };
     if (isEdit && show) {
@@ -113,6 +126,12 @@ export default function PodcastShowForm({ show, onClose }: Props) {
       await create.mutateAsync(payload);
     }
     onClose();
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && show) uploadCover.mutate({ id: show.id, file });
+    e.target.value = "";
   };
 
   return (
@@ -127,6 +146,59 @@ export default function PodcastShowForm({ show, onClose }: Props) {
           placeholder={t("podcastForm.namePlaceholder")}
         />
       </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">{t("podcastForm.showConcept")}</label>
+        <textarea
+          className={inputClass}
+          rows={2}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder={t("podcastForm.showConceptPlaceholder")}
+          maxLength={1000}
+        />
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t("podcastForm.showConceptHint")}</p>
+      </div>
+
+      {isEdit && show && (
+        <div>
+          <label className="block text-sm font-medium mb-1">{t("podcastForm.coverImage")}</label>
+          <div className="flex items-center gap-3">
+            {show.cover_image_url ? (
+              <img
+                src={show.cover_image_url}
+                alt=""
+                className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-lg border border-dashed border-gray-300 dark:border-gray-600" />
+            )}
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleCoverChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => coverInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <Upload size={13} /> {t("podcastForm.uploadCoverImage")}
+            </button>
+            {show.cover_image_url && (
+              <button
+                type="button"
+                onClick={() => deleteCover.mutate(show.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+              >
+                <X size={13} /> {t("common.delete")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium mb-1">{t("podcastForm.language")}</label>
@@ -265,6 +337,21 @@ export default function PodcastShowForm({ show, onClose }: Props) {
       <div>
         <label className="block text-sm font-medium mb-1">{t("podcastForm.lengthMinutes")}</label>
         <RangeSlider value={targetLengthMinutes} onChange={setTargetLengthMinutes} min={1} max={15} unit=" min" />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">{t("podcastForm.speechRate")}</label>
+        <RangeSlider
+          value={speechRate}
+          // Range-input float steps (e.g. 0.75 + 0.05*n) can drift to values
+          // like 1.0499999999999998 -- round to 2dp before it hits state/API.
+          onChange={(v) => setSpeechRate(Math.round(v * 100) / 100)}
+          min={0.75}
+          max={1.5}
+          step={0.05}
+          unit="x"
+        />
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t("podcastForm.speechRateHint")}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

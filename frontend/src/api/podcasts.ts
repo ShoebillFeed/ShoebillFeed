@@ -19,6 +19,16 @@ export const podcastsApi = {
   disablePublicFeed: (id: string) => client.delete<PodcastShow>(`/podcasts/shows/${id}/public-feed`).then((r) => r.data),
   regeneratePublicFeed: (id: string) =>
     client.post<PodcastShow>(`/podcasts/shows/${id}/public-feed/regenerate`).then((r) => r.data),
+  uploadCover: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    // Let the browser set the multipart Content-Type (with boundary) itself --
+    // the client's default "application/json" header would otherwise win.
+    return client
+      .post<PodcastShow>(`/podcasts/shows/${id}/cover`, formData, { headers: { "Content-Type": undefined } })
+      .then((r) => r.data);
+  },
+  deleteCover: (id: string) => client.delete<PodcastShow>(`/podcasts/shows/${id}/cover`).then((r) => r.data),
   listShowEpisodes: (showId: string) =>
     client.get<PodcastEpisode[]>(`/podcasts/shows/${showId}/episodes`).then((r) => r.data),
   listEpisodes: (params: { page?: number; page_size?: number } = {}) =>

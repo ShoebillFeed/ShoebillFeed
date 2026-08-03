@@ -4,7 +4,7 @@ import tempfile
 import wave
 from dataclasses import dataclass
 
-_SILENCE_GAP_SECONDS = 0.4
+SILENCE_GAP_SECONDS = 0.4
 _SAMPLE_RATE = 22050  # matches Piper's default output rate for medium-quality models
 
 
@@ -33,7 +33,7 @@ def assemble_episode(turn_wav_paths: list[str], turn_durations: list[float], out
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         silence_path = os.path.join(tmp_dir, "silence.wav")
-        _write_silence_wav(silence_path, _SILENCE_GAP_SECONDS)
+        _write_silence_wav(silence_path, SILENCE_GAP_SECONDS)
 
         concat_list_path = os.path.join(tmp_dir, "concat_list.txt")
         with open(concat_list_path, "w") as f:
@@ -52,5 +52,5 @@ def assemble_episode(turn_wav_paths: list[str], turn_durations: list[float], out
             capture_output=True,
         )
 
-    total_seconds = sum(turn_durations) + _SILENCE_GAP_SECONDS * max(0, len(turn_wav_paths) - 1)
+    total_seconds = sum(turn_durations) + SILENCE_GAP_SECONDS * max(0, len(turn_wav_paths) - 1)
     return AssembleResult(path=out_path, duration_seconds=total_seconds)

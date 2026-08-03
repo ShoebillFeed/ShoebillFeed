@@ -12,8 +12,10 @@ from app.services.podcast_script import (
     estimate_story_count,
     select_episode_items,
     build_script,
+    build_episode_records,
     _story_payload,
 )
+from app.services.tts.audio_assembly import SILENCE_GAP_SECONDS
 
 
 def _make_source(db_session, user_id, name="Feed"):
@@ -160,7 +162,9 @@ class TestStoryPayload:
 
         payload = _story_payload(item)
 
-        assert payload == {"title": "Big News", "content": "Something happened.", "source_name": "The Daily"}
+        assert payload == {
+            "title": "Big News", "content": "Something happened.", "source_name": "The Daily", "url": item.url,
+        }
 
     def test_news_item_payload_falls_back_to_title_when_no_abstract(self, db_session, make_user):
         user = make_user()
@@ -222,4 +226,56 @@ class TestBuildScript:
         assert [h["id"] for h in kwargs["hosts"]] == ["h1", "h2"]
         assert kwargs["target_minutes"] == 7
         assert kwargs["language"] == "de"
-        assert kwargs["stories"] == [{"title": "Big News", "content": "Something happened.", "source_name": "The Daily"}]
+        assert kwargs["stories"] == [
+            {"title": "Big News", "content": "Something happened.", "source_name": "The Daily", "url": item.url},
+        ]
+        assert kwargs["show_description"] == show.description
+
+
+class TestBuildEpisodeRecords:
+    HOST_1 = {"id": "h1", "name": "Alex", "voice": "v1"}
+    HOST_2 = {"id": "h2", "name": "Sam", "voice": "v2"}
+    STORIES = [
+        {"title": "Story A", "source_name": "Source A", "url": "https://a.example/1"},
+        {"title": "Story B", "source_name": "Source B", "url": "https://b.example/1"},
+    ]
+
+    def test_script_entries_carry_resolved_host_names(self):
+        turns = [(PodcastScriptTurn(host_id="h1", text="Hi!", story_index=None), self.HOST_1, 5.0)]
+        script_entries, _ = build_episode_records(turns, self.STORIES)
+        assert script_entries == [{"host_id": "h1", "host_name": "Alex", "story_index": None, "text": "Hi!"}]
+
+    def test_shownote_recorded_at_first_mention_of_each_story(self):
+        turns = [
+            (PodcastScriptTurn(host_id="h1", text="Welcome!", story_index=None), self.HOST_1, 10.0),
+            (PodcastScriptTurn(host_id="h2", text="Story A intro", story_index=0), self.HOST_2, 10.0),
+            (PodcastScriptTurn(host_id="h1", text="More on A", story_index=0), self.HOST_1, 10.0),
+            (PodcastScriptTurn(host_id="h2", text="Story B intro", story_index=1), self.HOST_2, 10.0),
+        ]
+        _, shownotes = build_episode_records(turns, self.STORIES)
+
+        assert [n["title"] for n in shownotes] == ["Story A", "Story B"]
+        # turn 0 (welcome, no gap yet) runs 0->10; turn 1 starts after one
+        # SILENCE_GAP_SECONDS gap at 10 + gap; turn 3 (story B) starts after
+        # three turns' audio plus three gaps.
+        assert shownotes[0]["start_seconds"] == round(10.0 + SILENCE_GAP_SECONDS, 1)
+        assert shownotes[1]["start_seconds"] == round(30.0 + 3 * SILENCE_GAP_SECONDS, 1)
+        assert shownotes[0]["url"] == "https://a.example/1"
+
+    def test_no_shownote_for_turns_without_a_story_index(self):
+        turns = [(PodcastScriptTurn(host_id="h1", text="Just banter", story_index=None), self.HOST_1, 5.0)]
+        _, shownotes = build_episode_records(turns, self.STORIES)
+        assert shownotes == []
+
+    def test_no_duplicate_shownote_for_repeated_story_index(self):
+        turns = [
+            (PodcastScriptTurn(host_id="h1", text="A part 1", story_index=0), self.HOST_1, 5.0),
+            (PodcastScriptTurn(host_id="h2", text="A part 2", story_index=0), self.HOST_2, 5.0),
+        ]
+        _, shownotes = build_episode_records(turns, self.STORIES)
+        assert len(shownotes) == 1
+
+    def test_out_of_range_story_index_produces_no_shownote(self):
+        turns = [(PodcastScriptTurn(host_id="h1", text="Ghost story", story_index=9), self.HOST_1, 5.0)]
+        _, shownotes = build_episode_records(turns, self.STORIES)
+        assert shownotes == []

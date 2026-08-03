@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { ChevronDown, ChevronRight, Podcast, Trash2 } from "lucide-react";
+import { Bookmark, ChevronDown, ChevronRight, ExternalLink, Podcast, Trash2 } from "lucide-react";
 import { usePodcastEpisodes, useDeletePodcastEpisode } from "../hooks/usePodcasts";
 import { useToast } from "../components/ui/Toaster";
 import { cn } from "../lib/utils";
@@ -28,6 +28,14 @@ function EpisodeCard({ episode }: { episode: PodcastEpisode }) {
   const toast = useToast();
   const deleteEpisode = useDeletePodcastEpisode();
   const [expanded, setExpanded] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const seekTo = (seconds: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = seconds;
+    audio.play().catch(() => {});
+  };
 
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-900">
@@ -54,11 +62,59 @@ function EpisodeCard({ episode }: { episode: PodcastEpisode }) {
       </div>
 
       {episode.status === "ready" && (
-        <audio controls preload="none" className="w-full mt-3" src={`/api/podcasts/episodes/${episode.id}/audio`} />
+        <audio
+          ref={audioRef}
+          controls
+          preload="none"
+          className="w-full mt-3"
+          src={`/api/podcasts/episodes/${episode.id}/audio`}
+        />
       )}
 
       {episode.status === "failed" && episode.error_message && (
         <p className="mt-3 text-xs text-red-600 dark:text-red-400">{episode.error_message}</p>
+      )}
+
+      {episode.shownotes && episode.shownotes.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">{t("podcast.shownotes")}</p>
+          <ul className="flex flex-col gap-1.5">
+            {episode.shownotes.map((note, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm">
+                {episode.status === "ready" ? (
+                  <button
+                    type="button"
+                    onClick={() => seekTo(note.start_seconds)}
+                    className="flex items-center gap-1 text-xs font-mono text-indigo-600 dark:text-indigo-400 hover:underline shrink-0 mt-0.5"
+                    title={t("podcast.jumpToStory")}
+                  >
+                    <Bookmark size={11} />
+                    {formatDuration(note.start_seconds)}
+                  </button>
+                ) : (
+                  <span className="text-xs font-mono text-gray-400 shrink-0 mt-0.5">
+                    {formatDuration(note.start_seconds)}
+                  </span>
+                )}
+                <span className="text-gray-700 dark:text-gray-300 min-w-0">
+                  {note.title}
+                  <span className="text-gray-400 dark:text-gray-500"> — {note.source_name}</span>
+                  {note.url && (
+                    <a
+                      href={note.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center ml-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                      title={t("podcast.openSource")}
+                    >
+                      <ExternalLink size={11} />
+                    </a>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {episode.script && episode.script.length > 0 && (
@@ -74,7 +130,7 @@ function EpisodeCard({ episode }: { episode: PodcastEpisode }) {
             <div className="mt-2 space-y-2 text-sm text-gray-700 dark:text-gray-300 max-h-64 overflow-y-auto pr-2">
               {episode.script.map((turn, i) => (
                 <p key={i}>
-                  <span className="font-medium">{turn.host_id}: </span>
+                  <span className="font-medium">{turn.host_name || turn.host_id}: </span>
                   {turn.text}
                 </p>
               ))}

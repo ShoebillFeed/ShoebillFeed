@@ -25,8 +25,12 @@ class TTSProvider(ABC):
         ...
 
     @abstractmethod
-    def synthesize(self, text: str, voice_id: str, out_path: str) -> SynthesisResult:
-        """Render `text` to a WAV file at `out_path` using `voice_id`."""
+    def synthesize(self, text: str, voice_id: str, out_path: str, speech_rate: float = 1.0) -> SynthesisResult:
+        """Render `text` to a WAV file at `out_path` using `voice_id`.
+
+        `speech_rate` is listener-facing (1.0 = normal, > 1.0 = faster);
+        providers with no speed control are free to ignore it.
+        """
         ...
 
     def pick_distinct_voices(self, language: str, count: int) -> list[str]:

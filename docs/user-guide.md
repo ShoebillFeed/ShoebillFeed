@@ -28,19 +28,27 @@ switch to often.
 appear, each with an inline audio player, a status badge
 (queued/generating/ready/failed), and an expandable transcript.
 
-Configure shows under **Settings → Podcast**: a name, up to three hosts
-(each with a name, a free-text character prompt describing their
-personality, and a voice), which categories and feeds to draw stories
-from (empty = all), a time window, a target length (up to 15 minutes), a
-language, and a daily generation time plus timezone. "Generate now"
-triggers an episode immediately instead of waiting for the schedule.
+Configure shows under **Settings → Podcast**: a name, an optional show
+concept/description, up to three hosts (each with a name, a free-text
+character prompt describing their personality, and a voice), which
+categories and feeds to draw stories from (empty = all), a time window, a
+target length (up to 15 minutes), a language, a speech speed, a cover
+image, and a daily generation time plus timezone. "Generate now" triggers
+an episode immediately instead of waiting for the schedule.
 
-The character prompt shapes how each host's lines are *written* by the
-LLM — tone, vocabulary, personality — not how the voice *sounds*. Voices
-are rendered by [Piper](https://github.com/OHF-Voice/piper1-gpl), a
-self-hosted, offline text-to-speech engine, so two hosts sharing the only
-voice available for a language will sound identical even with very
-different character prompts.
+The show concept shapes *what* the episode covers and its overall
+angle (e.g. "focus on market impact, skeptical tone, skip celebrity
+gossip"), on top of each host's own character prompt, which shapes how
+*that host's* lines are written — tone, vocabulary, personality. Neither
+changes how the voice *sounds*. Voices are rendered by
+[Piper](https://github.com/OHF-Voice/piper1-gpl), a self-hosted, offline
+text-to-speech engine, so two hosts sharing the only voice available for
+a language will sound identical even with very different character
+prompts. Speech speed (0.75x–1.5x) adjusts how fast that voice talks.
+
+Each ready episode shows **show notes**: one entry per story actually
+covered, with a clickable timestamp that jumps the player to where that
+story starts and a link to the original source article.
 
 ### Listening in a podcast app
 

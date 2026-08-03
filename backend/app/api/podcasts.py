@@ -1,8 +1,8 @@
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -24,6 +24,11 @@ from app.services.podcast_feed import generate_feed_token, render_rss_feed
 from app.services.range_streaming import range_response
 
 router = APIRouter()
+
+# Content-Type -> file extension. Whatever is stored is served back verbatim
+# (no re-encoding/validation of actual image bytes) -- keep this narrow.
+_COVER_CONTENT_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
+_MAX_COVER_BYTES = 5 * 1024 * 1024
 
 
 def _get_show(show_id: uuid.UUID, db: Session, user: User) -> PodcastShow:
@@ -60,7 +65,18 @@ def _show_out(show: PodcastShow) -> PodcastShowOut:
     base = get_settings().public_base_url.rstrip("/")
     if show.public_feed_enabled and show.public_feed_token and base:
         out.public_feed_url = f"{base}/api/podcasts/public/{show.public_feed_token}/feed.xml"
+    if show.cover_image_path:
+        # Relative, same-origin path -- served through the authenticated
+        # /shows/{id}/cover route below, so the browser's session cookie
+        # covers it automatically, same as any other /api request.
+        out.cover_image_url = f"/api/podcasts/shows/{show.id}/cover"
     return out
+
+
+def _cover_abs_path(show: PodcastShow) -> str | None:
+    if not show.cover_image_path:
+        return None
+    return os.path.join(get_settings().podcast_audio_dir, show.cover_image_path)
 
 
 def _episode_out(episode: PodcastEpisode, show_name: str) -> PodcastEpisodeOut:
@@ -148,11 +164,67 @@ def regenerate_public_feed(show_id: uuid.UUID, db: Session = Depends(get_db), cu
     return _show_out(show)
 
 
+@router.post("/shows/{show_id}/cover", response_model=PodcastShowOut)
+async def upload_cover(
+    show_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    show = _get_show(show_id, db, current_user)
+    ext = _COVER_CONTENT_TYPES.get(file.content_type)
+    if not ext:
+        raise HTTPException(status_code=400, detail="Cover image must be PNG, JPEG, or WebP")
+    data = await file.read()
+    if len(data) > _MAX_COVER_BYTES:
+        raise HTTPException(status_code=400, detail="Cover image must be under 5MB")
+
+    settings = get_settings()
+    covers_dir = os.path.join(settings.podcast_audio_dir, "covers")
+    os.makedirs(covers_dir, exist_ok=True)
+
+    old_path = _cover_abs_path(show)
+    if old_path and os.path.exists(old_path):
+        os.remove(old_path)
+
+    rel_path = f"covers/{show.id}.{ext}"
+    with open(os.path.join(settings.podcast_audio_dir, rel_path), "wb") as f:
+        f.write(data)
+    show.cover_image_path = rel_path
+    db.commit()
+    db.refresh(show)
+    return _show_out(show)
+
+
+@router.delete("/shows/{show_id}/cover", response_model=PodcastShowOut)
+def delete_cover(show_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    show = _get_show(show_id, db, current_user)
+    old_path = _cover_abs_path(show)
+    if old_path and os.path.exists(old_path):
+        os.remove(old_path)
+    show.cover_image_path = None
+    db.commit()
+    db.refresh(show)
+    return _show_out(show)
+
+
+@router.get("/shows/{show_id}/cover")
+def get_cover(show_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    show = _get_show(show_id, db, current_user)
+    path = _cover_abs_path(show)
+    if not path or not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="No cover image set")
+    return FileResponse(path)
+
+
 @router.delete("/shows/{show_id}", status_code=204)
 def delete_show(show_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     show = _get_show(show_id, db, current_user)
     for episode in db.scalars(select(PodcastEpisode).where(PodcastEpisode.show_id == show.id)).all():
         _delete_episode_audio(episode)
+    cover_path = _cover_abs_path(show)
+    if cover_path and os.path.exists(cover_path):
+        os.remove(cover_path)
     db.delete(show)  # cascades to episode rows via ondelete=CASCADE
     db.commit()
 
@@ -258,6 +330,16 @@ def public_feed_xml(feed_token: str, request: Request, db: Session = Depends(get
     ).all()
     xml = render_rss_feed(show, episodes, settings.public_base_url.rstrip("/"), settings.podcast_audio_dir)
     return Response(content=xml, media_type="application/rss+xml")
+
+
+@router.get("/public/{feed_token}/cover")
+@limiter.limit("60/minute")
+def public_cover(feed_token: str, request: Request, db: Session = Depends(get_db)):
+    show = _get_show_by_feed_token(feed_token, db)
+    path = _cover_abs_path(show)
+    if not path or not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="No cover image set")
+    return FileResponse(path)
 
 
 @router.get("/public/{feed_token}/episodes/{episode_id}/audio")

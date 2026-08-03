@@ -37,12 +37,16 @@ class PiperProvider(TTSProvider):
             for i in curated_speaker_indices(speakers)
         ]
 
-    def synthesize(self, text: str, voice_id: str, out_path: str) -> SynthesisResult:
+    def synthesize(self, text: str, voice_id: str, out_path: str, speech_rate: float = 1.0) -> SynthesisResult:
         from piper.config import SynthesisConfig  # imported lazily alongside PiperVoice
 
         model, speaker_id = self._parse_voice_id(voice_id)
         voice = self._load_voice(model)
-        syn_config = SynthesisConfig(speaker_id=speaker_id) if speaker_id is not None else None
+        # Piper's length_scale is phoneme-duration scaling, inverted from our
+        # listener-facing "speed" (< 1 = faster speech, so invert here). 1.0
+        # is Piper's own default too, so a normal-speed show is a no-op.
+        length_scale = 1.0 / speech_rate if speech_rate else 1.0
+        syn_config = SynthesisConfig(speaker_id=speaker_id, length_scale=length_scale)
 
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         with wave.open(out_path, "wb") as wav_file:
