@@ -27,7 +27,8 @@ function EpisodeCard({ episode }: { episode: PodcastEpisode }) {
   const { t } = useTranslation();
   const toast = useToast();
   const deleteEpisode = useDeletePodcastEpisode();
-  const [expanded, setExpanded] = useState(false);
+  const [transcriptExpanded, setTranscriptExpanded] = useState(false);
+  const [shownotesExpanded, setShownotesExpanded] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const seekTo = (seconds: number) => {
@@ -40,15 +41,24 @@ function EpisodeCard({ episode }: { episode: PodcastEpisode }) {
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-900">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">{episode.show_name}</h3>
-            <StatusBadge status={episode.status} />
+        <div className="flex items-start gap-3 min-w-0">
+          {episode.show_cover_image_url && (
+            <img
+              src={episode.show_cover_image_url}
+              alt=""
+              className="w-10 h-10 rounded-md object-cover border border-gray-200 dark:border-gray-700 shrink-0"
+            />
+          )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">{episode.show_name}</h3>
+              <StatusBadge status={episode.status} />
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {new Date(episode.created_at).toLocaleString()}
+              {episode.duration_seconds != null && ` · ${formatDuration(episode.duration_seconds)}`}
+            </p>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {new Date(episode.created_at).toLocaleString()}
-            {episode.duration_seconds != null && ` · ${formatDuration(episode.duration_seconds)}`}
-          </p>
         </div>
         <button
           onClick={() =>
@@ -77,56 +87,69 @@ function EpisodeCard({ episode }: { episode: PodcastEpisode }) {
 
       {episode.shownotes && episode.shownotes.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">{t("podcast.shownotes")}</p>
-          <ul className="flex flex-col gap-1.5">
-            {episode.shownotes.map((note, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                {episode.status === "ready" ? (
-                  <button
-                    type="button"
-                    onClick={() => seekTo(note.start_seconds)}
-                    className="flex items-center gap-1 text-xs font-mono text-indigo-600 dark:text-indigo-400 hover:underline shrink-0 mt-0.5"
-                    title={t("podcast.jumpToStory")}
-                  >
-                    <Bookmark size={11} />
-                    {formatDuration(note.start_seconds)}
-                  </button>
-                ) : (
-                  <span className="text-xs font-mono text-gray-400 shrink-0 mt-0.5">
-                    {formatDuration(note.start_seconds)}
-                  </span>
-                )}
-                <span className="text-gray-700 dark:text-gray-300 min-w-0">
-                  {note.title}
-                  <span className="text-gray-400 dark:text-gray-500"> — {note.source_name}</span>
-                  {note.url && (
-                    <a
-                      href={note.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center ml-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
-                      title={t("podcast.openSource")}
-                    >
-                      <ExternalLink size={11} />
-                    </a>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <button
+            onClick={() => setShownotesExpanded((v) => !v)}
+            className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
+          >
+            {shownotesExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            {t("podcast.shownotes")}
+          </button>
+          {shownotesExpanded && (
+            <div className="mt-2">
+              {episode.description && (
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{episode.description}</p>
+              )}
+              <ul className="flex flex-col gap-1.5">
+                {episode.shownotes.map((note, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    {episode.status === "ready" ? (
+                      <button
+                        type="button"
+                        onClick={() => seekTo(note.start_seconds)}
+                        className="flex items-center gap-1 text-xs font-mono text-indigo-600 dark:text-indigo-400 hover:underline shrink-0 mt-0.5"
+                        title={t("podcast.jumpToStory")}
+                      >
+                        <Bookmark size={11} />
+                        {formatDuration(note.start_seconds)}
+                      </button>
+                    ) : (
+                      <span className="text-xs font-mono text-gray-400 shrink-0 mt-0.5">
+                        {formatDuration(note.start_seconds)}
+                      </span>
+                    )}
+                    <span className="text-gray-700 dark:text-gray-300 min-w-0">
+                      {note.title}
+                      <span className="text-gray-400 dark:text-gray-500"> — {note.source_name}</span>
+                      {note.url && (
+                        <a
+                          href={note.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center ml-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                          title={t("podcast.openSource")}
+                        >
+                          <ExternalLink size={11} />
+                        </a>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
       {episode.script && episode.script.length > 0 && (
         <div className="mt-3">
           <button
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => setTranscriptExpanded((v) => !v)}
             className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
           >
-            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            {transcriptExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             {t("podcast.transcript")}
           </button>
-          {expanded && (
+          {transcriptExpanded && (
             <div className="mt-2 space-y-2 text-sm text-gray-700 dark:text-gray-300 max-h-64 overflow-y-auto pr-2">
               {episode.script.map((turn, i) => (
                 <p key={i}>

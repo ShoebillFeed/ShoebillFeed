@@ -77,9 +77,11 @@ export interface PodcastEpisode {
   id: string;
   show_id: string;
   show_name: string;
+  show_cover_image_url: string | null;
   status: PodcastEpisodeStatus;
   script: PodcastScriptTurn[] | null;
   shownotes: PodcastShownote[] | null;
+  description: string;
   news_item_ids: string[];
   news_cluster_ids: string[];
   duration_seconds: number | null;

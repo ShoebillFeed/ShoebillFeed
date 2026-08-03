@@ -20,7 +20,7 @@ from app.schemas.podcast import (
     VoiceOut,
 )
 from app.schemas.pagination import Page
-from app.services.podcast_feed import generate_feed_token, render_rss_feed
+from app.services.podcast_feed import generate_feed_token, render_rss_feed, episode_description
 from app.services.range_streaming import range_response
 
 router = APIRouter()
@@ -79,9 +79,12 @@ def _cover_abs_path(show: PodcastShow) -> str | None:
     return os.path.join(get_settings().podcast_audio_dir, show.cover_image_path)
 
 
-def _episode_out(episode: PodcastEpisode, show_name: str) -> PodcastEpisodeOut:
+def _episode_out(episode: PodcastEpisode, show_name: str, cover_image_path: str | None = None) -> PodcastEpisodeOut:
     out = PodcastEpisodeOut.model_validate(episode)
     out.show_name = show_name
+    if cover_image_path:
+        out.show_cover_image_url = f"/api/podcasts/shows/{episode.show_id}/cover"
+    out.description = episode_description(episode)
     return out
 
 
@@ -243,7 +246,7 @@ def list_show_episodes(show_id: uuid.UUID, db: Session = Depends(get_db), curren
     episodes = db.scalars(
         select(PodcastEpisode).where(PodcastEpisode.show_id == show.id).order_by(PodcastEpisode.created_at.desc())
     ).all()
-    return [_episode_out(e, show.name) for e in episodes]
+    return [_episode_out(e, show.name, show.cover_image_path) for e in episodes]
 
 
 @router.get("/episodes", response_model=Page[PodcastEpisodeOut])
@@ -261,12 +264,14 @@ def list_episodes(
     page_episodes = all_episodes[(page - 1) * page_size: page * page_size]
 
     show_ids = {e.show_id for e in page_episodes}
-    show_names: dict[uuid.UUID, str] = {}
+    show_meta: dict[uuid.UUID, tuple[str, str | None]] = {}
     if show_ids:
-        rows = db.execute(select(PodcastShow.id, PodcastShow.name).where(PodcastShow.id.in_(show_ids)))
-        show_names = {row.id: row.name for row in rows}
+        rows = db.execute(
+            select(PodcastShow.id, PodcastShow.name, PodcastShow.cover_image_path).where(PodcastShow.id.in_(show_ids))
+        )
+        show_meta = {row.id: (row.name, row.cover_image_path) for row in rows}
 
-    items = [_episode_out(e, show_names.get(e.show_id, "")) for e in page_episodes]
+    items = [_episode_out(e, *show_meta.get(e.show_id, ("", None))) for e in page_episodes]
     return Page(
         items=items,
         total=total,
@@ -280,7 +285,7 @@ def list_episodes(
 def get_episode(episode_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     episode = _get_episode(episode_id, db, current_user)
     show = db.scalar(select(PodcastShow).where(PodcastShow.id == episode.show_id))
-    return _episode_out(episode, show.name if show else "")
+    return _episode_out(episode, show.name if show else "", show.cover_image_path if show else None)
 
 
 @router.delete("/episodes/{episode_id}", status_code=204)

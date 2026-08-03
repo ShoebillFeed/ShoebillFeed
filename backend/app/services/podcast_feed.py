@@ -15,7 +15,7 @@ def generate_feed_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-def _episode_description(episode: PodcastEpisode) -> str:
+def episode_description(episode: PodcastEpisode) -> str:
     if episode.shownotes:
         lines = []
         for note in episode.shownotes:
@@ -65,7 +65,7 @@ def render_rss_feed(show: PodcastShow, episodes: list[PodcastEpisode], base_url:
         SubElement(item, "title").text = f"{show.name} — {pub_date.strftime('%B %-d, %Y')}"
         SubElement(item, "guid", {"isPermaLink": "false"}).text = str(episode.id)
         SubElement(item, "pubDate").text = format_datetime(pub_date)
-        SubElement(item, "description").text = _episode_description(episode)
+        SubElement(item, "description").text = episode_description(episode)
         if episode.audio_path:
             enclosure_url = f"{base_url}/api/podcasts/public/{show.public_feed_token}/episodes/{episode.id}/audio"
             SubElement(item, "enclosure", {

@@ -87,9 +87,15 @@ class PodcastEpisodeOut(BaseModel):
     id: uuid.UUID
     show_id: uuid.UUID
     show_name: str = ""
+    # Server-computed from the owning show's cover_image_path, same
+    # never-expose-the-raw-path convention as PodcastShowOut.cover_image_url.
+    show_cover_image_url: str | None = None
     status: Literal["pending", "generating", "ready", "failed"]
     script: list[PodcastScriptTurnSchema] | None = None
     shownotes: list[PodcastShownoteSchema] | None = None
+    # Server-computed summary text -- the same value used for this episode's
+    # RSS <description> (services/podcast_feed.py::episode_description()).
+    description: str = ""
     news_item_ids: list[uuid.UUID] = []
     news_cluster_ids: list[uuid.UUID] = []
     duration_seconds: int | None = None

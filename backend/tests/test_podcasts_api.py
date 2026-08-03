@@ -364,6 +364,40 @@ def test_list_show_episodes(auth_client, db_session, podcast_dirs):
     assert len(body) == 1
     assert body[0]["id"] == str(episode.id)
     assert body[0]["show_name"] == "Morning Briefing"
+    assert body[0]["show_cover_image_url"] is None
+
+
+def test_list_show_episodes_includes_show_cover_image_url_when_set(auth_client, db_session, podcast_dirs):
+    from app.models.podcast_show import PodcastShow
+
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    auth_client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.png", b"bytes", "image/png")},
+    )
+    show = db_session.get(PodcastShow, uuid.UUID(created["id"]))
+    _make_ready_episode(db_session, podcast_dirs, show)
+
+    resp = auth_client.get(f"/api/podcasts/shows/{created['id']}/episodes")
+
+    assert resp.json()[0]["show_cover_image_url"] == f"/api/podcasts/shows/{created['id']}/cover"
+
+
+def test_episode_description_reflects_shownotes_when_present(auth_client, db_session, podcast_dirs):
+    from app.models.podcast_show import PodcastShow
+
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    show = db_session.get(PodcastShow, uuid.UUID(created["id"]))
+    episode, _ = _make_ready_episode(db_session, podcast_dirs, show)
+    episode.shownotes = [
+        {"title": "Big Story", "source_name": "The Daily", "url": "https://example.com/1", "start_seconds": 5.0},
+    ]
+    db_session.commit()
+
+    resp = auth_client.get(f"/api/podcasts/episodes/{episode.id}")
+
+    assert "Big Story" in resp.json()["description"]
+    assert "The Daily" in resp.json()["description"]
 
 
 def test_list_all_episodes_is_paginated_and_includes_show_name(auth_client, db_session, podcast_dirs):
