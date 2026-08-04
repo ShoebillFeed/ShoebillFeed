@@ -150,7 +150,7 @@ Structure:
 - Discuss each story in turn, with genuine back-and-forth between hosts — not just one host reading a summary while the others stay silent.
 - Close with a brief, natural sign-off.
 - Base everything strictly on the story content given below — do not invent facts, quotes, or details not present in the source material.
-- Aim for an overall spoken length of approximately {target_minutes} minute(s) at a natural conversational pace (~150 words/minute across all hosts combined). Pace the discussion accordingly — do not rush through everything in a few lines, and do not pad with filler.
+- Aim for an overall spoken length of approximately {target_minutes} minute(s) at a natural conversational pace (~35 words/minute across all hosts combined). Pace the discussion accordingly — do not rush through everything in a few lines, and do not pad with filler.
 
 Return a JSON object with exactly this shape:
 {{"turns": [{{"host_id": "<id from the hosts list above>", "story_index": <0-based index of the "Story N" below this line is mainly about, or null for the welcome/sign-off/banter>, "text": "<what this host says>"}}, ...]}}

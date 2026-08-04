@@ -10,7 +10,10 @@ from app.services.llm.factory import get_llm_provider
 from app.services.llm.base import PodcastScriptResult, PodcastScriptTurn
 from app.services.tts.audio_assembly import SILENCE_GAP_SECONDS
 
-_WORDS_PER_MINUTE = 150
+# Not a textbook speech rate -- calibrated against actual observed Piper
+# output, which runs far slower per word than natural human conversation
+# once real synthesis (pacing, pauses) is accounted for.
+_WORDS_PER_MINUTE = 35
 _INTRO_OUTRO_WORDS = 120
 _BASE_WORDS_PER_STORY = 130
 _EXTRA_WORDS_PER_HOST = 15
