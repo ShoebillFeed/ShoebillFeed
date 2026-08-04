@@ -1,10 +1,19 @@
 import os
 import uuid
+from io import BytesIO
 from unittest.mock import MagicMock, patch
+
+from PIL import Image
 
 from app.models.podcast_episode import PodcastEpisode
 
 VALID_HOST = {"id": "h1", "name": "Alex", "character_prompt": "Curious and upbeat", "voice": "en_US-libritts_r-medium#0"}
+
+
+def _image_bytes(size=(20, 20), color=(255, 0, 0), fmt="PNG"):
+    buf = BytesIO()
+    Image.new("RGB", size, color).save(buf, format=fmt)
+    return buf.getvalue()
 
 
 def _show_payload(**overrides):
@@ -147,7 +156,7 @@ def test_upload_cover_sets_url_and_is_retrievable(auth_client, podcast_dirs):
 
     resp = auth_client.post(
         f"/api/podcasts/shows/{created['id']}/cover",
-        files={"file": ("cover.png", b"fake png bytes", "image/png")},
+        files={"file": ("cover.png", _image_bytes(), "image/png")},
     )
 
     assert resp.status_code == 200
@@ -156,7 +165,34 @@ def test_upload_cover_sets_url_and_is_retrievable(auth_client, podcast_dirs):
 
     get_resp = auth_client.get(body["cover_image_url"])
     assert get_resp.status_code == 200
-    assert get_resp.content == b"fake png bytes"
+    stored = Image.open(BytesIO(get_resp.content))
+    assert stored.format == "PNG"
+    assert stored.size == (20, 20)  # smaller than the resize cap -- left untouched
+
+
+def test_upload_cover_rejects_invalid_image_bytes(auth_client, podcast_dirs):
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+
+    resp = auth_client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.png", b"not actually a png", "image/png")},
+    )
+
+    assert resp.status_code == 400
+
+
+def test_upload_cover_downscales_images_larger_than_the_cap(auth_client, podcast_dirs):
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+
+    resp = auth_client.post(
+        f"/api/podcasts/shows/{created['id']}/cover",
+        files={"file": ("cover.png", _image_bytes(size=(2000, 1000)), "image/png")},
+    )
+    body = resp.json()
+
+    stored = Image.open(BytesIO(auth_client.get(body["cover_image_url"]).content))
+    assert max(stored.size) == 1400
+    assert stored.size == (1400, 700)  # aspect ratio preserved
 
 
 def test_upload_cover_rejects_unsupported_content_type(auth_client, podcast_dirs):
@@ -186,24 +222,24 @@ def test_upload_cover_replaces_previous_cover_file(auth_client, podcast_dirs):
     created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
     auth_client.post(
         f"/api/podcasts/shows/{created['id']}/cover",
-        files={"file": ("cover.png", b"first", "image/png")},
+        files={"file": ("cover.png", _image_bytes(color=(255, 0, 0)), "image/png")},
     )
 
     resp = auth_client.post(
         f"/api/podcasts/shows/{created['id']}/cover",
-        files={"file": ("cover.jpg", b"second", "image/jpeg")},
+        files={"file": ("cover.jpg", _image_bytes(color=(0, 255, 0), fmt="JPEG"), "image/jpeg")},
     )
     body = resp.json()
 
     get_resp = auth_client.get(body["cover_image_url"])
-    assert get_resp.content == b"second"
+    assert Image.open(BytesIO(get_resp.content)).format == "JPEG"
 
 
 def test_delete_cover_clears_url_and_removes_file(auth_client, podcast_dirs):
     created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
     uploaded = auth_client.post(
         f"/api/podcasts/shows/{created['id']}/cover",
-        files={"file": ("cover.png", b"bytes", "image/png")},
+        files={"file": ("cover.png", _image_bytes(), "image/png")},
     ).json()
 
     resp = auth_client.delete(f"/api/podcasts/shows/{created['id']}/cover")
@@ -225,7 +261,7 @@ def test_delete_show_removes_cover_image_file(auth_client, db_session, podcast_d
     created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
     auth_client.post(
         f"/api/podcasts/shows/{created['id']}/cover",
-        files={"file": ("cover.png", b"bytes", "image/png")},
+        files={"file": ("cover.png", _image_bytes(), "image/png")},
     )
     show = db_session.get(PodcastShow, uuid.UUID(created["id"]))
     cover_path = os.path.join(podcast_dirs.podcast_audio_dir, show.cover_image_path)
@@ -373,7 +409,7 @@ def test_list_show_episodes_includes_show_cover_image_url_when_set(auth_client, 
     created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
     auth_client.post(
         f"/api/podcasts/shows/{created['id']}/cover",
-        files={"file": ("cover.png", b"bytes", "image/png")},
+        files={"file": ("cover.png", _image_bytes(), "image/png")},
     )
     show = db_session.get(PodcastShow, uuid.UUID(created["id"]))
     _make_ready_episode(db_session, podcast_dirs, show)

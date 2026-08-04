@@ -1,8 +1,11 @@
 import os
 import uuid
 
+from io import BytesIO
+
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, Response
+from PIL import Image, UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -25,10 +28,36 @@ from app.services.range_streaming import range_response
 
 router = APIRouter()
 
-# Content-Type -> file extension. Whatever is stored is served back verbatim
-# (no re-encoding/validation of actual image bytes) -- keep this narrow.
-_COVER_CONTENT_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
+# Content-Type -> (file extension, Pillow format name).
+_COVER_CONTENT_TYPES = {
+    "image/png": ("png", "PNG"),
+    "image/jpeg": ("jpg", "JPEG"),
+    "image/webp": ("webp", "WEBP"),
+}
 _MAX_COVER_BYTES = 5 * 1024 * 1024
+# 1400px matches Apple Podcasts' documented minimum artwork dimension, so
+# public RSS feeds stay compliant -- well beyond what the in-app UI ever
+# needs (a ~40-64px thumbnail), but uploads straight off a phone camera can
+# be several times larger than this in each dimension, so it's still a real
+# size reduction. thumbnail() only ever shrinks, never upscales a smaller image.
+_COVER_MAX_DIMENSION = 1400
+
+
+def _resize_cover_image(data: bytes, pillow_format: str) -> bytes:
+    try:
+        image = Image.open(BytesIO(data))
+        image.load()
+    except UnidentifiedImageError:
+        raise HTTPException(status_code=400, detail="Uploaded file is not a valid image")
+    image.thumbnail((_COVER_MAX_DIMENSION, _COVER_MAX_DIMENSION), Image.LANCZOS)
+    if pillow_format == "JPEG" and image.mode in ("RGBA", "P"):
+        image = image.convert("RGB")  # JPEG has no alpha channel
+    out = BytesIO()
+    save_kwargs = {"optimize": True}
+    if pillow_format in ("JPEG", "WEBP"):
+        save_kwargs["quality"] = 85
+    image.save(out, format=pillow_format, **save_kwargs)
+    return out.getvalue()
 
 
 def _get_show(show_id: uuid.UUID, db: Session, user: User) -> PodcastShow:
@@ -175,12 +204,14 @@ async def upload_cover(
     current_user: User = Depends(get_current_user),
 ):
     show = _get_show(show_id, db, current_user)
-    ext = _COVER_CONTENT_TYPES.get(file.content_type)
-    if not ext:
+    content_type_entry = _COVER_CONTENT_TYPES.get(file.content_type)
+    if not content_type_entry:
         raise HTTPException(status_code=400, detail="Cover image must be PNG, JPEG, or WebP")
+    ext, pillow_format = content_type_entry
     data = await file.read()
     if len(data) > _MAX_COVER_BYTES:
         raise HTTPException(status_code=400, detail="Cover image must be under 5MB")
+    data = _resize_cover_image(data, pillow_format)
 
     settings = get_settings()
     covers_dir = os.path.join(settings.podcast_audio_dir, "covers")

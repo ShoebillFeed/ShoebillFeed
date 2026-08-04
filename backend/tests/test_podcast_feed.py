@@ -1,10 +1,13 @@
 import os
 import uuid
 from datetime import datetime, timezone
+from io import BytesIO
 from xml.etree.ElementTree import fromstring
 
+from PIL import Image
+
 from app.models.podcast_episode import PodcastEpisode
-from app.services.podcast_feed import render_rss_feed
+from app.services.podcast_feed import render_rss_feed, episode_description
 
 VALID_HOST = {"id": "h1", "name": "Alex", "character_prompt": "Curious and upbeat", "voice": "en_US-libritts_r-medium#0"}
 
@@ -42,6 +45,30 @@ def _make_ready_episode(db_session, podcast_dirs, show, content=b"fake mp3 bytes
     episode.audio_path = rel_path
     db_session.commit()
     return episode
+
+
+# --- episode_description() ---------------------------------------------------
+
+class TestEpisodeDescription:
+    def test_shownotes_are_separated_by_a_blank_line(self):
+        episode = PodcastEpisode(shownotes=[
+            {"title": "Story A", "source_name": "Source A", "url": "https://a.example/1", "start_seconds": 0.0},
+            {"title": "Story B", "source_name": "Source B", "url": "https://b.example/1", "start_seconds": 30.0},
+        ])
+        description = episode_description(episode)
+        assert "Story A (Source A)\nhttps://a.example/1\n\nStory B (Source B)" in description
+
+    def test_falls_back_to_one_paragraph_per_turn_without_shownotes(self):
+        episode = PodcastEpisode(shownotes=None, script=[
+            {"host_id": "h1", "text": "Welcome to the show!"},
+            {"host_id": "h2", "text": "Great to be here."},
+        ])
+        description = episode_description(episode)
+        assert description == "Welcome to the show!\n\nGreat to be here."
+
+    def test_empty_without_script_or_shownotes(self):
+        episode = PodcastEpisode(shownotes=None, script=None)
+        assert episode_description(episode) == ""
 
 
 # --- render_rss_feed() -------------------------------------------------------
@@ -352,9 +379,11 @@ def test_public_audio_404s_for_episode_belonging_to_a_different_show(auth_client
 def test_public_cover_streams_for_valid_token(auth_client, public_base_url, podcast_dirs):
     created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
     enabled = auth_client.post(f"/api/podcasts/shows/{created['id']}/public-feed").json()
+    buf = BytesIO()
+    Image.new("RGB", (20, 20), (255, 0, 0)).save(buf, format="PNG")
     auth_client.post(
         f"/api/podcasts/shows/{created['id']}/cover",
-        files={"file": ("cover.png", b"cover bytes", "image/png")},
+        files={"file": ("cover.png", buf.getvalue(), "image/png")},
     )
     token = enabled["public_feed_url"].split("/")[-2]
 
@@ -362,7 +391,7 @@ def test_public_cover_streams_for_valid_token(auth_client, public_base_url, podc
     resp = auth_client.get(f"/api/podcasts/public/{token}/cover")
 
     assert resp.status_code == 200
-    assert resp.content == b"cover bytes"
+    assert Image.open(BytesIO(resp.content)).format == "PNG"
 
 
 def test_public_cover_404s_when_no_cover_set(auth_client, public_base_url):

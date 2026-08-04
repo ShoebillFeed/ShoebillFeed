@@ -97,7 +97,9 @@ function EpisodeCard({ episode }: { episode: PodcastEpisode }) {
           {shownotesExpanded && (
             <div className="mt-2">
               {episode.description && (
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{episode.description}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 whitespace-pre-line">
+                  {episode.description}
+                </p>
               )}
               <ul className="flex flex-col gap-1.5">
                 {episode.shownotes.map((note, i) => (

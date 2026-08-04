@@ -16,18 +16,26 @@ def generate_feed_token() -> str:
 
 
 def episode_description(episode: PodcastEpisode) -> str:
+    """Plain-text summary used for both the RSS <description> and the
+    frontend's show notes header. Paragraph-separated (blank line between
+    entries) rather than one run-on line -- most podcast apps and the
+    frontend (via a whitespace-preserving style) render that as visible
+    spacing, not just a single "\\n"."""
     if episode.shownotes:
-        lines = []
+        paragraphs = []
         for note in episode.shownotes:
-            line = f"{note['title']} ({note['source_name']})"
+            paragraph = f"{note['title']} ({note['source_name']})"
             if note.get("url"):
-                line += f" - {note['url']}"
-            lines.append(line)
-        return "\n".join(lines)[:_SHOWNOTES_DESCRIPTION_MAX_CHARS]
+                paragraph += f"\n{note['url']}"
+            paragraphs.append(paragraph)
+        return "\n\n".join(paragraphs)[:_SHOWNOTES_DESCRIPTION_MAX_CHARS]
     if not episode.script:
         return ""
-    text = " ".join(turn.get("text", "") for turn in episode.script).strip()
-    return text[:_DESCRIPTION_MAX_CHARS]
+    # No story_index grouping available (episode predates that field) -- fall
+    # back to one paragraph per turn rather than joining every line of
+    # dialogue into a single continuous sentence.
+    paragraphs = [turn.get("text", "").strip() for turn in episode.script if turn.get("text", "").strip()]
+    return "\n\n".join(paragraphs)[:_DESCRIPTION_MAX_CHARS]
 
 
 def _episode_length_bytes(episode: PodcastEpisode, audio_dir: str) -> int:
