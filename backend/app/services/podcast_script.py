@@ -7,13 +7,9 @@ from app.models.news_cluster import NewsCluster
 from app.models.podcast_show import PodcastShow
 from app.services.feed_ranking import build_feed
 from app.services.llm.factory import get_llm_provider
-from app.services.llm.base import PodcastScriptResult, PodcastScriptTurn
+from app.services.llm.base import PodcastScriptResult, PodcastScriptTurn, PODCAST_WORDS_PER_MINUTE
 from app.services.tts.audio_assembly import SILENCE_GAP_SECONDS
 
-# Not a textbook speech rate -- calibrated against actual observed Piper
-# output, which runs far slower per word than natural human conversation
-# once real synthesis (pacing, pauses) is accounted for.
-_WORDS_PER_MINUTE = 35
 _INTRO_OUTRO_WORDS = 120
 _BASE_WORDS_PER_STORY = 130
 _EXTRA_WORDS_PER_HOST = 15
@@ -21,7 +17,7 @@ _MAX_STORIES = 15
 
 
 def estimate_story_count(target_minutes: int, host_count: int) -> int:
-    total_words = target_minutes * _WORDS_PER_MINUTE
+    total_words = target_minutes * PODCAST_WORDS_PER_MINUTE
     per_story_words = _BASE_WORDS_PER_STORY + (host_count - 1) * _EXTRA_WORDS_PER_HOST
     n = (total_words - _INTRO_OUTRO_WORDS) // per_story_words
     return int(min(max(1, n), _MAX_STORIES))

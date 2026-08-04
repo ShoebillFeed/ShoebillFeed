@@ -150,7 +150,7 @@ Structure:
 - Discuss each story in turn, with genuine back-and-forth between hosts — not just one host reading a summary while the others stay silent.
 - Close with a brief, natural sign-off.
 - Base everything strictly on the story content given below — do not invent facts, quotes, or details not present in the source material.
-- Aim for an overall spoken length of approximately {target_minutes} minute(s) at a natural conversational pace (~35 words/minute across all hosts combined). Pace the discussion accordingly — do not rush through everything in a few lines, and do not pad with filler.
+- Target an overall spoken length of approximately {target_minutes} minute(s). At this pace, your combined script (every turn's text added together) must be approximately {target_words} words in total — treat that as a hard target, not a rough guide; it is already calibrated to real playback speed, not reading speed. With {story_count} stories to cover, that is roughly {words_per_story} words of genuine back-and-forth per story on average — develop each one with follow-up questions, reactions, and specifics instead of one line each before moving on. Do not stop early, and do not pad with filler just to reach the count.
 
 Return a JSON object with exactly this shape:
 {{"turns": [{{"host_id": "<id from the hosts list above>", "story_index": <0-based index of the "Story N" below this line is mainly about, or null for the welcome/sign-off/banter>, "text": "<what this host says>"}}, ...]}}
@@ -158,6 +158,16 @@ Return a JSON object with exactly this shape:
 Each array entry is one host's uninterrupted line. Use only the host ids given above.
 
 Respond ONLY with valid JSON. No markdown fences, no extra text."""
+
+# Not a textbook speech rate -- measured directly from a real Piper synthesis
+# run (en_US-libritts_r-medium): ~236 wpm of actual spoken audio, excluding
+# the SILENCE_GAP_SECONDS pause between turns. Set a bit below that measured
+# figure so the per-turn gaps (which add real duration but no words) are
+# implicitly covered rather than pushing the episode over target. Single
+# source of truth for both the story-selection budget (podcast_script.py)
+# and the prompt's stated word-count target below -- keep them derived from
+# this, not duplicated as separate hardcoded figures.
+PODCAST_WORDS_PER_MINUTE = 210
 
 
 def podcast_script_max_tokens(target_minutes: int) -> int:
@@ -799,9 +809,13 @@ class LLMProvider(ABC):
         show_description_block = (
             f"\nShow concept: {show_description.strip()}\n" if show_description and show_description.strip() else ""
         )
+        target_words = target_minutes * PODCAST_WORDS_PER_MINUTE
+        story_count = max(1, len(stories))
         system = PODCAST_SCRIPT_SYSTEM_PROMPT.format(
             host_count=len(hosts), hosts_block=hosts_block, target_minutes=target_minutes,
             show_description_block=show_description_block,
+            target_words=target_words, story_count=story_count,
+            words_per_story=target_words // story_count,
         )
         name = LANGUAGE_NAMES.get(language, language)
         system += f"\n\nIMPORTANT: All spoken dialogue (the \"text\" field of every turn) MUST be written in grammatically correct, standard {name}, regardless of the source stories' original language."
