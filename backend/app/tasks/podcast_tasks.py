@@ -34,11 +34,16 @@ def dispatch_due_podcasts() -> int:
 @celery_app.task(
     name="app.tasks.podcast_tasks.generate_podcast_episode",
     queue="podcast",
-    # Overrides the global 900s task_time_limit: a first-run Piper voice model
-    # download plus LLM script generation and CPU TTS synthesis for up to a
-    # 15-minute episode can comfortably exceed the default.
-    soft_time_limit=1500,
-    time_limit=1800,
+    # Overrides the global 900s task_time_limit. A first-run Piper voice model
+    # download plus CPU TTS synthesis for up to a 15-minute episode already
+    # eats into the default; on top of that, Ollama's own request timeout for
+    # the script call now scales with requested output size (see
+    # ollama_provider.py::_timeout_for) and can itself run up to ~27 minutes
+    # worst-case (8192 tokens at a conservative slow-CPU estimate) for a
+    # max-length episode, so the task limit needs real headroom above that,
+    # not just above the TTS side.
+    soft_time_limit=2700,
+    time_limit=3000,
 )
 def generate_podcast_episode(show_id: str) -> str:
     settings = get_settings()

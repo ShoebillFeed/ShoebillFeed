@@ -22,6 +22,23 @@ def _num_ctx_for(system: str, user: str, max_tokens: int) -> int:
     return max(4096, estimated_prompt_tokens + max_tokens + 512)
 
 
+# Conservative (slow-CPU) generation speed estimate, seconds per output token.
+_SECONDS_PER_TOKEN_ESTIMATE = 0.2
+
+
+def _timeout_for(max_tokens: int, floor: float) -> float:
+    """Generation time scales with the requested output length, especially
+    on CPU-only hosts -- a fixed client timeout sized for small
+    classification calls gets hit by larger generations (e.g. the podcast
+    script). This was most visible once _num_ctx_for started sizing the
+    context window correctly: calls that used to fail fast with a
+    silently-truncated response now actually run to completion, which takes
+    real time. Real hardware is often faster than this estimate, which just
+    means the request returns well before the deadline.
+    """
+    return max(floor, max_tokens * _SECONDS_PER_TOKEN_ESTIMATE)
+
+
 class OllamaProvider(LLMProvider):
     provider_name = "ollama"
 
@@ -34,7 +51,8 @@ class OllamaProvider(LLMProvider):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.model_name = model
-        self.client = httpx.Client(timeout=float(timeout))
+        self.default_timeout = float(timeout)
+        self.client = httpx.Client(timeout=self.default_timeout)
 
     def _post(self, payload: dict, timeout: float | None = None) -> dict:
         kw = {"timeout": timeout} if timeout is not None else {}
@@ -59,7 +77,7 @@ class OllamaProvider(LLMProvider):
                 "temperature": 0.1,
             },
         }
-        return self._post(payload)["response"]
+        return self._post(payload, timeout=_timeout_for(max_tokens, self.default_timeout))["response"]
 
     def process_item(self, title, content, categories, max_content_chars=1500, social_post=False, output_language=None) -> ProcessedResult:
         truncated = (content or title)[:max_content_chars]
@@ -82,7 +100,8 @@ class OllamaProvider(LLMProvider):
                 "temperature": 0.1,
             },
         }
-        result = parse_llm_response(self._post(payload)["response"], known, social_post=social_post)
+        response = self._post(payload, timeout=_timeout_for(1024, self.default_timeout))["response"]
+        result = parse_llm_response(response, known, social_post=social_post)
         result.provider_name = self.provider_name
         result.model_name = self.model_name
         return result
@@ -111,7 +130,8 @@ class OllamaProvider(LLMProvider):
                 "temperature": 0.1,
             },
         }
-        result = parse_cluster_response(self._post(payload)["response"], len(items), known)
+        response = self._post(payload, timeout=_timeout_for(2048, self.default_timeout))["response"]
+        result = parse_cluster_response(response, len(items), known)
         result.provider_name = self.provider_name
         result.model_name = self.model_name
         return result
@@ -134,7 +154,8 @@ class OllamaProvider(LLMProvider):
                 "temperature": 0.1,
             },
         }
-        result = parse_newsletter_response(self._post(payload, timeout=600.0)["response"], known)
+        response = self._post(payload, timeout=_timeout_for(4096, self.default_timeout))["response"]
+        result = parse_newsletter_response(response, known)
         result.provider_name = self.provider_name
         result.model_name = self.model_name
         return result

@@ -24,7 +24,7 @@ variable; defaults shown are from `backend/app/config.py`.
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Set to a remote host to use Ollama running elsewhere, e.g. `http://192.168.1.10:11434` |
 | `OLLAMA_MODEL` | `qwen3:8b` | |
 | `OLLAMA_EMBEDDING_MODEL` | `nomic-embed-text` | Used for semantic clustering regardless of which provider handles text generation — 768-dim; changing it requires a schema migration (see {doc}`clustering`) |
-| `OLLAMA_TIMEOUT` | `300` (seconds) | Increase for remote or slow Ollama hosts |
+| `OLLAMA_TIMEOUT` | `300` (seconds) | Floor, not a fixed value — increase for remote or slow Ollama hosts. Large generations (notably the podcast script) automatically use a longer per-request timeout above this floor, scaled to how much output was requested. |
 | `LLM_BATCH_MAX_WAIT_MINUTES` | `10` | How long to wait for an Anthropic Batch API job before cancelling and falling back to synchronous processing |
 
 See {doc}`llm-providers` for how the fallback chain and batch processing work.
