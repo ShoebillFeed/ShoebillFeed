@@ -33,12 +33,55 @@ See {doc}`llm-providers` for how the fallback chain and batch processing work.
 
 | Variable | Default | Description |
 |---|---|---|
-| `TTS_PROVIDER` | `piper` | Text-to-speech backend for generated podcast episodes. Currently only `piper` — a self-hosted, CPU-only engine (no GPU or API key needed). Voice models are downloaded automatically on first use into the `piper-voices` Docker volume. |
+| `TTS_PROVIDER` | `piper` | Text-to-speech backend for generated podcast episodes. `piper` runs self-hosted Piper in-process (CPU-only, no GPU or API key needed; voice models are downloaded automatically on first use into the `piper-voices` Docker volume). `network` instead talks over HTTP to a standalone `tts_service/` container (see {doc}`deployment`) — use this to run synthesis on separate hardware, e.g. a GPU machine. |
+| `TTS_SERVICE_URL` | — | Required when `TTS_PROVIDER=network`, e.g. `http://tts-host:8100`. |
+| `TTS_SERVICE_TIMEOUT` | `120` (seconds) | Per-request timeout when `TTS_PROVIDER=network`. Increase for a slow/remote/CPU-only TTS host. |
 | `PUBLIC_BASE_URL` | — | Required to enable a podcast show's public feed link (subscribing in a real podcast app). Must be the fully-qualified, publicly-reachable URL your instance is served at, no trailing slash, e.g. `https://shoebill.example.com`. Leave unset to keep the feature disabled — the enable button then returns a clear error instead of emitting a broken URL. |
 
 `PIPER_MODEL_DIR` and `PODCAST_AUDIO_DIR` are fixed container paths (not
 meant to be overridden) backed by the `piper-voices` and `podcast-audio`
 named volumes — see {doc}`deployment`.
+
+### Running TTS synthesis on separate hardware
+
+`docker-compose.tts.yml` runs a standalone TTS container independent of
+the main stack — the same pattern as `docker-compose.ollama.yml` for LLM
+calls. Point the main stack at it and it takes over podcast synthesis:
+
+```bash
+# On the TTS machine (CPU):
+docker compose -f docker-compose.tts.yml up -d --build
+
+# On the TTS machine (GPU):
+TTS_GPU=true TTS_DEVICE=cuda docker compose -f docker-compose.tts.yml up -d --build
+# (also uncomment the NVIDIA deploy block in docker-compose.tts.yml)
+
+# In the main stack's .env:
+TTS_PROVIDER=network
+TTS_SERVICE_URL=http://<tts-machine-ip>:8100
+```
+
+GPU use is opt-in at two independent points, both off by default: the
+`TTS_GPU` build arg (whether the image has GPU-capable builds of both
+`onnxruntime` and `torch` instead of their CPU-only defaults) and
+`TTS_DEVICE=cuda` at runtime (whether the engine is actually told to use
+it). A CPU-only deployment needs neither.
+
+**`TTS_ENGINE`** picks which synthesis backend `tts_service/` runs (default
+`piper`; `kokoro` also available) — both are always installed in the image,
+so this is a plain env var change, no rebuild needed:
+
+```bash
+TTS_ENGINE=kokoro docker compose -f docker-compose.tts.yml up -d --build
+```
+
+`piper` (self-hosted, CPU/ONNX, GPL-3.0) is the original engine and covers
+the widest language list. `kokoro` ([hexgrad/Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M),
+Apache 2.0) offers a smaller set of languages (English, Spanish, French,
+Italian, Portuguese) but with distinctly higher-quality, named voices
+(`af_heart`, `bm_daniel`, etc.) rather than Piper's numbered speakers —
+worth trying if Piper's default English voice quality isn't good enough
+for your use case.
 
 ## Reddit
 

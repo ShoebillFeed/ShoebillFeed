@@ -43,10 +43,15 @@ class Settings(BaseSettings):
     vapid_private_key: str = ""
     vapid_subject: str = "mailto:admin@localhost"
 
-    # Podcast text-to-speech provider. Currently only 'piper' (self-hosted, CPU/ONNX).
+    # Podcast text-to-speech provider: 'piper' (in-process, self-hosted CPU/ONNX)
+    # or 'network' (talks to a standalone tts_service/ container -- see
+    # docker-compose.tts.yml -- so synthesis can run on a different machine,
+    # e.g. one with a GPU).
     tts_provider: str = "piper"
     piper_model_dir: str = "/data/piper-voices"
     podcast_audio_dir: str = "/data/podcast-audio"
+    tts_service_url: str = ""
+    tts_service_timeout: float = 120.0
 
     # Required to enable a podcast show's public feed link (RSS enclosure/link
     # URLs must be fully-qualified for podcast apps to consume them). No

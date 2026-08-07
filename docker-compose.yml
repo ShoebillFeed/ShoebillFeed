@@ -89,6 +89,8 @@ services:
       TTS_PROVIDER: ${TTS_PROVIDER:-piper}
       PIPER_MODEL_DIR: /data/piper-voices
       PODCAST_AUDIO_DIR: /data/podcast-audio
+      TTS_SERVICE_URL: ${TTS_SERVICE_URL:-}
+      TTS_SERVICE_TIMEOUT: ${TTS_SERVICE_TIMEOUT:-120}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
     volumes:
       - podcast-audio:/data/podcast-audio
@@ -176,6 +178,8 @@ services:
       TTS_PROVIDER: ${TTS_PROVIDER:-piper}
       PIPER_MODEL_DIR: /data/piper-voices
       PODCAST_AUDIO_DIR: /data/podcast-audio
+      TTS_SERVICE_URL: ${TTS_SERVICE_URL:-}
+      TTS_SERVICE_TIMEOUT: ${TTS_SERVICE_TIMEOUT:-120}
     volumes:
       - piper-voices:/data/piper-voices
       - podcast-audio:/data/podcast-audio
