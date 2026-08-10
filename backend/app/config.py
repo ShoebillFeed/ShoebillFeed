@@ -57,10 +57,14 @@ class Settings(BaseSettings):
     # word-count target and how many stories get selected for a given target
     # length). Default (210) was measured against Piper's
     # en_US-libritts_r-medium voice -- see PODCAST_WORDS_PER_MINUTE in
-    # services/llm/base.py. Kokoro and Chatterbox speak at a different
-    # natural pace (Chatterbox noticeably slower and more variable in
-    # particular); if TTS_PROVIDER/TTS_ENGINE isn't Piper, tune this to match
-    # your engine's actual measured pace rather than trusting the default.
+    # services/llm/base.py. Kokoro speaks at a different natural pace and
+    # should be tuned separately. Chatterbox (default voice) measured close
+    # to Piper -- ~222 wpm actual across two real synthesis samples, despite
+    # being much slower to *compute* (~10x real-time on CPU) -- 195 is a
+    # reasonable starting point for it specifically, though this was only
+    # checked against the default voice/English; verify against a real
+    # generated episode and adjust if you're on a cloned voice or another
+    # language.
     podcast_words_per_minute: int = 210
 
     # Required to enable a podcast show's public feed link (RSS enclosure/link
