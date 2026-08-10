@@ -76,6 +76,9 @@ class _StubProvider(TTSProvider):
     def synthesize(self, text, voice_id, out_path, speech_rate=1.0):
         raise NotImplementedError
 
+    def health_check(self):
+        raise NotImplementedError
+
 
 class TestPiperProviderSynthesizeSpeechRate:
     """length_scale is Piper's own knob and is inverted from our listener-
@@ -102,6 +105,19 @@ class TestPiperProviderSynthesizeSpeechRate:
     def test_default_speech_rate_leaves_length_scale_at_one(self, tmp_path):
         syn_config = self._synthesize(tmp_path)
         assert syn_config.length_scale == pytest.approx(1.0)
+
+
+class TestPiperProviderHealthCheck:
+    def test_healthy_when_model_dir_exists_and_is_writable(self, tmp_path):
+        provider = PiperProvider(model_dir=str(tmp_path / "voices"))
+        assert provider.health_check() is True
+
+    def test_unhealthy_when_model_dir_is_not_a_directory(self, tmp_path):
+        not_a_dir = tmp_path / "not-a-dir"
+        not_a_dir.write_text("i am a file")
+        provider = PiperProvider.__new__(PiperProvider)  # skip __init__'s makedirs
+        provider.model_dir = str(not_a_dir)
+        assert provider.health_check() is False
 
 
 class TestPickDistinctVoicesDefault:

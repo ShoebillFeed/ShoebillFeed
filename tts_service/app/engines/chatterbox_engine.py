@@ -40,6 +40,7 @@ class ChatterboxEngine(TTSEngine):
     """
 
     engine_name = "chatterbox"
+    supports_speech_rate = False
 
     def __init__(self, model_dir: str, use_cuda: bool = False):
         self.model_dir = model_dir

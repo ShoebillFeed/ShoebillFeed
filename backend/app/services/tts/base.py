@@ -18,6 +18,13 @@ class SynthesisResult:
 class TTSProvider(ABC):
     provider_name: str = ""
 
+    # Whether synthesize()'s `speech_rate` argument actually has any effect
+    # for this provider. True is the common case (Piper, Kokoro); Chatterbox
+    # has no speed control in the underlying library at all and silently
+    # ignores it, so the frontend needs to know this to warn users instead
+    # of letting the Speech Speed slider look functional and do nothing.
+    supports_speech_rate: bool = True
+
     @abstractmethod
     def list_voices(self, language: str) -> list[VoiceInfo]:
         """Return all voices/speakers available for `language`. May be a single
@@ -30,6 +37,18 @@ class TTSProvider(ABC):
 
         `speech_rate` is listener-facing (1.0 = normal, > 1.0 = faster);
         providers with no speed control are free to ignore it.
+        """
+        ...
+
+    @abstractmethod
+    def health_check(self) -> bool:
+        """Cheap reachability check -- True if this provider is ready to
+        synthesize right now. Only ever called on-demand from Settings (not
+        on a hot path, and not wired into the app's own docker-compose
+        healthcheck, since TTS_PROVIDER=network reaching an unresponsive
+        remote host could make that check slow/flaky), so a short blocking
+        call here is fine. Implementations should catch their own errors and
+        return False rather than raise.
         """
         ...
 

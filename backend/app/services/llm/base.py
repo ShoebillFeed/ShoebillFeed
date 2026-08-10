@@ -163,10 +163,15 @@ Respond ONLY with valid JSON. No markdown fences, no extra text."""
 # run (en_US-libritts_r-medium): ~236 wpm of actual spoken audio, excluding
 # the SILENCE_GAP_SECONDS pause between turns. Set a bit below that measured
 # figure so the per-turn gaps (which add real duration but no words) are
-# implicitly covered rather than pushing the episode over target. Single
-# source of truth for both the story-selection budget (podcast_script.py)
-# and the prompt's stated word-count target below -- keep them derived from
-# this, not duplicated as separate hardcoded figures.
+# implicitly covered rather than pushing the episode over target.
+#
+# This is the Piper-calibrated *default* only, used when a caller doesn't
+# pass an explicit words_per_minute (e.g. direct tests). Real callers read
+# Settings.podcast_words_per_minute instead (see config.py) -- Kokoro and
+# especially Chatterbox speak at a meaningfully different natural pace, so
+# hardcoding this one figure for every engine would reintroduce the same
+# "episode way too short/long" problem this constant was originally
+# calibrated to fix, just for non-Piper deployments instead.
 PODCAST_WORDS_PER_MINUTE = 210
 
 
@@ -794,6 +799,7 @@ class LLMProvider(ABC):
         target_minutes: int,
         language: str,
         show_description: str | None = None,
+        words_per_minute: int = PODCAST_WORDS_PER_MINUTE,
     ) -> PodcastScriptResult:
         """Generate a conversational multi-host podcast script covering `stories`.
 
@@ -802,6 +808,10 @@ class LLMProvider(ABC):
         `show_description` is a free-text concept/angle for the show as a whole
         (distinct from each host's own character_prompt) -- e.g. "focus on
         market impact, skeptical tone, skip celebrity gossip".
+        `words_per_minute` should reflect the actual TTS engine's measured
+        spoken pace (see PODCAST_WORDS_PER_MINUTE above) -- callers read it
+        from settings rather than relying on this default, since the default
+        is Piper-calibrated and other engines pace differently.
         """
         hosts_block = "\n".join(
             f"- {h['name']} (id: {h['id']}): {h['character_prompt']}" for h in hosts
@@ -809,7 +819,7 @@ class LLMProvider(ABC):
         show_description_block = (
             f"\nShow concept: {show_description.strip()}\n" if show_description and show_description.strip() else ""
         )
-        target_words = target_minutes * PODCAST_WORDS_PER_MINUTE
+        target_words = target_minutes * words_per_minute
         story_count = max(1, len(stories))
         system = PODCAST_SCRIPT_SYSTEM_PROMPT.format(
             host_count=len(hosts), hosts_block=hosts_block, target_minutes=target_minutes,

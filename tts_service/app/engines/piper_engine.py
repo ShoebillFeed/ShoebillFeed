@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import threading
 import wave
 
 import httpx
@@ -27,6 +28,13 @@ class PiperEngine(TTSEngine):
         self.use_cuda = use_cuda
         os.makedirs(self.model_dir, exist_ok=True)
         self._loaded_voices: dict[str, PiperVoice] = {}
+        # FastAPI runs sync handlers in a thread pool -- without this, two
+        # concurrent first-requests for the same not-yet-loaded voice would
+        # both pass the `model in self._loaded_voices` check, double-download
+        # and double-construct the model (wasteful, and the two downloads
+        # racing to write the same tmp path in _download() could corrupt the
+        # file on disk).
+        self._load_lock = threading.Lock()
 
     def list_voices(self, language: str) -> list[VoiceInfo]:
         entry = PIPER_VOICE_CATALOG.get(language)
@@ -69,13 +77,23 @@ class PiperEngine(TTSEngine):
         return voice_id, None
 
     def _load_voice(self, model: str) -> PiperVoice:
-        if model in self._loaded_voices:
-            return self._loaded_voices[model]
+        voice = self._loaded_voices.get(model)
+        if voice is not None:
+            return voice
 
-        onnx_path, config_path = self._ensure_model_downloaded(model)
-        voice = PiperVoice.load(onnx_path, config_path=config_path, use_cuda=self.use_cuda)
-        self._loaded_voices[model] = voice
-        return voice
+        # Double-checked locking: the fast path above avoids the lock
+        # entirely once a voice is warm; only a cold first request pays for
+        # it, and re-checks inside the lock in case another thread already
+        # finished loading while this one was waiting.
+        with self._load_lock:
+            voice = self._loaded_voices.get(model)
+            if voice is not None:
+                return voice
+
+            onnx_path, config_path = self._ensure_model_downloaded(model)
+            voice = PiperVoice.load(onnx_path, config_path=config_path, use_cuda=self.use_cuda)
+            self._loaded_voices[model] = voice
+            return voice
 
     def _ensure_model_downloaded(self, model: str) -> tuple[str, str]:
         entry = next((e for e in PIPER_VOICE_CATALOG.values() if model_name(e) == model), None)

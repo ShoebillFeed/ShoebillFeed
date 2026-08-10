@@ -58,8 +58,16 @@ export interface UserSettingsUpdate {
   exploration_fraction?: number;
 }
 
+export interface TTSHealth {
+  provider: string;
+  healthy: boolean;
+  base_url: string | null;
+  supports_speech_rate: boolean;
+}
+
 export const settingsApi = {
   getAdvanced: () => client.get<UserSettings>("/settings/advanced").then((r) => r.data),
   updateAdvanced: (data: UserSettingsUpdate) =>
     client.patch<UserSettings>("/settings/advanced", data).then((r) => r.data),
+  getPodcastHealth: () => client.get<TTSHealth>("/settings/podcast-health").then((r) => r.data),
 };

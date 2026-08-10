@@ -63,4 +63,12 @@ ENV HF_HOME=/data/voices/hf-cache
 ENV NUMBA_CACHE_DIR=/data/voices/numba-cache
 
 EXPOSE 8100
+
+# Deliberately no --workers here. get_engine() (app/engines/factory.py) is
+# lru_cache'd *per process*, so each additional Uvicorn worker loads its own
+# separate copy of the active engine's model into memory -- a non-issue for
+# Piper's small ONNX model, but Chatterbox pulls in a multi-GB torch
+# checkpoint, where N workers means N times the memory. Scale this service
+# by running multiple containers (each still single-worker) behind a load
+# balancer instead, if concurrency ever becomes a bottleneck.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8100"]

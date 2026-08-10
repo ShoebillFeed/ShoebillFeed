@@ -4,6 +4,21 @@ import httpx
 
 from app.services.tts.base import TTSProvider, VoiceInfo, SynthesisResult
 
+# Conservative (Chatterbox-class slow-CPU) synthesis speed estimate, seconds
+# per character of input text. Applied regardless of which engine the
+# remote tts_service actually runs -- this provider has no visibility into
+# that (see health_check()'s optimistic default for the same reason), and
+# erring toward a generous timeout costs nothing (a fast engine's request
+# just returns well before the deadline), whereas erring short reproduces
+# the exact class of bug OllamaProvider's _timeout_for() fixed for the LLM
+# side: a fixed timeout sized for the common case gets hit by a genuinely
+# slow request instead of just taking longer to succeed.
+_SECONDS_PER_CHAR_ESTIMATE = 0.85
+
+
+def _timeout_for(text: str, floor: float) -> float:
+    return max(floor, len(text) * _SECONDS_PER_CHAR_ESTIMATE)
+
 
 class NetworkTTSProvider(TTSProvider):
     """Talks to a standalone tts_service/ container over HTTP instead of
@@ -15,7 +30,13 @@ class NetworkTTSProvider(TTSProvider):
 
     def __init__(self, base_url: str, timeout: float = 120.0):
         self.base_url = base_url.rstrip("/")
+        self.default_timeout = timeout
         self.client = httpx.Client(timeout=timeout)
+        # Optimistic default (assume capable) until a real health check says
+        # otherwise -- defaulting to False would misleadingly hide the speed
+        # control for a healthy Piper/Kokoro deployment that just hasn't had
+        # a health check run yet.
+        self.supports_speech_rate = True
 
     def list_voices(self, language: str) -> list[VoiceInfo]:
         resp = self.client.get(f"{self.base_url}/voices", params={"language": language})
@@ -26,6 +47,7 @@ class NetworkTTSProvider(TTSProvider):
         resp = self.client.post(
             f"{self.base_url}/synthesize",
             json={"text": text, "voice_id": voice_id, "speech_rate": speech_rate},
+            timeout=_timeout_for(text, self.default_timeout),
         )
         resp.raise_for_status()
 
@@ -37,6 +59,18 @@ class NetworkTTSProvider(TTSProvider):
         # re-parsing the WAV we just wrote.
         duration = float(resp.headers.get("X-Duration-Seconds", 0.0))
         return SynthesisResult(audio_path=out_path, duration_seconds=duration)
+
+    def health_check(self) -> bool:
+        try:
+            resp = self.client.get(f"{self.base_url}/health", timeout=5.0)
+            if resp.status_code != 200:
+                return False
+            data = resp.json()
+            if "supports_speech_rate" in data:
+                self.supports_speech_rate = bool(data["supports_speech_rate"])
+            return True
+        except Exception:
+            return False
 
     def __del__(self):
         try:

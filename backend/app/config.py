@@ -53,6 +53,16 @@ class Settings(BaseSettings):
     tts_service_url: str = ""
     tts_service_timeout: float = 120.0
 
+    # Spoken-words-per-minute used to size podcast scripts (both the LLM's
+    # word-count target and how many stories get selected for a given target
+    # length). Default (210) was measured against Piper's
+    # en_US-libritts_r-medium voice -- see PODCAST_WORDS_PER_MINUTE in
+    # services/llm/base.py. Kokoro and Chatterbox speak at a different
+    # natural pace (Chatterbox noticeably slower and more variable in
+    # particular); if TTS_PROVIDER/TTS_ENGINE isn't Piper, tune this to match
+    # your engine's actual measured pace rather than trusting the default.
+    podcast_words_per_minute: int = 210
+
     # Required to enable a podcast show's public feed link (RSS enclosure/link
     # URLs must be fully-qualified for podcast apps to consume them). No
     # trailing slash, e.g. https://shoebill.example.com

@@ -2,12 +2,13 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.models.news_item import NewsItem
 from app.models.news_cluster import NewsCluster
 from app.models.podcast_show import PodcastShow
 from app.services.feed_ranking import build_feed
 from app.services.llm.factory import get_llm_provider
-from app.services.llm.base import PodcastScriptResult, PodcastScriptTurn, PODCAST_WORDS_PER_MINUTE
+from app.services.llm.base import PodcastScriptResult, PodcastScriptTurn
 from app.services.tts.audio_assembly import SILENCE_GAP_SECONDS
 
 _INTRO_OUTRO_WORDS = 120
@@ -16,8 +17,10 @@ _EXTRA_WORDS_PER_HOST = 15
 _MAX_STORIES = 15
 
 
-def estimate_story_count(target_minutes: int, host_count: int) -> int:
-    total_words = target_minutes * PODCAST_WORDS_PER_MINUTE
+def estimate_story_count(target_minutes: int, host_count: int, words_per_minute: int | None = None) -> int:
+    if words_per_minute is None:
+        words_per_minute = get_settings().podcast_words_per_minute
+    total_words = target_minutes * words_per_minute
     per_story_words = _BASE_WORDS_PER_STORY + (host_count - 1) * _EXTRA_WORDS_PER_HOST
     n = (total_words - _INTRO_OUTRO_WORDS) // per_story_words
     return int(min(max(1, n), _MAX_STORIES))
@@ -83,6 +86,7 @@ def build_script(show: PodcastShow, items: list[NewsItem | NewsCluster]) -> Podc
         target_minutes=show.target_length_minutes,
         language=show.language,
         show_description=show.description,
+        words_per_minute=get_settings().podcast_words_per_minute,
     )
 
 

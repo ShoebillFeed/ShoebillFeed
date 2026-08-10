@@ -83,6 +83,17 @@ class TestEstimateStoryCount:
         # the same word budget fits fewer distinct stories.
         assert estimate_story_count(10, 3) <= estimate_story_count(10, 1)
 
+    def test_explicit_words_per_minute_overrides_the_settings_default(self):
+        # A slower engine (e.g. Chatterbox) should fit fewer stories into the
+        # same target length than the Piper-calibrated default would.
+        assert estimate_story_count(10, 1, words_per_minute=80) <= estimate_story_count(10, 1, words_per_minute=210)
+
+    def test_falls_back_to_the_configured_setting_when_not_given_explicitly(self, monkeypatch):
+        from app.config import get_settings
+
+        monkeypatch.setattr(get_settings(), "podcast_words_per_minute", 80)
+        assert estimate_story_count(10, 1) == estimate_story_count(10, 1, words_per_minute=80)
+
 
 class TestSelectEpisodeItems:
     def test_filters_out_items_outside_time_window(self, db_session, make_user):
@@ -230,6 +241,34 @@ class TestBuildScript:
             {"title": "Big News", "content": "Something happened.", "source_name": "The Daily", "url": item.url},
         ]
         assert kwargs["show_description"] == show.description
+        assert kwargs["words_per_minute"] == 210  # Settings.podcast_words_per_minute default
+
+    def test_passes_a_configured_non_default_words_per_minute(self, db_session, make_user, monkeypatch):
+        # Kokoro/Chatterbox deployments tune this away from the
+        # Piper-calibrated default -- build_script must actually use it.
+        from app.config import get_settings
+
+        monkeypatch.setattr(get_settings(), "podcast_words_per_minute", 150)
+
+        user = make_user()
+        source = _make_source(db_session, user.id, "The Daily")
+        item = _make_item(db_session, source, user.id, title="Big News", abstract="Something happened.")
+        db_session.commit()
+        show = _make_show(db_session, user.id, hosts=[
+            {"id": "h1", "name": "Alex", "character_prompt": "curious", "voice": "v1"},
+        ], target_length_minutes=7, language="en")
+        db_session.commit()
+
+        fake_provider = MagicMock()
+        fake_provider.generate_podcast_script.return_value = PodcastScriptResult(
+            turns=[PodcastScriptTurn(host_id="h1", text="Hello!")]
+        )
+
+        with patch("app.services.podcast_script.get_llm_provider", return_value=fake_provider):
+            build_script(show, [item])
+
+        kwargs = fake_provider.generate_podcast_script.call_args.kwargs
+        assert kwargs["words_per_minute"] == 150
 
 
 class TestBuildEpisodeRecords:

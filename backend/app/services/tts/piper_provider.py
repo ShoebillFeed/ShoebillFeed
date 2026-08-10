@@ -59,6 +59,15 @@ class PiperProvider(TTSProvider):
 
         return SynthesisResult(audio_path=out_path, duration_seconds=duration)
 
+    def health_check(self) -> bool:
+        # Fully in-process, no remote service to ping -- "healthy" here means
+        # "can actually persist a downloaded/synthesized voice model", the
+        # one way this provider fails that's worth surfacing proactively.
+        try:
+            return os.path.isdir(self.model_dir) and os.access(self.model_dir, os.W_OK)
+        except OSError:
+            return False
+
     def _parse_voice_id(self, voice_id: str) -> tuple[str, int | None]:
         if "#" in voice_id:
             model, speaker = voice_id.split("#", 1)

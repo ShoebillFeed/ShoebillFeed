@@ -112,6 +112,7 @@ export function RangeSlider({
   max,
   step = 1,
   unit = "",
+  disabled = false,
 }: {
   value: number;
   onChange: (v: number) => void;
@@ -119,6 +120,7 @@ export function RangeSlider({
   max: number;
   step?: number;
   unit?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="flex items-center gap-3 w-full max-w-xs">
@@ -129,7 +131,11 @@ export function RangeSlider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="flex-1 h-4 appearance-none bg-gray-200 dark:bg-gray-700 rounded-full cursor-pointer accent-indigo-600"
+        disabled={disabled}
+        className={cn(
+          "flex-1 h-4 appearance-none bg-gray-200 dark:bg-gray-700 rounded-full cursor-pointer accent-indigo-600",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
       />
       <span className="text-sm font-medium w-14 text-right shrink-0 text-gray-800 dark:text-gray-200">
         {value}{unit}

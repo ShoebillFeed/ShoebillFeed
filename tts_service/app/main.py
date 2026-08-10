@@ -26,7 +26,16 @@ class SynthesizeRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    # get_engine() is cheap here -- it only constructs the engine object
+    # (engine_name/supports_speech_rate are class attributes), never
+    # triggers the actual model download/load, so this stays a fast
+    # liveness check even for engines that lazily load a multi-GB model.
+    engine = get_engine()
+    return {
+        "status": "ok",
+        "engine": engine.engine_name,
+        "supports_speech_rate": engine.supports_speech_rate,
+    }
 
 
 @app.get("/voices", response_model=list[VoiceOut])

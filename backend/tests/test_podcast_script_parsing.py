@@ -169,3 +169,18 @@ class TestGeneratePodcastScriptPromptWordCount:
         # an empty story list before reaching this point.
         provider.generate_podcast_script(hosts=self.HOSTS, stories=[], target_minutes=5, language="en")
         assert provider.last_system is not None
+
+    def test_an_explicit_words_per_minute_overrides_the_piper_calibrated_default(self):
+        # Kokoro/Chatterbox deployments pass Settings.podcast_words_per_minute
+        # (see podcast_script.py::build_script) instead of relying on this
+        # provider-level default -- the prompt must actually reflect it.
+        provider = _FakePromptCapturingProvider()
+        provider.generate_podcast_script(
+            hosts=self.HOSTS,
+            stories=[{"title": "T", "content": "C", "source_name": "S"}],
+            target_minutes=10,
+            language="en",
+            words_per_minute=80,
+        )
+        assert "approximately 800 words" in provider.last_system
+        assert f"approximately {10 * PODCAST_WORDS_PER_MINUTE} words" not in provider.last_system

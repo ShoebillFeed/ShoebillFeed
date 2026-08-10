@@ -10,7 +10,17 @@ client = TestClient(app)
 def test_health():
     resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok"}
+    assert resp.json() == {"status": "ok", "engine": "piper", "supports_speech_rate": True}
+
+
+def test_health_reports_engine_name_and_speech_rate_support():
+    fake_engine = MagicMock()
+    fake_engine.engine_name = "chatterbox"
+    fake_engine.supports_speech_rate = False
+    with patch("app.main.get_engine", return_value=fake_engine):
+        resp = client.get("/health")
+
+    assert resp.json() == {"status": "ok", "engine": "chatterbox", "supports_speech_rate": False}
 
 
 def test_list_voices_returns_engine_voices():

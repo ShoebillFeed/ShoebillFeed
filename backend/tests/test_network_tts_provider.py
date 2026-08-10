@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.tts.network_provider import NetworkTTSProvider
+from app.services.tts.network_provider import NetworkTTSProvider, _timeout_for
 
 
 def _provider():
@@ -34,6 +34,17 @@ class TestListVoices:
         with patch.object(provider.client, "get", return_value=fake_resp):
             with pytest.raises(httpx.HTTPStatusError):
                 provider.list_voices("en")
+
+
+class TestTimeoutFor:
+    def test_floors_at_the_configured_default_for_short_text(self):
+        assert _timeout_for("hi", floor=120.0) == 120.0
+
+    def test_scales_up_for_long_text(self):
+        assert _timeout_for("x" * 1000, floor=120.0) > 120.0
+
+    def test_never_goes_below_a_custom_floor(self):
+        assert _timeout_for("short", floor=900.0) == 900.0
 
 
 class TestSynthesize:
@@ -79,6 +90,88 @@ class TestSynthesize:
             result = provider.synthesize("Hi", "voice", out_path)
 
         assert result.duration_seconds == 0.0
+
+    def test_request_timeout_scales_with_text_length(self, tmp_path):
+        # A long script turn on a slow (e.g. Chatterbox-class) engine must not
+        # be capped at the provider's default timeout -- see _timeout_for().
+        provider = NetworkTTSProvider(base_url="http://tts.test:8100", timeout=120.0)
+        fake_resp = MagicMock()
+        fake_resp.content = b"bytes"
+        fake_resp.headers = {"X-Duration-Seconds": "1.0"}
+        out_path = str(tmp_path / "turn.wav")
+        long_text = "word " * 2000
+
+        with patch.object(provider.client, "post", return_value=fake_resp) as mock_post:
+            provider.synthesize(long_text, "voice", out_path)
+
+        assert mock_post.call_args.kwargs["timeout"] > 120.0
+
+    def test_request_timeout_floors_at_the_configured_default_for_short_text(self, tmp_path):
+        provider = NetworkTTSProvider(base_url="http://tts.test:8100", timeout=120.0)
+        fake_resp = MagicMock()
+        fake_resp.content = b"bytes"
+        fake_resp.headers = {"X-Duration-Seconds": "1.0"}
+        out_path = str(tmp_path / "turn.wav")
+
+        with patch.object(provider.client, "post", return_value=fake_resp) as mock_post:
+            provider.synthesize("Hi", "voice", out_path)
+
+        assert mock_post.call_args.kwargs["timeout"] == 120.0
+
+
+class TestHealthCheck:
+    def test_healthy_on_200(self):
+        provider = _provider()
+        fake_resp = MagicMock(status_code=200)
+        fake_resp.json.return_value = {"status": "ok"}
+        with patch.object(provider.client, "get", return_value=fake_resp) as mock_get:
+            assert provider.health_check() is True
+        assert mock_get.call_args.args[0] == "http://tts.test:8100/health"
+        assert mock_get.call_args.kwargs["timeout"] == 5.0
+
+    def test_unhealthy_on_non_200(self):
+        provider = _provider()
+        fake_resp = MagicMock(status_code=503)
+        with patch.object(provider.client, "get", return_value=fake_resp):
+            assert provider.health_check() is False
+
+    def test_unhealthy_when_the_request_raises(self):
+        import httpx
+
+        provider = _provider()
+        with patch.object(provider.client, "get", side_effect=httpx.ConnectError("refused")):
+            assert provider.health_check() is False
+
+    def test_defaults_supports_speech_rate_to_true_before_any_check(self):
+        assert _provider().supports_speech_rate is True
+
+    def test_updates_supports_speech_rate_from_the_health_response(self):
+        provider = _provider()
+        fake_resp = MagicMock(status_code=200)
+        fake_resp.json.return_value = {"status": "ok", "engine": "chatterbox", "supports_speech_rate": False}
+        with patch.object(provider.client, "get", return_value=fake_resp):
+            provider.health_check()
+        assert provider.supports_speech_rate is False
+
+    def test_leaves_supports_speech_rate_unset_when_the_response_omits_it(self):
+        provider = _provider()
+        fake_resp = MagicMock(status_code=200)
+        fake_resp.json.return_value = {"status": "ok"}
+        with patch.object(provider.client, "get", return_value=fake_resp):
+            provider.health_check()
+        assert provider.supports_speech_rate is True
+
+    def test_does_not_update_supports_speech_rate_on_a_failed_check(self):
+        provider = _provider()
+        fake_resp = MagicMock(status_code=200)
+        fake_resp.json.return_value = {"status": "ok", "supports_speech_rate": False}
+        with patch.object(provider.client, "get", return_value=fake_resp):
+            provider.health_check()
+        assert provider.supports_speech_rate is False
+
+        with patch.object(provider.client, "get", return_value=MagicMock(status_code=503)):
+            provider.health_check()
+        assert provider.supports_speech_rate is False
 
 
 class TestTTSFactoryNetworkProvider:

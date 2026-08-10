@@ -12,6 +12,7 @@ import {
   useUploadPodcastCover,
   useDeletePodcastCover,
 } from "../../hooks/usePodcasts";
+import { usePodcastTtsHealth } from "../../hooks/useSettings";
 import { RangeSlider } from "./SettingsControls";
 import type { PodcastShow, PodcastHost } from "../../types/podcast";
 
@@ -84,6 +85,8 @@ export default function PodcastShowForm({ show, onClose }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: voices = [] } = usePodcastVoices(language);
+  const { data: ttsHealth } = usePodcastTtsHealth();
+  const speechRateSupported = ttsHealth?.supports_speech_rate ?? true;
 
   const toggleCategory = (id: string) =>
     setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -350,8 +353,11 @@ export default function PodcastShowForm({ show, onClose }: Props) {
           max={1.5}
           step={0.05}
           unit="x"
+          disabled={!speechRateSupported}
         />
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t("podcastForm.speechRateHint")}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+          {speechRateSupported ? t("podcastForm.speechRateHint") : t("podcastForm.speechRateUnsupportedHint")}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

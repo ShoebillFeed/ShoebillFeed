@@ -1,3 +1,7 @@
+import threading
+import time
+from unittest.mock import patch
+
 from app.engines.piper_voices import (
     PIPER_VOICE_CATALOG,
     curated_speaker_indices,
@@ -77,3 +81,44 @@ class TestPiperEngineConstruction:
     def test_use_cuda_can_be_enabled(self, tmp_path):
         engine = PiperEngine(model_dir=str(tmp_path), use_cuda=True)
         assert engine.use_cuda is True
+
+
+class TestPiperEngineLoadVoiceThreadSafety:
+    def test_concurrent_first_requests_load_the_voice_only_once(self, tmp_path):
+        # FastAPI runs sync handlers in a thread pool -- without the lock in
+        # _load_voice(), several concurrent first requests for the same
+        # unloaded voice would each pass the "not yet loaded" check and
+        # double-download/double-construct it.
+        engine = PiperEngine(model_dir=str(tmp_path))
+        load_count = 0
+        start_barrier = threading.Barrier(5)
+
+        def fake_load(onnx_path, config_path, use_cuda):
+            nonlocal load_count
+            load_count += 1
+            time.sleep(0.03)  # widen the window so concurrent callers can overlap
+            return object()
+
+        def call():
+            start_barrier.wait()
+            engine._load_voice("en_US-libritts_r-medium")
+
+        with patch.object(engine, "_ensure_model_downloaded", return_value=("onnx", "cfg")), \
+             patch("app.engines.piper_engine.PiperVoice.load", side_effect=fake_load):
+            threads = [threading.Thread(target=call) for _ in range(5)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+        assert load_count == 1
+        assert engine._loaded_voices["en_US-libritts_r-medium"] is not None
+
+    def test_a_second_call_after_loading_does_not_reload(self, tmp_path):
+        engine = PiperEngine(model_dir=str(tmp_path))
+        with patch.object(engine, "_ensure_model_downloaded", return_value=("onnx", "cfg")), \
+             patch("app.engines.piper_engine.PiperVoice.load") as mock_load:
+            engine._load_voice("en_US-libritts_r-medium")
+            engine._load_voice("en_US-libritts_r-medium")
+
+        mock_load.assert_called_once()

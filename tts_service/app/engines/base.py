@@ -17,6 +17,12 @@ class TTSEngine(ABC):
 
     engine_name: str = ""
 
+    # Whether synthesize()'s `speech_rate` argument actually has any effect.
+    # True is the common case; engines with no speed control at all (e.g.
+    # Chatterbox) override this to False so /health can report it and the
+    # app's Speech Speed slider can warn instead of silently doing nothing.
+    supports_speech_rate: bool = True
+
     @abstractmethod
     def list_voices(self, language: str) -> list[VoiceInfo]:
         """Return all voices/speakers available for `language`. May be a

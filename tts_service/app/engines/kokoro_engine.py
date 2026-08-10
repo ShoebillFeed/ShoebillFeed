@@ -1,4 +1,5 @@
 import logging
+import threading
 
 import numpy as np
 
@@ -19,6 +20,10 @@ class KokoroEngine(TTSEngine):
         # One KPipeline per Kokoro lang_code, lazily constructed and cached --
         # each owns its own G2P + loaded voice packs, so reuse matters.
         self._pipelines: dict[str, object] = {}
+        # See PiperEngine._load_lock for why this exists: FastAPI's sync
+        # handlers run in a thread pool, so two concurrent first-requests for
+        # the same lang_code could otherwise both construct a KPipeline.
+        self._pipeline_lock = threading.Lock()
 
     def list_voices(self, language: str) -> list[VoiceInfo]:
         names = KOKORO_VOICES.get(language, [])
@@ -44,7 +49,15 @@ class KokoroEngine(TTSEngine):
         return wav_bytes, duration
 
     def _get_pipeline(self, lang_code: str):
-        if lang_code not in self._pipelines:
+        pipeline = self._pipelines.get(lang_code)
+        if pipeline is not None:
+            return pipeline
+
+        with self._pipeline_lock:
+            pipeline = self._pipelines.get(lang_code)
+            if pipeline is not None:
+                return pipeline
+
             # Imported lazily: torch + kokoro are only needed if this engine
             # is actually selected (TTS_ENGINE=kokoro), so a piper-only
             # deployment never pays the import cost even though both
@@ -53,5 +66,6 @@ class KokoroEngine(TTSEngine):
 
             device = "cuda" if self.use_cuda else "cpu"
             logger.info("Loading Kokoro pipeline for lang_code=%r on %s", lang_code, device)
-            self._pipelines[lang_code] = KPipeline(lang_code=lang_code, device=device)
-        return self._pipelines[lang_code]
+            pipeline = KPipeline(lang_code=lang_code, device=device)
+            self._pipelines[lang_code] = pipeline
+            return pipeline

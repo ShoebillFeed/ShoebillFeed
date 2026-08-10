@@ -1,3 +1,5 @@
+import threading
+import time
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -98,3 +100,30 @@ class TestKokoroEnginePipelineCaching:
             engine._get_pipeline("e")
 
         assert created == [("e", "cpu")]
+
+    def test_concurrent_first_requests_construct_the_pipeline_only_once(self):
+        # FastAPI runs sync handlers in a thread pool -- without the lock in
+        # _get_pipeline(), several concurrent first requests for the same
+        # lang_code would each pass the "not yet cached" check and construct
+        # a duplicate KPipeline.
+        engine = KokoroEngine()
+        created = []
+        start_barrier = threading.Barrier(5)
+
+        class FakeKPipeline:
+            def __init__(self, lang_code, device):
+                time.sleep(0.03)  # widen the window so concurrent callers can overlap
+                created.append((lang_code, device))
+
+        def call():
+            start_barrier.wait()
+            engine._get_pipeline("a")
+
+        with patch.dict("sys.modules", {"kokoro": MagicMock(KPipeline=FakeKPipeline)}):
+            threads = [threading.Thread(target=call) for _ in range(5)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+        assert len(created) == 1
