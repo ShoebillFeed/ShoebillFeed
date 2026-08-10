@@ -180,6 +180,7 @@ services:
       PODCAST_AUDIO_DIR: /data/podcast-audio
       TTS_SERVICE_URL: ${TTS_SERVICE_URL:-}
       TTS_SERVICE_TIMEOUT: ${TTS_SERVICE_TIMEOUT:-120}
+      PODCAST_WORDS_PER_MINUTE: ${PODCAST_WORDS_PER_MINUTE:-210}
     volumes:
       - piper-voices:/data/piper-voices
       - podcast-audio:/data/podcast-audio
