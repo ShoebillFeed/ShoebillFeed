@@ -23,7 +23,7 @@ from app.schemas.podcast import (
     VoiceOut,
 )
 from app.schemas.pagination import Page
-from app.services.podcast_feed import generate_feed_token, render_rss_feed, episode_description
+from app.services.podcast_feed import generate_feed_token, render_rss_feed, episode_description, build_chapters_json
 from app.services.range_streaming import range_response
 
 router = APIRouter()
@@ -428,3 +428,15 @@ def public_episode_audio(feed_token: str, episode_id: uuid.UUID, request: Reques
     if not os.path.exists(full_path):
         raise HTTPException(status_code=404, detail="Episode audio file missing")
     return range_response(request, full_path, media_type="audio/mpeg")
+
+
+@router.get("/public/{feed_token}/episodes/{episode_id}/chapters.json")
+@limiter.limit("60/minute")
+def public_episode_chapters(feed_token: str, episode_id: uuid.UUID, request: Request, db: Session = Depends(get_db)):
+    show = _get_show_by_feed_token(feed_token, db)
+    episode = db.scalar(
+        select(PodcastEpisode).where(PodcastEpisode.id == episode_id, PodcastEpisode.show_id == show.id)
+    )
+    if not episode or not episode.shownotes:
+        raise HTTPException(status_code=404, detail="No chapters available for this episode")
+    return build_chapters_json(episode)

@@ -7,7 +7,7 @@ from xml.etree.ElementTree import fromstring
 from PIL import Image
 
 from app.models.podcast_episode import PodcastEpisode
-from app.services.podcast_feed import render_rss_feed, episode_description
+from app.services.podcast_feed import render_rss_feed, episode_description, build_chapters_json
 
 VALID_HOST = {"id": "h1", "name": "Alex", "character_prompt": "Curious and upbeat", "voice": "en_US-libritts_r-medium#0"}
 
@@ -29,10 +29,11 @@ def _show_payload(**overrides):
     return payload
 
 
-def _make_ready_episode(db_session, podcast_dirs, show, content=b"fake mp3 bytes", script=None):
+def _make_ready_episode(db_session, podcast_dirs, show, content=b"fake mp3 bytes", script=None, shownotes=None):
     episode = PodcastEpisode(
         show_id=show.id, user_id=show.user_id, status="ready", duration_seconds=300,
         script=script if script is not None else [{"host_id": "h1", "text": "Hello and welcome to the show."}],
+        shownotes=shownotes,
         generated_at=datetime.now(timezone.utc),
     )
     db_session.add(episode)
@@ -71,6 +72,33 @@ class TestEpisodeDescription:
         assert episode_description(episode) == ""
 
 
+# --- build_chapters_json() ---------------------------------------------------
+
+class TestBuildChaptersJson:
+    def test_maps_shownotes_to_podcast_namespace_chapters(self):
+        episode = PodcastEpisode(shownotes=[
+            {"title": "Story A", "source_name": "Source A", "url": "https://a.example/1", "start_seconds": 0.0},
+            {"title": "Story B", "source_name": "Source B", "url": "https://b.example/1", "start_seconds": 42.5},
+        ])
+        result = build_chapters_json(episode)
+        assert result["version"] == "1.2.0"
+        assert result["chapters"] == [
+            {"startTime": 0.0, "title": "Story A (Source A)", "url": "https://a.example/1"},
+            {"startTime": 42.5, "title": "Story B (Source B)", "url": "https://b.example/1"},
+        ]
+
+    def test_omits_url_when_a_shownote_has_none(self):
+        episode = PodcastEpisode(shownotes=[
+            {"title": "Story A", "source_name": "Source A", "url": None, "start_seconds": 0.0},
+        ])
+        chapter = build_chapters_json(episode)["chapters"][0]
+        assert "url" not in chapter
+
+    def test_empty_chapters_list_without_shownotes(self):
+        episode = PodcastEpisode(shownotes=None)
+        assert build_chapters_json(episode) == {"version": "1.2.0", "chapters": []}
+
+
 # --- render_rss_feed() -------------------------------------------------------
 
 class TestRenderRssFeed:
@@ -101,6 +129,38 @@ class TestRenderRssFeed:
         assert int(enclosure.attrib["length"]) > 0
         duration = item.find("{http://www.itunes.com/dtds/podcast-1.0.dtd}duration")
         assert duration.text == "300"
+        # No shownotes on this fixture -- no chapters tag to point at.
+        assert item.find("{https://podcastindex.org/namespace/1.0}chapters") is None
+
+    def test_includes_podcast_chapters_tag_when_shownotes_are_present(self, db_session, make_user, podcast_dirs):
+        from app.models.podcast_show import PodcastShow
+
+        user = make_user()
+        show = PodcastShow(**_show_payload(), user_id=user.id, public_feed_token="tok123", public_feed_enabled=True)
+        db_session.add(show)
+        db_session.flush()
+        episode = _make_ready_episode(db_session, podcast_dirs, show, shownotes=[
+            {"title": "Story A", "source_name": "Source A", "url": "https://a.example/1", "start_seconds": 0.0},
+        ])
+
+        xml = render_rss_feed(show, [episode], "https://podcast.test", podcast_dirs.podcast_audio_dir)
+
+        item = fromstring(xml).find("channel").find("item")
+        chapters = item.find("{https://podcastindex.org/namespace/1.0}chapters")
+        assert chapters is not None
+        assert chapters.attrib["url"] == f"https://podcast.test/api/podcasts/public/tok123/episodes/{episode.id}/chapters.json"
+        assert chapters.attrib["type"] == "application/json+chapters"
+
+    def test_root_declares_the_podcast_namespace(self, db_session, make_user, podcast_dirs):
+        from app.models.podcast_show import PodcastShow
+
+        user = make_user()
+        show = PodcastShow(**_show_payload(), user_id=user.id, public_feed_token="tok123", public_feed_enabled=True)
+        db_session.add(show)
+        db_session.flush()
+
+        xml = render_rss_feed(show, [], "https://podcast.test", podcast_dirs.podcast_audio_dir)
+        assert 'xmlns:podcast="https://podcastindex.org/namespace/1.0"' in xml
 
     def test_no_episodes_yields_empty_item_list(self, db_session, make_user, podcast_dirs):
         from app.models.podcast_show import PodcastShow
@@ -371,6 +431,66 @@ def test_public_audio_404s_for_episode_belonging_to_a_different_show(auth_client
     auth_client.cookies.clear()
     resp = auth_client.get(f"/api/podcasts/public/{token_a}/episodes/{other_episode.id}/audio")
 
+    assert resp.status_code == 404
+
+
+# --- Public episode chapters route (unauthenticated) --------------------------
+
+def test_public_chapters_returns_the_json_document_for_a_valid_token(auth_client, public_base_url, db_session, podcast_dirs):
+    from app.models.podcast_show import PodcastShow
+
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    enabled = auth_client.post(f"/api/podcasts/shows/{created['id']}/public-feed").json()
+    show = db_session.get(PodcastShow, uuid.UUID(created["id"]))
+    episode = _make_ready_episode(db_session, podcast_dirs, show, shownotes=[
+        {"title": "Story A", "source_name": "Source A", "url": "https://a.example/1", "start_seconds": 0.0},
+    ])
+    token = enabled["public_feed_url"].split("/")[-2]
+
+    auth_client.cookies.clear()
+    resp = auth_client.get(f"/api/podcasts/public/{token}/episodes/{episode.id}/chapters.json")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["version"] == "1.2.0"
+    assert body["chapters"] == [{"startTime": 0.0, "title": "Story A (Source A)", "url": "https://a.example/1"}]
+
+
+def test_public_chapters_404s_without_shownotes(auth_client, public_base_url, db_session, podcast_dirs):
+    from app.models.podcast_show import PodcastShow
+
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    enabled = auth_client.post(f"/api/podcasts/shows/{created['id']}/public-feed").json()
+    show = db_session.get(PodcastShow, uuid.UUID(created["id"]))
+    episode = _make_ready_episode(db_session, podcast_dirs, show)  # no shownotes
+    token = enabled["public_feed_url"].split("/")[-2]
+
+    auth_client.cookies.clear()
+    resp = auth_client.get(f"/api/podcasts/public/{token}/episodes/{episode.id}/chapters.json")
+
+    assert resp.status_code == 404
+
+
+def test_public_chapters_404s_for_episode_belonging_to_a_different_show(auth_client, public_base_url, db_session, podcast_dirs):
+    from app.models.podcast_show import PodcastShow
+
+    show_a = auth_client.post("/api/podcasts/shows", json=_show_payload(name="Show A")).json()
+    show_b = auth_client.post("/api/podcasts/shows", json=_show_payload(name="Show B")).json()
+    enabled_a = auth_client.post(f"/api/podcasts/shows/{show_a['id']}/public-feed").json()
+    show_b_orm = db_session.get(PodcastShow, uuid.UUID(show_b["id"]))
+    other_episode = _make_ready_episode(db_session, podcast_dirs, show_b_orm, shownotes=[
+        {"title": "Story A", "source_name": "Source A", "url": None, "start_seconds": 0.0},
+    ])
+    token_a = enabled_a["public_feed_url"].split("/")[-2]
+
+    auth_client.cookies.clear()
+    resp = auth_client.get(f"/api/podcasts/public/{token_a}/episodes/{other_episode.id}/chapters.json")
+
+    assert resp.status_code == 404
+
+
+def test_public_chapters_404s_for_unknown_token(client):
+    resp = client.get(f"/api/podcasts/public/not-a-real-token/episodes/{uuid.uuid4()}/chapters.json")
     assert resp.status_code == 404
 
 

@@ -7,6 +7,7 @@ from app.models.podcast_episode import PodcastEpisode
 from app.models.podcast_show import PodcastShow
 
 _ITUNES_NS = "http://www.itunes.com/dtds/podcast-1.0.dtd"
+_PODCAST_NS = "https://podcastindex.org/namespace/1.0"
 _DESCRIPTION_MAX_CHARS = 300
 _SHOWNOTES_DESCRIPTION_MAX_CHARS = 2000
 
@@ -38,6 +39,22 @@ def episode_description(episode: PodcastEpisode) -> str:
     return "\n\n".join(paragraphs)[:_DESCRIPTION_MAX_CHARS]
 
 
+def build_chapters_json(episode: PodcastEpisode) -> dict:
+    """Podcast Namespace chapters JSON (https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md)
+    for `episode`'s <podcast:chapters> tag -- straight remap of the shownote
+    bookmarks that already exist internally (see build_episode_records() in
+    podcast_script.py), no new data needed."""
+    chapters = [
+        {
+            "startTime": note["start_seconds"],
+            "title": f"{note['title']} ({note['source_name']})" if note.get("source_name") else note["title"],
+            **({"url": note["url"]} if note.get("url") else {}),
+        }
+        for note in (episode.shownotes or [])
+    ]
+    return {"version": "1.2.0", "chapters": chapters}
+
+
 def _episode_length_bytes(episode: PodcastEpisode, audio_dir: str) -> int:
     if not episode.audio_path:
         return 0
@@ -53,7 +70,7 @@ def render_rss_feed(show: PodcastShow, episodes: list[PodcastEpisode], base_url:
     `episodes` should already be filtered to status == "ready" and ordered
     newest-first by the caller.
     """
-    rss = Element("rss", {"version": "2.0", "xmlns:itunes": _ITUNES_NS})
+    rss = Element("rss", {"version": "2.0", "xmlns:itunes": _ITUNES_NS, "xmlns:podcast": _PODCAST_NS})
     channel = SubElement(rss, "channel")
     SubElement(channel, "title").text = show.name
     SubElement(channel, "link").text = base_url
@@ -83,5 +100,8 @@ def render_rss_feed(show: PodcastShow, episodes: list[PodcastEpisode], base_url:
             })
         if episode.duration_seconds:
             SubElement(item, "itunes:duration").text = str(episode.duration_seconds)
+        if episode.shownotes:
+            chapters_url = f"{base_url}/api/podcasts/public/{show.public_feed_token}/episodes/{episode.id}/chapters.json"
+            SubElement(item, "podcast:chapters", {"url": chapters_url, "type": "application/json+chapters"})
 
     return tostring(rss, encoding="utf-8", xml_declaration=True).decode("utf-8")
