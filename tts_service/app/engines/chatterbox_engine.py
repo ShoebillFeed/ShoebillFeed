@@ -41,6 +41,7 @@ class ChatterboxEngine(TTSEngine):
 
     engine_name = "chatterbox"
     supports_speech_rate = False
+    supports_exaggeration = True
 
     def __init__(self, model_dir: str, use_cuda: bool = False):
         self.model_dir = model_dir
@@ -70,7 +71,9 @@ class ChatterboxEngine(TTSEngine):
                     voices.append(VoiceInfo(id=f"{language}:{name}", language=language, label=name))
         return voices
 
-    def synthesize(self, text: str, voice_id: str, speech_rate: float) -> tuple[bytes, float]:
+    def synthesize(
+        self, text: str, voice_id: str, speech_rate: float, exaggeration: float | None = None
+    ) -> tuple[bytes, float]:
         # speech_rate is intentionally ignored -- Chatterbox has no direct
         # speed control, unlike Piper's length_scale or Kokoro's speed.
         language, name = self._parse_voice_id(voice_id)
@@ -84,6 +87,10 @@ class ChatterboxEngine(TTSEngine):
             if not os.path.exists(audio_prompt_path):
                 raise ValueError(f"Unknown Chatterbox voice: {voice_id!r}")
 
+        generate_kwargs = {}
+        if exaggeration is not None:
+            generate_kwargs["exaggeration"] = exaggeration
+
         model = self._get_model()
         with self._lock:
             if audio_prompt_path is None:
@@ -93,7 +100,7 @@ class ChatterboxEngine(TTSEngine):
                 # audio_prompt_path is given.
                 model.conds = self._default_conds
             wav_tensor = model.generate(
-                text, language_id=chatterbox_lang, audio_prompt_path=audio_prompt_path,
+                text, language_id=chatterbox_lang, audio_prompt_path=audio_prompt_path, **generate_kwargs,
             )
             audio = wav_tensor.squeeze(0).cpu().numpy()
 

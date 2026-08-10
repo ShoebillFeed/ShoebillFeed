@@ -54,7 +54,7 @@ def test_create_and_list_show(auth_client):
     assert resp.status_code == 201
     body = resp.json()
     assert body["name"] == "Morning Briefing"
-    assert body["hosts"] == [VALID_HOST]
+    assert body["hosts"] == [{**VALID_HOST, "exaggeration": None}]
 
     listed = auth_client.get("/api/podcasts/shows")
     assert listed.status_code == 200
@@ -64,6 +64,19 @@ def test_create_and_list_show(auth_client):
 def test_create_show_requires_authentication(client):
     resp = client.post("/api/podcasts/shows", json=_show_payload())
     assert resp.status_code == 401
+
+
+def test_create_show_persists_a_per_host_exaggeration_value(auth_client):
+    host = {**VALID_HOST, "exaggeration": 0.8}
+    resp = auth_client.post("/api/podcasts/shows", json=_show_payload(hosts=[host]))
+    assert resp.status_code == 201
+    assert resp.json()["hosts"][0]["exaggeration"] == 0.8
+
+
+def test_create_show_rejects_an_out_of_range_exaggeration(auth_client):
+    host = {**VALID_HOST, "exaggeration": 5.0}
+    resp = auth_client.post("/api/podcasts/shows", json=_show_payload(hosts=[host]))
+    assert resp.status_code == 422
 
 
 def test_create_show_rejects_more_than_three_hosts(auth_client):

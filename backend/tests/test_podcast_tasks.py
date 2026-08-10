@@ -44,4 +44,16 @@ class TestSynthesizeTurnWithRetry:
 
         _synthesize_turn_with_retry(tts, "Hello", "voice-1", "/tmp/out.wav", 1.25, 3)
 
-        tts.synthesize.assert_called_once_with("Hello", "voice-1", "/tmp/out.wav", speech_rate=1.25)
+        tts.synthesize.assert_called_once_with(
+            "Hello", "voice-1", "/tmp/out.wav", speech_rate=1.25, exaggeration=None
+        )
+
+    def test_passes_through_exaggeration_when_given(self):
+        tts = MagicMock()
+        tts.synthesize.return_value = "result"
+
+        _synthesize_turn_with_retry(tts, "Hello", "voice-1", "/tmp/out.wav", 1.25, 3, exaggeration=0.8)
+
+        tts.synthesize.assert_called_once_with(
+            "Hello", "voice-1", "/tmp/out.wav", speech_rate=1.25, exaggeration=0.8
+        )

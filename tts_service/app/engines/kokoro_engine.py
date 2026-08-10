@@ -29,7 +29,10 @@ class KokoroEngine(TTSEngine):
         names = KOKORO_VOICES.get(language, [])
         return [VoiceInfo(id=name, language=language, label=name) for name in names]
 
-    def synthesize(self, text: str, voice_id: str, speech_rate: float) -> tuple[bytes, float]:
+    def synthesize(
+        self, text: str, voice_id: str, speech_rate: float, exaggeration: float | None = None
+    ) -> tuple[bytes, float]:
+        # exaggeration is Chatterbox-specific; Kokoro has no equivalent.
         language = language_for_voice(voice_id)
         if language is None:
             raise ValueError(f"Unknown Kokoro voice: {voice_id!r}")

@@ -59,13 +59,25 @@ class TestSynthesize:
             result = provider.synthesize("Hello there", "en_US-libritts_r-medium#0", out_path, speech_rate=1.5)
 
         assert mock_post.call_args.kwargs["json"] == {
-            "text": "Hello there", "voice_id": "en_US-libritts_r-medium#0", "speech_rate": 1.5,
+            "text": "Hello there", "voice_id": "en_US-libritts_r-medium#0", "speech_rate": 1.5, "exaggeration": None,
         }
         assert os.path.exists(out_path)
         with open(out_path, "rb") as f:
             assert f.read() == b"RIFF....fake wav bytes"
         assert result.audio_path == out_path
         assert result.duration_seconds == 4.2
+
+    def test_passes_exaggeration_through_when_given(self, tmp_path):
+        provider = _provider()
+        fake_resp = MagicMock()
+        fake_resp.content = b"bytes"
+        fake_resp.headers = {"X-Duration-Seconds": "1.0"}
+        out_path = str(tmp_path / "turn.wav")
+
+        with patch.object(provider.client, "post", return_value=fake_resp) as mock_post:
+            provider.synthesize("Hi", "voice", out_path, exaggeration=0.8)
+
+        assert mock_post.call_args.kwargs["json"]["exaggeration"] == 0.8
 
     def test_creates_parent_directories(self, tmp_path):
         provider = _provider()
@@ -172,6 +184,25 @@ class TestHealthCheck:
         with patch.object(provider.client, "get", return_value=MagicMock(status_code=503)):
             provider.health_check()
         assert provider.supports_speech_rate is False
+
+    def test_defaults_supports_exaggeration_to_false_before_any_check(self):
+        assert _provider().supports_exaggeration is False
+
+    def test_updates_supports_exaggeration_from_the_health_response(self):
+        provider = _provider()
+        fake_resp = MagicMock(status_code=200)
+        fake_resp.json.return_value = {"status": "ok", "engine": "chatterbox", "supports_exaggeration": True}
+        with patch.object(provider.client, "get", return_value=fake_resp):
+            provider.health_check()
+        assert provider.supports_exaggeration is True
+
+    def test_leaves_supports_exaggeration_unset_when_the_response_omits_it(self):
+        provider = _provider()
+        fake_resp = MagicMock(status_code=200)
+        fake_resp.json.return_value = {"status": "ok"}
+        with patch.object(provider.client, "get", return_value=fake_resp):
+            provider.health_check()
+        assert provider.supports_exaggeration is False
 
 
 class TestTTSFactoryNetworkProvider:

@@ -3,6 +3,10 @@ export interface PodcastHost {
   name: string;
   character_prompt: string;
   voice: string;
+  // Chatterbox-specific emotion/delivery intensity (null = engine default).
+  // Has no effect on Piper/Kokoro -- only shown in the form when the
+  // configured TTS engine reports supports_exaggeration.
+  exaggeration?: number | null;
 }
 
 export interface PodcastShow {

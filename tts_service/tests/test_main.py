@@ -10,17 +10,22 @@ client = TestClient(app)
 def test_health():
     resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok", "engine": "piper", "supports_speech_rate": True}
+    assert resp.json() == {
+        "status": "ok", "engine": "piper", "supports_speech_rate": True, "supports_exaggeration": False,
+    }
 
 
-def test_health_reports_engine_name_and_speech_rate_support():
+def test_health_reports_engine_name_and_capabilities():
     fake_engine = MagicMock()
     fake_engine.engine_name = "chatterbox"
     fake_engine.supports_speech_rate = False
+    fake_engine.supports_exaggeration = True
     with patch("app.main.get_engine", return_value=fake_engine):
         resp = client.get("/health")
 
-    assert resp.json() == {"status": "ok", "engine": "chatterbox", "supports_speech_rate": False}
+    assert resp.json() == {
+        "status": "ok", "engine": "chatterbox", "supports_speech_rate": False, "supports_exaggeration": True,
+    }
 
 
 def test_list_voices_returns_engine_voices():
@@ -51,7 +56,7 @@ def test_synthesize_returns_wav_bytes_and_duration_header():
     assert resp.content == b"RIFF...."
     assert resp.headers["content-type"] == "audio/wav"
     assert resp.headers["x-duration-seconds"] == "3.5"
-    fake_engine.synthesize.assert_called_once_with("Hello", "v1", 1.2)
+    fake_engine.synthesize.assert_called_once_with("Hello", "v1", 1.2, None)
 
 
 def test_synthesize_defaults_speech_rate_to_one():
@@ -60,7 +65,16 @@ def test_synthesize_defaults_speech_rate_to_one():
     with patch("app.main.get_engine", return_value=fake_engine):
         client.post("/synthesize", json={"text": "Hi", "voice_id": "v1"})
 
-    fake_engine.synthesize.assert_called_once_with("Hi", "v1", 1.0)
+    fake_engine.synthesize.assert_called_once_with("Hi", "v1", 1.0, None)
+
+
+def test_synthesize_passes_exaggeration_through():
+    fake_engine = MagicMock()
+    fake_engine.synthesize.return_value = (b"bytes", 1.0)
+    with patch("app.main.get_engine", return_value=fake_engine):
+        client.post("/synthesize", json={"text": "Hi", "voice_id": "v1", "exaggeration": 0.8})
+
+    fake_engine.synthesize.assert_called_once_with("Hi", "v1", 1.0, 0.8)
 
 
 def test_synthesize_returns_400_for_a_value_error():

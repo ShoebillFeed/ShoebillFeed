@@ -25,6 +25,12 @@ class TTSProvider(ABC):
     # of letting the Speech Speed slider look functional and do nothing.
     supports_speech_rate: bool = True
 
+    # Whether synthesize()'s `exaggeration` argument has any effect. False is
+    # the common case -- only Chatterbox's underlying library exposes an
+    # emotion/delivery-intensity knob -- so the podcast show form only shows
+    # the per-host exaggeration control when this is True.
+    supports_exaggeration: bool = False
+
     @abstractmethod
     def list_voices(self, language: str) -> list[VoiceInfo]:
         """Return all voices/speakers available for `language`. May be a single
@@ -32,11 +38,18 @@ class TTSProvider(ABC):
         ...
 
     @abstractmethod
-    def synthesize(self, text: str, voice_id: str, out_path: str, speech_rate: float = 1.0) -> SynthesisResult:
+    def synthesize(
+        self, text: str, voice_id: str, out_path: str, speech_rate: float = 1.0,
+        exaggeration: float | None = None,
+    ) -> SynthesisResult:
         """Render `text` to a WAV file at `out_path` using `voice_id`.
 
         `speech_rate` is listener-facing (1.0 = normal, > 1.0 = faster);
         providers with no speed control are free to ignore it.
+
+        `exaggeration` is Chatterbox-specific (emotion/delivery intensity,
+        None = use the engine's own default); providers with no equivalent
+        are free to ignore it.
         """
         ...
 

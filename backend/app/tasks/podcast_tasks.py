@@ -21,7 +21,10 @@ _TURN_SYNTHESIS_MAX_ATTEMPTS = 3
 _TURN_SYNTHESIS_RETRY_DELAY_SECONDS = 2.0
 
 
-def _synthesize_turn_with_retry(tts, text: str, voice_id: str, out_path: str, speech_rate: float, turn_index: int):
+def _synthesize_turn_with_retry(
+    tts, text: str, voice_id: str, out_path: str, speech_rate: float, turn_index: int,
+    exaggeration: float | None = None,
+):
     """Attempts synthesize() up to _TURN_SYNTHESIS_MAX_ATTEMPTS times before
     giving up on this one turn. A single transient TTS failure (network
     blip against TTS_PROVIDER=network, a momentary model hiccup) shouldn't
@@ -31,7 +34,7 @@ def _synthesize_turn_with_retry(tts, text: str, voice_id: str, out_path: str, sp
     last_exc: Exception | None = None
     for attempt in range(1, _TURN_SYNTHESIS_MAX_ATTEMPTS + 1):
         try:
-            return tts.synthesize(text, voice_id, out_path, speech_rate=speech_rate)
+            return tts.synthesize(text, voice_id, out_path, speech_rate=speech_rate, exaggeration=exaggeration)
         except Exception as exc:
             last_exc = exc
             logger.warning(
@@ -172,7 +175,9 @@ def _run_generation(db, settings, show: PodcastShow, episode: PodcastEpisode) ->
             if not host:
                 continue
             out_path = os.path.join(work_dir, f"turn_{i}.wav")
-            result = _synthesize_turn_with_retry(tts, turn.text, host["voice"], out_path, show.speech_rate, i)
+            result = _synthesize_turn_with_retry(
+                tts, turn.text, host["voice"], out_path, show.speech_rate, i, host.get("exaggeration"),
+            )
             if result is None:
                 continue
             turn_paths.append(result.audio_path)

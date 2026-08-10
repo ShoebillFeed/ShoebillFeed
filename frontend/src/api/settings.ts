@@ -63,6 +63,7 @@ export interface TTSHealth {
   healthy: boolean;
   base_url: string | null;
   supports_speech_rate: boolean;
+  supports_exaggeration: boolean;
 }
 
 export const settingsApi = {

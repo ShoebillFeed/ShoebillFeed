@@ -273,6 +273,7 @@ const en = {
     noVoicesForLanguage: "No distinct voices available for this language — all hosts will share the same default voice.",
     previewVoice: "Preview this voice",
     previewFailed: "Couldn't generate a preview. Try again.",
+    exaggeration: "Emotion intensity",
     needAtLeastOneHost: "Add at least one host.",
     hostFieldsRequired: "Every host needs a name, character prompt, and voice.",
     categories: "Categories",

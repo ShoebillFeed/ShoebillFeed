@@ -88,6 +88,7 @@ export default function PodcastShowForm({ show, onClose }: Props) {
   const { data: voices = [] } = usePodcastVoices(language);
   const { data: ttsHealth } = usePodcastTtsHealth();
   const speechRateSupported = ttsHealth?.supports_speech_rate ?? true;
+  const exaggerationSupported = ttsHealth?.supports_exaggeration ?? false;
 
   const previewVoiceMutation = usePreviewVoice();
   const [previewingHostId, setPreviewingHostId] = useState<string | null>(null);
@@ -309,6 +310,20 @@ export default function PodcastShowForm({ show, onClose }: Props) {
               )}
               {i === 0 && voices.length === 0 && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">{t("podcastForm.noVoicesForLanguage")}</p>
+              )}
+              {exaggerationSupported && (
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t("podcastForm.exaggeration")}
+                  </label>
+                  <RangeSlider
+                    value={host.exaggeration ?? 0.5}
+                    onChange={(v) => updateHost(host.id, { exaggeration: Math.round(v * 100) / 100 })}
+                    min={0}
+                    max={2}
+                    step={0.05}
+                  />
+                </div>
               )}
             </div>
           ))}

@@ -129,3 +129,7 @@ class TTSHealthOut(BaseModel):
     # (Chatterbox doesn't) -- lets the podcast show form warn instead of
     # showing a Speech Speed slider that silently does nothing.
     supports_speech_rate: bool = True
+    # Whether the configured engine honors a per-host exaggeration value
+    # (only Chatterbox does) -- lets the podcast show form show that control
+    # only when it would actually do something.
+    supports_exaggeration: bool = False

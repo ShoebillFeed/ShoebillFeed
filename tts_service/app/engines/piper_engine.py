@@ -49,7 +49,10 @@ class PiperEngine(TTSEngine):
             for i in curated_speaker_indices(speakers)
         ]
 
-    def synthesize(self, text: str, voice_id: str, speech_rate: float) -> tuple[bytes, float]:
+    def synthesize(
+        self, text: str, voice_id: str, speech_rate: float, exaggeration: float | None = None
+    ) -> tuple[bytes, float]:
+        # exaggeration is Chatterbox-specific; Piper has no equivalent.
         model, speaker_id = self._parse_voice_id(voice_id)
         voice = self._load_voice(model)
         # Piper's length_scale is phoneme-duration scaling, inverted from our

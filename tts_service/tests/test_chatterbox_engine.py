@@ -92,6 +92,28 @@ class TestSynthesize:
 
         fake_model.generate.assert_called_once_with("Hi", language_id="en", audio_prompt_path=str(ref_path))
 
+    def test_exaggeration_is_passed_through_to_generate_when_given(self, tmp_path):
+        engine = ChatterboxEngine(model_dir=str(tmp_path))
+        fake_model = MagicMock()
+        fake_model.generate.return_value = _fake_wav_tensor([0.0] * 100)
+
+        with patch.object(engine, "_get_model", return_value=fake_model):
+            engine.synthesize("Hi", "en:default", speech_rate=1.0, exaggeration=0.8)
+
+        fake_model.generate.assert_called_once_with(
+            "Hi", language_id="en", audio_prompt_path=None, exaggeration=0.8
+        )
+
+    def test_exaggeration_omitted_from_generate_when_not_given(self, tmp_path):
+        engine = ChatterboxEngine(model_dir=str(tmp_path))
+        fake_model = MagicMock()
+        fake_model.generate.return_value = _fake_wav_tensor([0.0] * 100)
+
+        with patch.object(engine, "_get_model", return_value=fake_model):
+            engine.synthesize("Hi", "en:default", speech_rate=1.0)
+
+        fake_model.generate.assert_called_once_with("Hi", language_id="en", audio_prompt_path=None)
+
     def test_missing_reference_clip_raises(self, tmp_path):
         engine = ChatterboxEngine(model_dir=str(tmp_path))
         fake_model = MagicMock()

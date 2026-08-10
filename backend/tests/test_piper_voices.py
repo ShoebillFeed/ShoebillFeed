@@ -73,7 +73,7 @@ class _StubProvider(TTSProvider):
     def list_voices(self, language):
         return self._voices
 
-    def synthesize(self, text, voice_id, out_path, speech_rate=1.0):
+    def synthesize(self, text, voice_id, out_path, speech_rate=1.0, exaggeration=None):
         raise NotImplementedError
 
     def health_check(self):

@@ -37,7 +37,11 @@ class PiperProvider(TTSProvider):
             for i in curated_speaker_indices(speakers)
         ]
 
-    def synthesize(self, text: str, voice_id: str, out_path: str, speech_rate: float = 1.0) -> SynthesisResult:
+    def synthesize(
+        self, text: str, voice_id: str, out_path: str, speech_rate: float = 1.0,
+        exaggeration: float | None = None,
+    ) -> SynthesisResult:
+        # exaggeration is Chatterbox-specific; Piper has no equivalent.
         from piper.config import SynthesisConfig  # imported lazily alongside PiperVoice
 
         model, speaker_id = self._parse_voice_id(voice_id)

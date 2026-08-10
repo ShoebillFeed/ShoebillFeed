@@ -11,6 +11,12 @@ class PodcastHostSchema(BaseModel):
     name: str = Field(..., max_length=50)
     character_prompt: str = Field(..., max_length=1000)
     voice: str = Field(..., max_length=100)
+    # Chatterbox-specific emotion/delivery intensity (library default 0.5,
+    # range per its own docs roughly 0.25-2.0 before it starts sounding
+    # unnatural). None = use the engine's own default. Silently has no
+    # effect on Piper/Kokoro -- the frontend only shows this control when
+    # TTSHealthOut.supports_exaggeration is true.
+    exaggeration: float | None = Field(None, ge=0.0, le=2.0)
 
 
 class PodcastShowBase(BaseModel):

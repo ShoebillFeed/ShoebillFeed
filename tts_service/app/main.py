@@ -22,6 +22,9 @@ class SynthesizeRequest(BaseModel):
     text: str = Field(..., min_length=1)
     voice_id: str
     speech_rate: float = 1.0
+    # Chatterbox-specific (emotion/delivery intensity); engines with no
+    # equivalent ignore it. None = use the engine's own default.
+    exaggeration: float | None = None
 
 
 @app.get("/health")
@@ -35,6 +38,7 @@ def health():
         "status": "ok",
         "engine": engine.engine_name,
         "supports_speech_rate": engine.supports_speech_rate,
+        "supports_exaggeration": engine.supports_exaggeration,
     }
 
 
@@ -49,7 +53,7 @@ def list_voices(language: str = Query(...)):
 def synthesize(req: SynthesizeRequest):
     engine = get_engine()
     try:
-        wav_bytes, duration = engine.synthesize(req.text, req.voice_id, req.speech_rate)
+        wav_bytes, duration = engine.synthesize(req.text, req.voice_id, req.speech_rate, req.exaggeration)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception:

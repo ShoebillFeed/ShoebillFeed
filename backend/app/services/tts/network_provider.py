@@ -37,16 +37,24 @@ class NetworkTTSProvider(TTSProvider):
         # control for a healthy Piper/Kokoro deployment that just hasn't had
         # a health check run yet.
         self.supports_speech_rate = True
+        # Pessimistic default here, unlike above: exaggeration is a genuinely
+        # new control (not a pre-existing one that might be silently
+        # inert), so hiding it until a health check confirms Chatterbox is
+        # actually running is the safer failure mode.
+        self.supports_exaggeration = False
 
     def list_voices(self, language: str) -> list[VoiceInfo]:
         resp = self.client.get(f"{self.base_url}/voices", params={"language": language})
         resp.raise_for_status()
         return [VoiceInfo(id=v["id"], language=v["language"], label=v["label"]) for v in resp.json()]
 
-    def synthesize(self, text: str, voice_id: str, out_path: str, speech_rate: float = 1.0) -> SynthesisResult:
+    def synthesize(
+        self, text: str, voice_id: str, out_path: str, speech_rate: float = 1.0,
+        exaggeration: float | None = None,
+    ) -> SynthesisResult:
         resp = self.client.post(
             f"{self.base_url}/synthesize",
-            json={"text": text, "voice_id": voice_id, "speech_rate": speech_rate},
+            json={"text": text, "voice_id": voice_id, "speech_rate": speech_rate, "exaggeration": exaggeration},
             timeout=_timeout_for(text, self.default_timeout),
         )
         resp.raise_for_status()
@@ -68,6 +76,8 @@ class NetworkTTSProvider(TTSProvider):
             data = resp.json()
             if "supports_speech_rate" in data:
                 self.supports_speech_rate = bool(data["supports_speech_rate"])
+            if "supports_exaggeration" in data:
+                self.supports_exaggeration = bool(data["supports_exaggeration"])
             return True
         except Exception:
             return False

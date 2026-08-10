@@ -77,15 +77,18 @@ def podcast_health_check():
         provider = get_tts_provider()
         healthy = provider.health_check()
         supports_speech_rate = provider.supports_speech_rate
+        supports_exaggeration = provider.supports_exaggeration
     except Exception:
         healthy = False
         supports_speech_rate = True
+        supports_exaggeration = False
 
     return TTSHealthOut(
         provider=settings.tts_provider,
         healthy=healthy,
         base_url=settings.tts_service_url if settings.tts_provider == "network" else None,
         supports_speech_rate=supports_speech_rate,
+        supports_exaggeration=supports_exaggeration,
     )
 
 
