@@ -567,6 +567,75 @@ def test_delete_episode_removes_audio_file(auth_client, db_session, podcast_dirs
     assert auth_client.get(f"/api/podcasts/episodes/{episode.id}").status_code == 404
 
 
+# --- Regenerate episode -----------------------------------------------------
+
+def test_regenerate_dispatches_task_on_the_podcast_queue(auth_client, db_session, podcast_dirs):
+    from app.models.podcast_show import PodcastShow
+
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    show = db_session.get(PodcastShow, uuid.UUID(created["id"]))
+    episode = PodcastEpisode(show_id=show.id, user_id=show.user_id, status="failed", error_message="boom")
+    db_session.add(episode)
+    db_session.commit()
+
+    fake_result = MagicMock(id="fake-task-id")
+    with patch(
+        "app.tasks.podcast_tasks.regenerate_podcast_episode.apply_async", return_value=fake_result
+    ) as apply_async:
+        resp = auth_client.post(f"/api/podcasts/episodes/{episode.id}/regenerate")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"queued": True}
+    apply_async.assert_called_once()
+    assert apply_async.call_args.kwargs["queue"] == "podcast"
+    assert apply_async.call_args.kwargs["args"] == [str(episode.id)]
+
+
+def test_regenerate_rejects_an_episode_already_generating(auth_client, db_session, podcast_dirs):
+    from app.models.podcast_show import PodcastShow
+
+    created = auth_client.post("/api/podcasts/shows", json=_show_payload()).json()
+    show = db_session.get(PodcastShow, uuid.UUID(created["id"]))
+    episode = PodcastEpisode(show_id=show.id, user_id=show.user_id, status="generating")
+    db_session.add(episode)
+    db_session.commit()
+
+    with patch("app.tasks.podcast_tasks.regenerate_podcast_episode.apply_async") as apply_async:
+        resp = auth_client.post(f"/api/podcasts/episodes/{episode.id}/regenerate")
+
+    assert resp.status_code == 409
+    apply_async.assert_not_called()
+
+
+def test_regenerate_requires_owning_the_episode(client, db_session, make_user, podcast_dirs):
+    from app.models.podcast_show import PodcastShow
+    from app.services.auth import create_token
+
+    user1 = make_user(username="user1")
+    user2 = make_user(username="user2")
+    client.cookies.set("access_token", create_token(user1.id, user1.username))
+    created = client.post("/api/podcasts/shows", json=_show_payload()).json()
+    show = db_session.get(PodcastShow, uuid.UUID(created["id"]))
+    episode = PodcastEpisode(show_id=show.id, user_id=show.user_id, status="ready")
+    db_session.add(episode)
+    db_session.commit()
+
+    client.cookies.set("access_token", create_token(user2.id, user2.username))
+    with patch("app.tasks.podcast_tasks.regenerate_podcast_episode.apply_async") as apply_async:
+        resp = client.post(f"/api/podcasts/episodes/{episode.id}/regenerate")
+
+    assert resp.status_code == 404
+    apply_async.assert_not_called()
+
+
+def test_regenerate_404_for_an_unknown_episode(auth_client, podcast_dirs):
+    with patch("app.tasks.podcast_tasks.regenerate_podcast_episode.apply_async") as apply_async:
+        resp = auth_client.post(f"/api/podcasts/episodes/{uuid.uuid4()}/regenerate")
+
+    assert resp.status_code == 404
+    apply_async.assert_not_called()
+
+
 # --- Audio streaming -------------------------------------------------------------
 
 def test_stream_audio_404_when_episode_not_ready(auth_client, db_session, podcast_dirs):

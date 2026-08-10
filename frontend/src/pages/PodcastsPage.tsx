@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { Bookmark, ChevronDown, ChevronRight, ExternalLink, Podcast, Trash2 } from "lucide-react";
-import { usePodcastEpisodes, useDeletePodcastEpisode } from "../hooks/usePodcasts";
+import { Bookmark, ChevronDown, ChevronRight, ExternalLink, Podcast, RotateCw, Trash2 } from "lucide-react";
+import { usePodcastEpisodes, useDeletePodcastEpisode, useRegeneratePodcastEpisode } from "../hooks/usePodcasts";
 import { useToast } from "../components/ui/Toaster";
 import { cn } from "../lib/utils";
 import { formatDuration } from "../lib/podcastFormat";
@@ -27,6 +27,7 @@ function EpisodeCard({ episode }: { episode: PodcastEpisode }) {
   const { t } = useTranslation();
   const toast = useToast();
   const deleteEpisode = useDeletePodcastEpisode();
+  const regenerateEpisode = useRegeneratePodcastEpisode();
   const [transcriptExpanded, setTranscriptExpanded] = useState(false);
   const [shownotesExpanded, setShownotesExpanded] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -60,15 +61,29 @@ function EpisodeCard({ episode }: { episode: PodcastEpisode }) {
             </p>
           </div>
         </div>
-        <button
-          onClick={() =>
-            toast.confirm(t("podcast.confirmDeleteEpisode"), () => deleteEpisode.mutate(episode.id))
-          }
-          className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-colors shrink-0"
-          title={t("common.delete")}
-        >
-          <Trash2 size={14} />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {(episode.status === "ready" || episode.status === "failed") && (
+            <button
+              onClick={() =>
+                toast.confirm(t("podcast.confirmRegenerateEpisode"), () => regenerateEpisode.mutate(episode.id))
+              }
+              disabled={regenerateEpisode.isPending}
+              className="p-1.5 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors disabled:opacity-50"
+              title={t("podcast.regenerateEpisode")}
+            >
+              <RotateCw size={14} />
+            </button>
+          )}
+          <button
+            onClick={() =>
+              toast.confirm(t("podcast.confirmDeleteEpisode"), () => deleteEpisode.mutate(episode.id))
+            }
+            className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+            title={t("common.delete")}
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
 
       {episode.status === "ready" && (

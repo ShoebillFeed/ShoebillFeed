@@ -58,6 +58,8 @@ const en = {
     jumpToStory: "Jump to this story",
     openSource: "Open original source",
     confirmDeleteEpisode: "Delete this episode?",
+    regenerateEpisode: "Regenerate episode",
+    confirmRegenerateEpisode: "Regenerate this episode? The current script and audio will be replaced.",
     status: {
       pending: "Queued",
       generating: "Generating…",

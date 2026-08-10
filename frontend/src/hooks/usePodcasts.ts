@@ -110,6 +110,14 @@ export function useDeletePodcastEpisode() {
   });
 }
 
+export function useRegeneratePodcastEpisode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: podcastsApi.regenerateEpisode,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["podcast-episodes"] }),
+  });
+}
+
 export function usePodcastVoices(language: string) {
   return useQuery({
     queryKey: ["podcast-voices", language],

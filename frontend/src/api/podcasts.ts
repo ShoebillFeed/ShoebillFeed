@@ -35,6 +35,7 @@ export const podcastsApi = {
     client.get<PodcastEpisodePage>("/podcasts/episodes", { params }).then((r) => r.data),
   getEpisode: (id: string) => client.get<PodcastEpisode>(`/podcasts/episodes/${id}`).then((r) => r.data),
   deleteEpisode: (id: string) => client.delete(`/podcasts/episodes/${id}`),
+  regenerateEpisode: (id: string) => client.post(`/podcasts/episodes/${id}/regenerate`).then((r) => r.data),
   listVoices: (language: string) =>
     client.get<PodcastVoice[]>("/podcasts/voices", { params: { language } }).then((r) => r.data),
   previewVoice: (voiceId: string, language: string) =>

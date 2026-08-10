@@ -327,6 +327,16 @@ def delete_episode(episode_id: uuid.UUID, db: Session = Depends(get_db), current
     db.commit()
 
 
+@router.post("/episodes/{episode_id}/regenerate")
+def regenerate_episode(episode_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    episode = _get_episode(episode_id, db, current_user)
+    if episode.status == "generating":
+        raise HTTPException(status_code=409, detail="Episode is already generating")
+    from app.tasks.podcast_tasks import regenerate_podcast_episode
+    regenerate_podcast_episode.apply_async(args=[str(episode_id)], queue="podcast")
+    return {"queued": True}
+
+
 @router.get("/episodes/{episode_id}/audio")
 def stream_episode_audio(
     episode_id: uuid.UUID,
