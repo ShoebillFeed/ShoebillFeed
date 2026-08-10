@@ -62,26 +62,39 @@ TTS_SERVICE_URL=http://<tts-machine-ip>:8100
 ```
 
 GPU use is opt-in at two independent points, both off by default: the
-`TTS_GPU` build arg (whether the image has GPU-capable builds of both
-`onnxruntime` and `torch` instead of their CPU-only defaults) and
-`TTS_DEVICE=cuda` at runtime (whether the engine is actually told to use
-it). A CPU-only deployment needs neither.
+`TTS_GPU` build arg (whether the image has GPU-capable builds of the ML
+backends instead of their CPU-only defaults) and `TTS_DEVICE=cuda` at
+runtime (whether the engine is actually told to use it). A CPU-only
+deployment needs neither — except practically speaking for `chatterbox`
+(below), which is slow enough on CPU (~10x real-time) that GPU is worth
+having for it specifically.
 
 **`TTS_ENGINE`** picks which synthesis backend `tts_service/` runs (default
-`piper`; `kokoro` also available) — both are always installed in the image,
-so this is a plain env var change, no rebuild needed:
+`piper`; `kokoro` and `chatterbox` also available) — all three are always
+installed in the image, so this is a plain env var change, no rebuild
+needed:
 
 ```bash
 TTS_ENGINE=kokoro docker compose -f docker-compose.tts.yml up -d --build
 ```
 
 `piper` (self-hosted, CPU/ONNX, GPL-3.0) is the original engine and covers
-the widest language list. `kokoro` ([hexgrad/Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M),
+the widest fixed-voice language list. `kokoro` ([hexgrad/Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M),
 Apache 2.0) offers a smaller set of languages (English, Spanish, French,
 Italian, Portuguese) but with distinctly higher-quality, named voices
 (`af_heart`, `bm_daniel`, etc.) rather than Piper's numbered speakers —
 worth trying if Piper's default English voice quality isn't good enough
-for your use case.
+for your use case. `chatterbox` ([ResembleAI/chatterbox](https://github.com/resemble-ai/chatterbox),
+MIT) works differently from the other two: instead of picking a named
+voice, it clones one from a short reference audio clip. It ships one
+built-in `default` voice per supported language (English, German, French,
+Spanish, Italian, Dutch, Polish, Portuguese, Russian, Chinese, Japanese,
+Korean, Turkish, Swedish, Danish, Finnish, Norwegian), and you can add more
+by dropping a `.wav` clip into
+`{TTS_MODEL_DIR}/chatterbox_voices/{language}/your-voice-name.wav` on the
+TTS host — no restart needed, it's rescanned on every request. Meaningfully
+slower than the other two engines, so it's the one where the GPU option
+actually matters.
 
 ## Reddit
 

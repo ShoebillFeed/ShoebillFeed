@@ -1,9 +1,8 @@
-import io
 import logging
-import wave
 
 import numpy as np
 
+from app.engines.audio_utils import float_audio_to_wav_bytes
 from app.engines.base import TTSEngine, VoiceInfo
 from app.engines.kokoro_voices import KOKORO_LANG_CODES, KOKORO_VOICES, language_for_voice
 
@@ -40,7 +39,7 @@ class KokoroEngine(TTSEngine):
             raise ValueError(f"Kokoro produced no audio for voice {voice_id!r}")
         audio = np.concatenate(chunks)
 
-        wav_bytes = _float_audio_to_wav_bytes(audio, _SAMPLE_RATE)
+        wav_bytes = float_audio_to_wav_bytes(audio, _SAMPLE_RATE)
         duration = len(audio) / _SAMPLE_RATE
         return wav_bytes, duration
 
@@ -56,14 +55,3 @@ class KokoroEngine(TTSEngine):
             logger.info("Loading Kokoro pipeline for lang_code=%r on %s", lang_code, device)
             self._pipelines[lang_code] = KPipeline(lang_code=lang_code, device=device)
         return self._pipelines[lang_code]
-
-
-def _float_audio_to_wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
-    pcm16 = (np.clip(audio, -1.0, 1.0) * 32767.0).astype(np.int16)
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as wav_file:
-        wav_file.setnchannels(1)
-        wav_file.setsampwidth(2)
-        wav_file.setframerate(sample_rate)
-        wav_file.writeframes(pcm16.tobytes())
-    return buf.getvalue()

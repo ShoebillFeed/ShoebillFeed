@@ -7,14 +7,17 @@
 # Usage (CPU, default, Piper engine):
 #   docker compose -f docker-compose.tts.yml up -d --build
 #
-# Usage (a different engine — currently piper or kokoro):
+# Usage (a different engine — currently piper, kokoro, or chatterbox):
 #   TTS_ENGINE=kokoro docker compose -f docker-compose.tts.yml up -d --build
-#   Both engines' dependencies are always in the image, so this is a plain
+#   All engines' dependencies are always in the image, so this is a plain
 #   env var change — no rebuild needed to switch, only to change TTS_GPU.
 #
 # Usage (GPU):
 #   TTS_GPU=true TTS_DEVICE=cuda docker compose -f docker-compose.tts.yml up -d --build
 #   (also uncomment the NVIDIA GPU block below)
+#   Strongly recommended for TTS_ENGINE=chatterbox specifically — real-time
+#   factor on CPU is roughly 10x (a few seconds of audio takes tens of
+#   seconds to generate), unlike piper/kokoro which are CPU-comfortable.
 #
 # Then point Shoebill at it (.env of the main stack):
 #   TTS_PROVIDER=network
