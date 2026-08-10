@@ -97,6 +97,14 @@ TTS host — no restart needed, it's rescanned on every request. Meaningfully
 slower than the other two engines, so it's the one where the GPU option
 actually matters.
 
+Once a network TTS backend is configured, each podcast host can also be
+pinned to a specific engine — the default (`TTS_PROVIDER`) or explicitly
+`piper`/`network` — instead of every host in a show sharing the same one.
+This is a per-host setting in the podcast show form (a "Voice engine"
+selector that only appears once `TTS_SERVICE_URL` is set, since with only
+Piper available there's nothing to choose between); nothing to configure
+here beyond `TTS_SERVICE_URL` itself.
+
 ## Reddit
 
 | Variable | Default | Description |

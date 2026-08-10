@@ -26,7 +26,13 @@ switch to often.
 
 **Podcasts** (top-level nav, next to Feed) is where generated episodes
 appear, each with an inline audio player, a status badge
-(queued/generating/ready/failed), and an expandable transcript.
+(queued/generating/ready/failed), and an expandable transcript. A ready or
+failed episode also has a **regenerate** button (circular arrow icon) that
+re-runs generation for that same episode — useful if you weren't happy
+with how it turned out, or if it failed and you want to retry. This
+replaces its script and audio; the episode's link stays the same, so
+anything that already pointed at it (e.g. a podcast app that cached the
+episode URL) keeps working once the new version is ready.
 
 Configure shows under **Settings → Podcast**: a name, an optional show
 concept/description, up to three hosts (each with a name, a free-text
@@ -40,15 +46,38 @@ The show concept shapes *what* the episode covers and its overall
 angle (e.g. "focus on market impact, skeptical tone, skip celebrity
 gossip"), on top of each host's own character prompt, which shapes how
 *that host's* lines are written — tone, vocabulary, personality. Neither
-changes how the voice *sounds*. Voices are rendered by
-[Piper](https://github.com/OHF-Voice/piper1-gpl), a self-hosted, offline
-text-to-speech engine, so two hosts sharing the only voice available for
-a language will sound identical even with very different character
-prompts. Speech speed (0.75x–1.5x) adjusts how fast that voice talks.
+changes how the voice *sounds*. Voices are rendered by a pluggable
+text-to-speech engine — [Piper](https://github.com/OHF-Voice/piper1-gpl)
+(self-hosted, offline) by default, or Kokoro/Chatterbox if the server
+operator has set up a network TTS backend — so two hosts sharing the only
+voice available for a language will sound identical even with very
+different character prompts. Click the play icon next to a host's voice
+picker to hear a short sample before committing to it.
+
+Speech speed (0.75x–1.5x) adjusts how fast a voice talks, but not every
+engine supports it — Chatterbox has no speed control at all, and the form
+tells you when the configured engine can't honor it rather than leaving
+the slider silently doing nothing. If the engine is Chatterbox, hosts also
+get an **emotion intensity** control (delivery/expressiveness, not
+available on Piper or Kokoro). If the server has a second TTS engine
+configured alongside the default, each host can also be pinned to a
+specific **voice engine** independently — e.g. one host on the default
+local voice, another on a more expressive network one — via a selector
+that only appears once a second engine is actually available to choose
+from.
 
 Each ready episode shows **show notes**: one entry per story actually
 covered, with a clickable timestamp that jumps the player to where that
-story starts and a link to the original source article.
+story starts and a link to the original source article. The same
+timestamps are published as podcast chapter markers (the
+[Podcasting 2.0 namespace](https://podcastindex.org/namespace/1.0)'s
+`<podcast:chapters>`) in the RSS feed, so podcast apps that support
+chapters show the same jump-to-story markers there too.
+
+If a single line of dialogue fails to synthesize (a transient error, e.g.
+a momentary blip talking to a network TTS backend), Shoebill retries it a
+few times before giving up on just that one line rather than failing the
+whole episode.
 
 ### Listening in a podcast app
 
