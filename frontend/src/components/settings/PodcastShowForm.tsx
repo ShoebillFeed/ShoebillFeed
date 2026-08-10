@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Plus, Trash2, Upload, X } from "lucide-react";
+import { Check, Loader2, Play, Plus, Trash2, Upload, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { CONTENT_LANGUAGES } from "../../lib/languages";
 import { useCategories } from "../../hooks/useCategories";
@@ -9,6 +9,7 @@ import {
   useCreatePodcastShow,
   useUpdatePodcastShow,
   usePodcastVoices,
+  usePreviewVoice,
   useUploadPodcastCover,
   useDeletePodcastCover,
 } from "../../hooks/usePodcasts";
@@ -87,6 +88,31 @@ export default function PodcastShowForm({ show, onClose }: Props) {
   const { data: voices = [] } = usePodcastVoices(language);
   const { data: ttsHealth } = usePodcastTtsHealth();
   const speechRateSupported = ttsHealth?.supports_speech_rate ?? true;
+
+  const previewVoiceMutation = usePreviewVoice();
+  const [previewingHostId, setPreviewingHostId] = useState<string | null>(null);
+  const [previewErrorHostId, setPreviewErrorHostId] = useState<string | null>(null);
+
+  const playVoicePreview = (host: PodcastHost) => {
+    if (!host.voice || previewingHostId) return;
+    setPreviewingHostId(host.id);
+    setPreviewErrorHostId(null);
+    previewVoiceMutation.mutate(
+      { voiceId: host.voice, language },
+      {
+        onSuccess: (blob) => {
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          const cleanup = () => URL.revokeObjectURL(url);
+          audio.addEventListener("ended", cleanup);
+          audio.addEventListener("error", cleanup);
+          audio.play().catch(cleanup);
+        },
+        onError: () => setPreviewErrorHostId(host.id),
+        onSettled: () => setPreviewingHostId(null),
+      }
+    );
+  };
 
   const toggleCategory = (id: string) =>
     setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -256,17 +282,31 @@ export default function PodcastShowForm({ show, onClose }: Props) {
                 placeholder={t("podcastForm.characterPromptPlaceholder")}
                 required
               />
-              <select
-                className={inputClass}
-                value={host.voice}
-                onChange={(e) => updateHost(host.id, { voice: e.target.value })}
-                required
-              >
-                <option value="" disabled>{t("podcastForm.selectVoice")}</option>
-                {voices.map((v) => (
-                  <option key={v.id} value={v.id}>{v.label}</option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  className={cn(inputClass, "flex-1")}
+                  value={host.voice}
+                  onChange={(e) => updateHost(host.id, { voice: e.target.value })}
+                  required
+                >
+                  <option value="" disabled>{t("podcastForm.selectVoice")}</option>
+                  {voices.map((v) => (
+                    <option key={v.id} value={v.id}>{v.label}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => playVoicePreview(host)}
+                  disabled={!host.voice || previewingHostId === host.id}
+                  className="p-2 rounded border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 transition-colors"
+                  title={t("podcastForm.previewVoice")}
+                >
+                  {previewingHostId === host.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                </button>
+              </div>
+              {previewErrorHostId === host.id && (
+                <p className="text-xs text-red-600 dark:text-red-400">{t("podcastForm.previewFailed")}</p>
+              )}
               {i === 0 && voices.length === 0 && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">{t("podcastForm.noVoicesForLanguage")}</p>
               )}

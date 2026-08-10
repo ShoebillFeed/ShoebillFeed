@@ -37,4 +37,14 @@ export const podcastsApi = {
   deleteEpisode: (id: string) => client.delete(`/podcasts/episodes/${id}`),
   listVoices: (language: string) =>
     client.get<PodcastVoice[]>("/podcasts/voices", { params: { language } }).then((r) => r.data),
+  previewVoice: (voiceId: string, language: string) =>
+    client
+      .get<Blob>("/podcasts/voices/preview", {
+        params: { voice_id: voiceId, language },
+        responseType: "blob",
+        // A cold-start model load (Kokoro/Chatterbox) or just slow CPU
+        // synthesis can genuinely exceed the client's default 15s timeout.
+        timeout: 60_000,
+      })
+      .then((r) => r.data),
 };

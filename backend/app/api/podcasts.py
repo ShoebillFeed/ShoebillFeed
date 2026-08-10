@@ -351,6 +351,32 @@ def list_voices(language: str = Query(...), _: User = Depends(get_current_user))
     return [VoiceOut(id=v.id, label=v.label) for v in voices]
 
 
+@router.get("/voices/preview")
+def preview_voice(voice_id: str = Query(...), language: str = Query(...), _: User = Depends(get_current_user)):
+    """Synthesize a short, fixed sample phrase for `voice_id` so the show
+    form can play it before committing to it. Deliberately not persisted
+    anywhere -- generated to a throwaway temp file and streamed back."""
+    import tempfile
+
+    from app.services.tts.factory import get_tts_provider
+    from app.services.tts.preview_text import preview_phrase_for
+
+    fd, tmp_path = tempfile.mkstemp(suffix=".wav")
+    os.close(fd)
+    try:
+        provider = get_tts_provider()
+        provider.synthesize(preview_phrase_for(language), voice_id, tmp_path, speech_rate=1.0)
+        with open(tmp_path, "rb") as f:
+            audio_bytes = f.read()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+    return Response(content=audio_bytes, media_type="audio/wav")
+
+
 # --- Public routes (no auth -- consumed by podcast apps, scoped only by the
 # per-show feed token embedded in the URL path itself). ---------------------
 

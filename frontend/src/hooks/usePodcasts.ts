@@ -117,3 +117,10 @@ export function usePodcastVoices(language: string) {
     enabled: !!language,
   });
 }
+
+export function usePreviewVoice() {
+  return useMutation({
+    mutationFn: ({ voiceId, language }: { voiceId: string; language: string }) =>
+      podcastsApi.previewVoice(voiceId, language),
+  });
+}

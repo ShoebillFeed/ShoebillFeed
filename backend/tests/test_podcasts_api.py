@@ -385,6 +385,78 @@ def test_list_voices_for_unknown_language_returns_empty_list(auth_client, podcas
     assert resp.json() == []
 
 
+# --- Voice preview --------------------------------------------------------
+
+def _fake_provider_writing(content: bytes):
+    fake_provider = MagicMock()
+
+    def fake_synthesize(text, voice_id, out_path, speech_rate=1.0):
+        with open(out_path, "wb") as f:
+            f.write(content)
+
+    fake_provider.synthesize.side_effect = fake_synthesize
+    return fake_provider
+
+
+def test_preview_voice_returns_the_synthesized_audio_bytes(auth_client, podcast_dirs):
+    fake_provider = _fake_provider_writing(b"RIFF....fake wav bytes")
+    with patch("app.services.tts.factory.get_tts_provider", return_value=fake_provider):
+        resp = auth_client.get(
+            "/api/podcasts/voices/preview", params={"voice_id": "en_US-libritts_r-medium#0", "language": "en"}
+        )
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "audio/wav"
+    assert resp.content == b"RIFF....fake wav bytes"
+
+
+def test_preview_voice_uses_a_language_appropriate_sample_phrase(auth_client, podcast_dirs):
+    fake_provider = _fake_provider_writing(b"bytes")
+    with patch("app.services.tts.factory.get_tts_provider", return_value=fake_provider):
+        auth_client.get("/api/podcasts/voices/preview", params={"voice_id": "de_DE-mls-medium", "language": "de"})
+
+    call_args = fake_provider.synthesize.call_args
+    assert call_args.args[0] == "Hallo, das ist eine Vorschau dieser Stimme."
+    assert call_args.args[1] == "de_DE-mls-medium"
+
+
+def test_preview_voice_falls_back_to_english_for_an_uncatalogued_language(auth_client, podcast_dirs):
+    fake_provider = _fake_provider_writing(b"bytes")
+    with patch("app.services.tts.factory.get_tts_provider", return_value=fake_provider):
+        auth_client.get("/api/podcasts/voices/preview", params={"voice_id": "v", "language": "xx"})
+
+    assert fake_provider.synthesize.call_args.args[0] == "Hello, this is a preview of this voice."
+
+
+def test_preview_voice_returns_400_for_an_unknown_voice(auth_client, podcast_dirs):
+    fake_provider = MagicMock()
+    fake_provider.synthesize.side_effect = ValueError("Unknown Piper voice model: 'bogus'")
+    with patch("app.services.tts.factory.get_tts_provider", return_value=fake_provider):
+        resp = auth_client.get("/api/podcasts/voices/preview", params={"voice_id": "bogus", "language": "en"})
+    assert resp.status_code == 400
+
+
+def test_preview_voice_requires_auth(client, podcast_dirs):
+    resp = client.get("/api/podcasts/voices/preview", params={"voice_id": "v", "language": "en"})
+    assert resp.status_code == 401
+
+
+def test_preview_voice_removes_the_temp_file_afterward(auth_client, podcast_dirs):
+    captured_path = {}
+    fake_provider = MagicMock()
+
+    def fake_synthesize(text, voice_id, out_path, speech_rate=1.0):
+        captured_path["path"] = out_path
+        with open(out_path, "wb") as f:
+            f.write(b"bytes")
+
+    fake_provider.synthesize.side_effect = fake_synthesize
+    with patch("app.services.tts.factory.get_tts_provider", return_value=fake_provider):
+        auth_client.get("/api/podcasts/voices/preview", params={"voice_id": "v", "language": "en"})
+
+    assert not os.path.exists(captured_path["path"])
+
+
 # --- Episodes -------------------------------------------------------------
 
 def test_list_show_episodes(auth_client, db_session, podcast_dirs):
