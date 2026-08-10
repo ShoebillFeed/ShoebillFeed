@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -15,6 +16,35 @@ from app.services.podcast_scheduling import due_shows
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+_TURN_SYNTHESIS_MAX_ATTEMPTS = 3
+_TURN_SYNTHESIS_RETRY_DELAY_SECONDS = 2.0
+
+
+def _synthesize_turn_with_retry(tts, text: str, voice_id: str, out_path: str, speech_rate: float, turn_index: int):
+    """Attempts synthesize() up to _TURN_SYNTHESIS_MAX_ATTEMPTS times before
+    giving up on this one turn. A single transient TTS failure (network
+    blip against TTS_PROVIDER=network, a momentary model hiccup) shouldn't
+    sink an otherwise-fine episode -- returns None once attempts are
+    exhausted so the caller can skip just this turn, rather than letting the
+    exception propagate and fail the whole episode."""
+    last_exc: Exception | None = None
+    for attempt in range(1, _TURN_SYNTHESIS_MAX_ATTEMPTS + 1):
+        try:
+            return tts.synthesize(text, voice_id, out_path, speech_rate=speech_rate)
+        except Exception as exc:
+            last_exc = exc
+            logger.warning(
+                "TTS synthesis failed for turn %d (attempt %d/%d): %s",
+                turn_index, attempt, _TURN_SYNTHESIS_MAX_ATTEMPTS, exc,
+            )
+            if attempt < _TURN_SYNTHESIS_MAX_ATTEMPTS:
+                time.sleep(_TURN_SYNTHESIS_RETRY_DELAY_SECONDS)
+    logger.error(
+        "Skipping turn %d after %d failed synthesis attempts: %s",
+        turn_index, _TURN_SYNTHESIS_MAX_ATTEMPTS, last_exc,
+    )
+    return None
 
 
 @celery_app.task(name="app.tasks.podcast_tasks.dispatch_due_podcasts", queue="podcast")
@@ -142,7 +172,9 @@ def _run_generation(db, settings, show: PodcastShow, episode: PodcastEpisode) ->
             if not host:
                 continue
             out_path = os.path.join(work_dir, f"turn_{i}.wav")
-            result = tts.synthesize(turn.text, host["voice"], out_path, speech_rate=show.speech_rate)
+            result = _synthesize_turn_with_retry(tts, turn.text, host["voice"], out_path, show.speech_rate, i)
+            if result is None:
+                continue
             turn_paths.append(result.audio_path)
             turn_durations.append(result.duration_seconds)
             turns_with_durations.append((turn, host, result.duration_seconds))
