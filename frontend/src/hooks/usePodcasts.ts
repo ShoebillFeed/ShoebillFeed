@@ -118,17 +118,17 @@ export function useRegeneratePodcastEpisode() {
   });
 }
 
-export function usePodcastVoices(language: string) {
+export function usePodcastVoices(language: string, provider?: string | null) {
   return useQuery({
-    queryKey: ["podcast-voices", language],
-    queryFn: () => podcastsApi.listVoices(language),
+    queryKey: ["podcast-voices", language, provider ?? null],
+    queryFn: () => podcastsApi.listVoices(language, provider),
     enabled: !!language,
   });
 }
 
 export function usePreviewVoice() {
   return useMutation({
-    mutationFn: ({ voiceId, language }: { voiceId: string; language: string }) =>
-      podcastsApi.previewVoice(voiceId, language),
+    mutationFn: ({ voiceId, language, provider }: { voiceId: string; language: string; provider?: string | null }) =>
+      podcastsApi.previewVoice(voiceId, language, provider),
   });
 }

@@ -355,17 +355,30 @@ def stream_episode_audio(
 
 
 @router.get("/voices", response_model=list[VoiceOut])
-def list_voices(language: str = Query(...), _: User = Depends(get_current_user)):
+def list_voices(
+    language: str = Query(...), provider: str | None = Query(None), _: User = Depends(get_current_user)
+):
     from app.services.tts.factory import get_tts_provider
-    voices = get_tts_provider().list_voices(language)
+    try:
+        voices = get_tts_provider(provider).list_voices(language)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     return [VoiceOut(id=v.id, label=v.label) for v in voices]
 
 
 @router.get("/voices/preview")
-def preview_voice(voice_id: str = Query(...), language: str = Query(...), _: User = Depends(get_current_user)):
+def preview_voice(
+    voice_id: str = Query(...), language: str = Query(...), provider: str | None = Query(None),
+    _: User = Depends(get_current_user),
+):
     """Synthesize a short, fixed sample phrase for `voice_id` so the show
     form can play it before committing to it. Deliberately not persisted
-    anywhere -- generated to a throwaway temp file and streamed back."""
+    anywhere -- generated to a throwaway temp file and streamed back.
+
+    `provider` overrides the deployment's global default -- lets the form
+    preview a voice on whichever engine a given host is pinned to
+    (PodcastHostSchema.tts_provider), not just the default one.
+    """
     import tempfile
 
     from app.services.tts.factory import get_tts_provider
@@ -374,8 +387,8 @@ def preview_voice(voice_id: str = Query(...), language: str = Query(...), _: Use
     fd, tmp_path = tempfile.mkstemp(suffix=".wav")
     os.close(fd)
     try:
-        provider = get_tts_provider()
-        provider.synthesize(preview_phrase_for(language), voice_id, tmp_path, speech_rate=1.0)
+        tts = get_tts_provider(provider)
+        tts.synthesize(preview_phrase_for(language), voice_id, tmp_path, speech_rate=1.0)
         with open(tmp_path, "rb") as f:
             audio_bytes = f.read()
     except ValueError as exc:

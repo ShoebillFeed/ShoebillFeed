@@ -7,6 +7,10 @@ export interface PodcastHost {
   // Has no effect on Piper/Kokoro -- only shown in the form when the
   // configured TTS engine reports supports_exaggeration.
   exaggeration?: number | null;
+  // Pins this host to a specific engine instead of the deployment's global
+  // default (null = use the default). "network" only works when the
+  // backend reports network_configured.
+  tts_provider?: "piper" | "network" | null;
 }
 
 export interface PodcastShow {

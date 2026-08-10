@@ -17,6 +17,16 @@ class PodcastHostSchema(BaseModel):
     # effect on Piper/Kokoro -- the frontend only shows this control when
     # TTSHealthOut.supports_exaggeration is true.
     exaggeration: float | None = Field(None, ge=0.0, le=2.0)
+    # Pins this host to a specific engine instead of the deployment's global
+    # Settings.tts_provider default -- e.g. one host on the free in-process
+    # Piper voice, another on a remote Chatterbox tts_service for a more
+    # expressive character. None = use the global default (the only option
+    # before this field existed; existing shows keep working unchanged).
+    # "network" only actually works if TTS_SERVICE_URL is configured --
+    # unvalidated here (would need a live check against the remote service),
+    # surfaces as a failed episode/turn at generation time instead, same as
+    # any other TTS synthesis failure.
+    tts_provider: Literal["piper", "network"] | None = None
 
 
 class PodcastShowBase(BaseModel):

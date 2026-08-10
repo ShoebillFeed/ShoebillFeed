@@ -89,6 +89,7 @@ def podcast_health_check():
         base_url=settings.tts_service_url if settings.tts_provider == "network" else None,
         supports_speech_rate=supports_speech_rate,
         supports_exaggeration=supports_exaggeration,
+        network_configured=bool(settings.tts_service_url),
     )
 
 

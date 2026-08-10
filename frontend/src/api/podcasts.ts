@@ -36,12 +36,14 @@ export const podcastsApi = {
   getEpisode: (id: string) => client.get<PodcastEpisode>(`/podcasts/episodes/${id}`).then((r) => r.data),
   deleteEpisode: (id: string) => client.delete(`/podcasts/episodes/${id}`),
   regenerateEpisode: (id: string) => client.post(`/podcasts/episodes/${id}/regenerate`).then((r) => r.data),
-  listVoices: (language: string) =>
-    client.get<PodcastVoice[]>("/podcasts/voices", { params: { language } }).then((r) => r.data),
-  previewVoice: (voiceId: string, language: string) =>
+  listVoices: (language: string, provider?: string | null) =>
+    client
+      .get<PodcastVoice[]>("/podcasts/voices", { params: { language, provider: provider ?? undefined } })
+      .then((r) => r.data),
+  previewVoice: (voiceId: string, language: string, provider?: string | null) =>
     client
       .get<Blob>("/podcasts/voices/preview", {
-        params: { voice_id: voiceId, language },
+        params: { voice_id: voiceId, language, provider: provider ?? undefined },
         responseType: "blob",
         // A cold-start model load (Kokoro/Chatterbox) or just slow CPU
         // synthesis can genuinely exceed the client's default 15s timeout.

@@ -54,7 +54,7 @@ def test_create_and_list_show(auth_client):
     assert resp.status_code == 201
     body = resp.json()
     assert body["name"] == "Morning Briefing"
-    assert body["hosts"] == [{**VALID_HOST, "exaggeration": None}]
+    assert body["hosts"] == [{**VALID_HOST, "exaggeration": None, "tts_provider": None}]
 
     listed = auth_client.get("/api/podcasts/shows")
     assert listed.status_code == 200
@@ -75,6 +75,19 @@ def test_create_show_persists_a_per_host_exaggeration_value(auth_client):
 
 def test_create_show_rejects_an_out_of_range_exaggeration(auth_client):
     host = {**VALID_HOST, "exaggeration": 5.0}
+    resp = auth_client.post("/api/podcasts/shows", json=_show_payload(hosts=[host]))
+    assert resp.status_code == 422
+
+
+def test_create_show_persists_a_per_host_tts_provider_pin(auth_client):
+    host = {**VALID_HOST, "tts_provider": "network"}
+    resp = auth_client.post("/api/podcasts/shows", json=_show_payload(hosts=[host]))
+    assert resp.status_code == 201
+    assert resp.json()["hosts"][0]["tts_provider"] == "network"
+
+
+def test_create_show_rejects_an_unknown_tts_provider(auth_client):
+    host = {**VALID_HOST, "tts_provider": "bogus"}
     resp = auth_client.post("/api/podcasts/shows", json=_show_payload(hosts=[host]))
     assert resp.status_code == 422
 
@@ -398,6 +411,24 @@ def test_list_voices_for_unknown_language_returns_empty_list(auth_client, podcas
     assert resp.json() == []
 
 
+def test_list_voices_accepts_an_explicit_provider_override(auth_client, podcast_dirs):
+    fake_provider = MagicMock()
+    from app.services.tts.base import VoiceInfo
+    fake_provider.list_voices.return_value = [VoiceInfo(id="v1", language="en", label="Voice 1")]
+
+    with patch("app.services.tts.factory.get_tts_provider", return_value=fake_provider) as get_provider:
+        resp = auth_client.get("/api/podcasts/voices", params={"language": "en", "provider": "network"})
+
+    assert resp.status_code == 200
+    assert resp.json() == [{"id": "v1", "label": "Voice 1"}]
+    get_provider.assert_called_once_with("network")
+
+
+def test_list_voices_returns_400_for_a_misconfigured_provider_override(auth_client, podcast_dirs):
+    resp = auth_client.get("/api/podcasts/voices", params={"language": "en", "provider": "network"})
+    assert resp.status_code == 400
+
+
 # --- Voice preview --------------------------------------------------------
 
 def _fake_provider_writing(content: bytes):
@@ -409,6 +440,23 @@ def _fake_provider_writing(content: bytes):
 
     fake_provider.synthesize.side_effect = fake_synthesize
     return fake_provider
+
+
+def test_preview_voice_accepts_an_explicit_provider_override(auth_client, podcast_dirs):
+    fake_provider = _fake_provider_writing(b"bytes")
+    with patch("app.services.tts.factory.get_tts_provider", return_value=fake_provider) as get_provider:
+        resp = auth_client.get(
+            "/api/podcasts/voices/preview", params={"voice_id": "v", "language": "en", "provider": "network"}
+        )
+    assert resp.status_code == 200
+    get_provider.assert_called_once_with("network")
+
+
+def test_preview_voice_returns_400_for_a_misconfigured_provider_override(auth_client, podcast_dirs):
+    resp = auth_client.get(
+        "/api/podcasts/voices/preview", params={"voice_id": "v", "language": "en", "provider": "network"}
+    )
+    assert resp.status_code == 400
 
 
 def test_preview_voice_returns_the_synthesized_audio_bytes(auth_client, podcast_dirs):

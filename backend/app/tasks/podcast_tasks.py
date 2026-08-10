@@ -163,7 +163,6 @@ def _run_generation(db, settings, show: PodcastShow, episode: PodcastEpisode) ->
             raise ValueError("LLM returned an empty podcast script")
         stories = story_payloads(items)
 
-        tts = get_tts_provider()
         work_dir = os.path.join(settings.podcast_audio_dir, "_tmp", str(episode.id))
         os.makedirs(work_dir, exist_ok=True)
 
@@ -173,6 +172,22 @@ def _run_generation(db, settings, show: PodcastShow, episode: PodcastEpisode) ->
         for i, turn in enumerate(script.turns):
             host = next((h for h in show.hosts if h["id"] == turn.host_id), None)
             if not host:
+                continue
+            # Per-host engine pin (PodcastHostSchema.tts_provider), falling
+            # back to the deployment's global default when unset. Resolved
+            # per turn (not hoisted above the loop) since different hosts in
+            # the same episode can point at different engines. A bad pin
+            # (e.g. "network" with no TTS_SERVICE_URL configured) fails fast
+            # here rather than through the retry loop below -- it's a config
+            # error, not a transient one, so retrying it would just waste
+            # _TURN_SYNTHESIS_MAX_ATTEMPTS attempts on a guaranteed failure.
+            try:
+                tts = get_tts_provider(host.get("tts_provider"))
+            except Exception as exc:
+                logger.error(
+                    "Skipping turn %d: could not resolve TTS provider %r for host %r: %s",
+                    i, host.get("tts_provider"), host.get("id"), exc,
+                )
                 continue
             out_path = os.path.join(work_dir, f"turn_{i}.wav")
             result = _synthesize_turn_with_retry(

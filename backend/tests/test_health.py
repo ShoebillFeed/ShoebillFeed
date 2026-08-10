@@ -37,6 +37,7 @@ def test_podcast_health_reports_piper_by_default(client, podcast_dirs):
     assert body["base_url"] is None
     assert body["supports_speech_rate"] is True
     assert body["supports_exaggeration"] is False
+    assert body["network_configured"] is False
 
 
 def test_podcast_health_does_not_require_auth(client, podcast_dirs):
@@ -61,6 +62,27 @@ def test_podcast_health_reports_network_provider_and_base_url(client, podcast_di
         assert body["provider"] == "network"
         assert body["healthy"] is True
         assert body["base_url"] == "http://tts.internal:8100"
+    finally:
+        get_tts_provider.cache_clear()
+
+
+def test_podcast_health_reports_network_configured_even_when_piper_is_the_default(client, podcast_dirs, monkeypatch):
+    # network_configured reflects whether TTS_SERVICE_URL is set at all --
+    # independent of which provider is the global default -- since it's used
+    # to gate whether "network" is offered as a per-host engine pin.
+    from app.config import get_settings
+    from app.services.tts.factory import get_tts_provider
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "tts_provider", "piper")
+    monkeypatch.setattr(settings, "tts_service_url", "http://tts.internal:8100")
+    get_tts_provider.cache_clear()
+
+    try:
+        resp = client.get("/api/settings/podcast-health")
+        body = resp.json()
+        assert body["provider"] == "piper"
+        assert body["network_configured"] is True
     finally:
         get_tts_provider.cache_clear()
 

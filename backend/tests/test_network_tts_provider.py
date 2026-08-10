@@ -234,3 +234,72 @@ class TestTTSFactoryNetworkProvider:
                 get_tts_provider()
         finally:
             get_tts_provider.cache_clear()
+
+    def test_explicit_provider_name_overrides_the_global_default(self, monkeypatch, tmp_path):
+        # A per-host tts_provider pin should work even when it's not the
+        # deployment's global Settings.tts_provider.
+        from app.config import get_settings
+        from app.services.tts.factory import get_tts_provider
+        from app.services.tts.piper_provider import PiperProvider
+
+        settings = get_settings()
+        monkeypatch.setattr(settings, "tts_provider", "network")
+        monkeypatch.setattr(settings, "tts_service_url", "http://tts.test:8100")
+        monkeypatch.setattr(settings, "piper_model_dir", str(tmp_path))
+        get_tts_provider.cache_clear()
+        try:
+            default_provider = get_tts_provider()
+            explicit_piper = get_tts_provider("piper")
+            assert isinstance(default_provider, NetworkTTSProvider)
+            assert isinstance(explicit_piper, PiperProvider)
+        finally:
+            get_tts_provider.cache_clear()
+
+    def test_none_provider_name_resolves_to_the_global_default(self, monkeypatch):
+        # NOTE: lru_cache keys on the literal call signature, so
+        # get_tts_provider(None) and get_tts_provider() land in separate
+        # cache slots even though they resolve to the same provider type --
+        # a harmless minor duplication (cheap constructors, no shared state
+        # that would actually go stale across the two instances), not
+        # asserted here as an identity check.
+        from app.config import get_settings
+        from app.services.tts.factory import get_tts_provider
+        from app.services.tts.network_provider import NetworkTTSProvider
+
+        settings = get_settings()
+        monkeypatch.setattr(settings, "tts_provider", "network")
+        monkeypatch.setattr(settings, "tts_service_url", "http://tts.test:8100")
+        get_tts_provider.cache_clear()
+        try:
+            assert isinstance(get_tts_provider(None), NetworkTTSProvider)
+            assert isinstance(get_tts_provider(), NetworkTTSProvider)
+        finally:
+            get_tts_provider.cache_clear()
+
+    def test_distinct_provider_names_are_cached_separately(self, monkeypatch, tmp_path):
+        from app.config import get_settings
+        from app.services.tts.factory import get_tts_provider
+
+        settings = get_settings()
+        monkeypatch.setattr(settings, "tts_service_url", "http://tts.test:8100")
+        monkeypatch.setattr(settings, "piper_model_dir", str(tmp_path))
+        get_tts_provider.cache_clear()
+        try:
+            assert get_tts_provider("piper") is get_tts_provider("piper")
+            assert get_tts_provider("piper") is not get_tts_provider("network")
+        finally:
+            get_tts_provider.cache_clear()
+
+    def test_explicit_network_still_raises_without_a_configured_service_url(self, monkeypatch):
+        from app.config import get_settings
+        from app.services.tts.factory import get_tts_provider
+
+        settings = get_settings()
+        monkeypatch.setattr(settings, "tts_provider", "piper")
+        monkeypatch.setattr(settings, "tts_service_url", "")
+        get_tts_provider.cache_clear()
+        try:
+            with pytest.raises(ValueError, match="TTS_SERVICE_URL"):
+                get_tts_provider("network")
+        finally:
+            get_tts_provider.cache_clear()

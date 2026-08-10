@@ -55,6 +55,120 @@ function newHost(index: number): PodcastHost {
   };
 }
 
+interface HostCardProps {
+  host: PodcastHost;
+  index: number;
+  language: string;
+  canRemove: boolean;
+  networkConfigured: boolean;
+  defaultProviderName: string;
+  exaggerationSupported: boolean;
+  previewingHostId: string | null;
+  previewErrorHostId: string | null;
+  onUpdate: (id: string, patch: Partial<PodcastHost>) => void;
+  onRemove: (id: string) => void;
+  onPreview: (host: PodcastHost) => void;
+}
+
+// One host's own voice list depends on that host's own tts_provider
+// override, so it needs its own usePodcastVoices() call -- which means its
+// own component, since hooks can't be called per-item inside a .map().
+function HostCard({
+  host, index, language, canRemove, networkConfigured, defaultProviderName, exaggerationSupported,
+  previewingHostId, previewErrorHostId, onUpdate, onRemove, onPreview,
+}: HostCardProps) {
+  const { t } = useTranslation();
+  const { data: voices = [] } = usePodcastVoices(language, host.tts_provider);
+
+  return (
+    <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <input
+          className={cn(inputClass, "flex-1")}
+          value={host.name}
+          onChange={(e) => onUpdate(host.id, { name: e.target.value })}
+          placeholder={t("podcastForm.hostName")}
+          required
+        />
+        {canRemove && (
+          <button
+            type="button"
+            onClick={() => onRemove(host.id)}
+            className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+            title={t("common.delete")}
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+      <textarea
+        className={inputClass}
+        rows={2}
+        value={host.character_prompt}
+        onChange={(e) => onUpdate(host.id, { character_prompt: e.target.value })}
+        placeholder={t("podcastForm.characterPromptPlaceholder")}
+        required
+      />
+      {networkConfigured && (
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t("podcastForm.engine")}</label>
+          <select
+            className={inputClass}
+            value={host.tts_provider ?? ""}
+            onChange={(e) => onUpdate(host.id, { tts_provider: (e.target.value || null) as PodcastHost["tts_provider"], voice: "" })}
+          >
+            <option value="">{t("podcastForm.engineDefault", { provider: defaultProviderName })}</option>
+            <option value="piper">{t("podcastForm.enginePiper")}</option>
+            <option value="network">{t("podcastForm.engineNetwork")}</option>
+          </select>
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <select
+          className={cn(inputClass, "flex-1")}
+          value={host.voice}
+          onChange={(e) => onUpdate(host.id, { voice: e.target.value })}
+          required
+        >
+          <option value="" disabled>{t("podcastForm.selectVoice")}</option>
+          {voices.map((v) => (
+            <option key={v.id} value={v.id}>{v.label}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => onPreview(host)}
+          disabled={!host.voice || previewingHostId === host.id}
+          className="p-2 rounded border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 transition-colors"
+          title={t("podcastForm.previewVoice")}
+        >
+          {previewingHostId === host.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+        </button>
+      </div>
+      {previewErrorHostId === host.id && (
+        <p className="text-xs text-red-600 dark:text-red-400">{t("podcastForm.previewFailed")}</p>
+      )}
+      {index === 0 && voices.length === 0 && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">{t("podcastForm.noVoicesForLanguage")}</p>
+      )}
+      {exaggerationSupported && (
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            {t("podcastForm.exaggeration")}
+          </label>
+          <RangeSlider
+            value={host.exaggeration ?? 0.5}
+            onChange={(v) => onUpdate(host.id, { exaggeration: Math.round(v * 100) / 100 })}
+            min={0}
+            max={2}
+            step={0.05}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   show?: PodcastShow;
   onClose: () => void;
@@ -85,10 +199,11 @@ export default function PodcastShowForm({ show, onClose }: Props) {
   const [isActive, setIsActive] = useState(show?.is_active ?? true);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const { data: voices = [] } = usePodcastVoices(language);
   const { data: ttsHealth } = usePodcastTtsHealth();
   const speechRateSupported = ttsHealth?.supports_speech_rate ?? true;
   const exaggerationSupported = ttsHealth?.supports_exaggeration ?? false;
+  const networkConfigured = ttsHealth?.network_configured ?? false;
+  const defaultProviderName = ttsHealth?.provider ?? "piper";
 
   const previewVoiceMutation = usePreviewVoice();
   const [previewingHostId, setPreviewingHostId] = useState<string | null>(null);
@@ -99,7 +214,7 @@ export default function PodcastShowForm({ show, onClose }: Props) {
     setPreviewingHostId(host.id);
     setPreviewErrorHostId(null);
     previewVoiceMutation.mutate(
-      { voiceId: host.voice, language },
+      { voiceId: host.voice, language, provider: host.tts_provider },
       {
         onSuccess: (blob) => {
           const url = URL.createObjectURL(blob);
@@ -255,77 +370,21 @@ export default function PodcastShowForm({ show, onClose }: Props) {
         <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">{t("podcastForm.characterPromptHint")}</p>
         <div className="flex flex-col gap-3">
           {hosts.map((host, i) => (
-            <div key={host.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <input
-                  className={cn(inputClass, "flex-1")}
-                  value={host.name}
-                  onChange={(e) => updateHost(host.id, { name: e.target.value })}
-                  placeholder={t("podcastForm.hostName")}
-                  required
-                />
-                {hosts.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeHost(host.id)}
-                    className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
-                    title={t("common.delete")}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-              <textarea
-                className={inputClass}
-                rows={2}
-                value={host.character_prompt}
-                onChange={(e) => updateHost(host.id, { character_prompt: e.target.value })}
-                placeholder={t("podcastForm.characterPromptPlaceholder")}
-                required
-              />
-              <div className="flex items-center gap-2">
-                <select
-                  className={cn(inputClass, "flex-1")}
-                  value={host.voice}
-                  onChange={(e) => updateHost(host.id, { voice: e.target.value })}
-                  required
-                >
-                  <option value="" disabled>{t("podcastForm.selectVoice")}</option>
-                  {voices.map((v) => (
-                    <option key={v.id} value={v.id}>{v.label}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => playVoicePreview(host)}
-                  disabled={!host.voice || previewingHostId === host.id}
-                  className="p-2 rounded border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 transition-colors"
-                  title={t("podcastForm.previewVoice")}
-                >
-                  {previewingHostId === host.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-                </button>
-              </div>
-              {previewErrorHostId === host.id && (
-                <p className="text-xs text-red-600 dark:text-red-400">{t("podcastForm.previewFailed")}</p>
-              )}
-              {i === 0 && voices.length === 0 && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">{t("podcastForm.noVoicesForLanguage")}</p>
-              )}
-              {exaggerationSupported && (
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    {t("podcastForm.exaggeration")}
-                  </label>
-                  <RangeSlider
-                    value={host.exaggeration ?? 0.5}
-                    onChange={(v) => updateHost(host.id, { exaggeration: Math.round(v * 100) / 100 })}
-                    min={0}
-                    max={2}
-                    step={0.05}
-                  />
-                </div>
-              )}
-            </div>
+            <HostCard
+              key={host.id}
+              host={host}
+              index={i}
+              language={language}
+              canRemove={hosts.length > 1}
+              networkConfigured={networkConfigured}
+              defaultProviderName={defaultProviderName}
+              exaggerationSupported={exaggerationSupported}
+              previewingHostId={previewingHostId}
+              previewErrorHostId={previewErrorHostId}
+              onUpdate={updateHost}
+              onRemove={removeHost}
+              onPreview={playVoicePreview}
+            />
           ))}
         </div>
       </div>
