@@ -14,12 +14,13 @@ import { Accordion } from "./Accordion";
 import {
   useActivityStats, useCategoryStats, useSourceStats,
   useWeightHistory, useSourceClusters,
-  useKeywordClusterMap,
+  useKeywordClusterMap, usePodcastEpisodeStats,
 } from "../../hooks/useStats";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
+import { usePodcastShows } from "../../hooks/usePodcasts";
 import { statsApi } from "../../api/stats";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { KeywordClusterMapEntry } from "../../api/stats";
+import type { KeywordClusterMapEntry, PodcastEpisodeStat } from "../../api/stats";
 
 class ChartErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
   state = { crashed: false };
@@ -779,6 +780,189 @@ function KeywordClusterMapChart() {
   return <ClusterBubbleMap data={data} />;
 }
 
+// ── Podcast episode topics ────────────────────────────────────────────────────
+
+function ShowPicker({
+  shows,
+  value,
+  onChange,
+}: {
+  shows: { id: string; name: string }[];
+  value: string | null;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <select
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value)}
+      className="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1 text-gray-700 dark:text-gray-300"
+    >
+      {shows.map((s) => (
+        <option key={s.id} value={s.id}>{s.name}</option>
+      ))}
+    </select>
+  );
+}
+
+function EpisodeTagList({ title, tags }: { title: string; tags: { label: string; count: number }[] }) {
+  if (!tags.length) return null;
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">{title}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {tags.map((tag) => (
+          <span
+            key={tag.label}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+          >
+            {tag.label}
+            {tag.count > 1 && <span className="text-[10px] text-gray-400 dark:text-gray-500">×{tag.count}</span>}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EpisodeDetailPanel({ episode }: { episode: PodcastEpisodeStat }) {
+  const { t } = useTranslation();
+  return (
+    <div className="mt-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+          {format(parseISO(episode.generated_at), "MMM d, yyyy")}
+        </span>
+        <span className="text-xs text-gray-400 dark:text-gray-500">
+          {t("stats.storiesCount", { count: episode.total_stories })}
+        </span>
+      </div>
+      <EpisodeTagList
+        title={t("stats.topKeywords")}
+        tags={episode.top_keywords.map((k) => ({ label: k.keyword, count: k.count }))}
+      />
+      <EpisodeTagList
+        title={t("stats.topSources")}
+        tags={episode.top_sources.map((s) => ({ label: s.name, count: s.count }))}
+      />
+    </div>
+  );
+}
+
+function PodcastEpisodesChart({ showId }: { showId: string }) {
+  const { t } = useTranslation();
+  const gridColor = useGridColor();
+  const { data, isLoading } = usePodcastEpisodeStats(showId);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  if (isLoading) return <Loading />;
+  if (!data?.length) return <Empty />;
+
+  const seenCatIds = new Set<string>();
+  const allCategories: { id: string; name: string; color: string }[] = [];
+  for (const ep of data) {
+    for (const cat of ep.categories) {
+      if (!seenCatIds.has(cat.id)) {
+        seenCatIds.add(cat.id);
+        allCategories.push({ id: cat.id, name: cat.name, color: cat.color });
+      }
+    }
+  }
+
+  const chartData = data.map((ep) => {
+    const row: Record<string, string | number> = {
+      id: ep.id,
+      date: format(parseISO(ep.generated_at), "MMM d"),
+      _total: ep.total_stories,
+    };
+    for (const cat of ep.categories) {
+      row[cat.name] = cat.count;
+    }
+    return row;
+  });
+
+  const active = data.find((ep) => ep.id === activeId) ?? data[data.length - 1];
+  const handleBarClick = (bar: { payload?: Record<string, string | number> }) => {
+    if (bar.payload?.id) setActiveId(String(bar.payload.id));
+  };
+
+  return (
+    <div>
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
+          <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+          <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} width={28} />
+          <Tooltip
+            cursor={CURSOR_STYLE}
+            wrapperStyle={WRAPPER_STYLE}
+            content={({ active, payload, label }) => {
+              if (!active || !payload?.[0]) return null;
+              const row = payload[0].payload as Record<string, string | number>;
+              const total = row._total as number;
+              const entries = allCategories
+                .map((cat) => ({ ...cat, count: (row[cat.name] ?? 0) as number }))
+                .filter((e) => e.count > 0)
+                .sort((a, b) => b.count - a.count);
+              return (
+                <TooltipBox label={label as string}>
+                  <TooltipRow name={t("stats.stories")} value={total} />
+                  {entries.length > 0 && <CategoryBars entries={entries} total={total} />}
+                </TooltipBox>
+              );
+            }}
+          />
+          {allCategories.map((cat, i) => (
+            <Bar
+              key={cat.id}
+              dataKey={cat.name}
+              stackId="stack"
+              fill={cat.color}
+              radius={i === allCategories.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+              cursor="pointer"
+              onClick={handleBarClick}
+            />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+      {active && <EpisodeDetailPanel episode={active} />}
+    </div>
+  );
+}
+
+function PodcastEpisodesEmpty() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center h-40 text-sm text-gray-400 text-center px-4">
+      {t("stats.noPodcastShows")}
+    </div>
+  );
+}
+
+function PodcastEpisodesSection() {
+  const { t } = useTranslation();
+  const { data: shows = [] } = usePodcastShows();
+  const [selectedShowId, setSelectedShowId] = useState<string | null>(null);
+  const effectiveShowId = selectedShowId ?? shows[0]?.id ?? null;
+
+  return (
+    <ChartCard
+      title={t("stats.podcastEpisodesTitle")}
+      description={t("stats.podcastEpisodesDesc")}
+      action={
+        shows.length > 0 && (
+          <ShowPicker shows={shows} value={effectiveShowId} onChange={setSelectedShowId} />
+        )
+      }
+    >
+      {shows.length === 0 ? (
+        <PodcastEpisodesEmpty />
+      ) : (
+        <PodcastEpisodesChart key={effectiveShowId} showId={effectiveShowId as string} />
+      )}
+    </ChartCard>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export default function StatsPanel() {
@@ -888,6 +1072,8 @@ export default function StatsPanel() {
           >
             <KeywordClusterMapChart />
           </ChartCard>
+
+          <PodcastEpisodesSection />
         </div>
       </Accordion>
     </div>

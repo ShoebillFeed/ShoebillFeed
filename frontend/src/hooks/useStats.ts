@@ -42,3 +42,11 @@ export function useKeywordClusterMap() {
     queryFn: () => statsApi.keywordClusterMap(),
   });
 }
+
+export function usePodcastEpisodeStats(showId: string | null) {
+  return useQuery({
+    queryKey: ["stats", "podcast-episodes", showId],
+    queryFn: () => statsApi.podcastEpisodes(showId as string),
+    enabled: !!showId,
+  });
+}
