@@ -526,6 +526,8 @@ const pl = {
     symbolSourceIconsDesc: "Mała ikona obok nazwy źródła pokazuje jego rodzaj: 📰 RSS/Atom, 🔴 Reddit, ✉️ newsletter e-mail, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Etykieta kategorii",
     symbolCategoryPillDesc: "Kolorowa etykieta na karcie pokazuje, do której z Twoich kategorii przypisano artykuł — kolor odpowiada temu wybranemu w Ustawienia → Kategorie.",
+    podcastTitle: "Podcasty",
+    podcastBody: "Zamień swój kanał w codzienny podcast. Skonfiguruj do trzech prowadzących AI — każdy z osobowością, którą sam opiszesz — aby omawiali najważniejsze wiadomości z wybranych kategorii, źródeł i przedziału czasowego, w Twoim języku, z długością i porą, które ustawisz. Głosy są domyślnie generowane lokalnie za pomocą Piper; Kokoro i Chatterbox są dostępne jako alternatywne, samodzielnie hostowane silniki. Odcinki pojawiają się bezpośrednio w aplikacji, lub dodaj prywatny link do dowolnej aplikacji podcastowej, aby słuchać wszędzie.",
   },
   users: {
     title: "Użytkownicy",

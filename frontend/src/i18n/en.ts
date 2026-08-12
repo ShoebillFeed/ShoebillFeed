@@ -563,6 +563,8 @@ const en = {
     symbolSourceIconsDesc: "A small icon next to the source name shows what kind of source it is: 📰 RSS/Atom, 🔴 Reddit, ✉️ email newsletter, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Category label",
     symbolCategoryPillDesc: "The colored label on a card shows which of your categories the article was sorted into — the color matches what you picked in Settings → Categories.",
+    podcastTitle: "Podcasts",
+    podcastBody: "Turn your feed into a daily podcast. Configure up to three AI hosts — each with a personality you write yourself — to discuss the top stories from whichever categories, feeds, and time window you pick, in your language, at a length and time you set. Voices are generated locally by default with Piper; Kokoro and Chatterbox are available as alternative self-hosted engines. Episodes appear right here in the app, or add a private link to any podcast app to listen anywhere.",
   },
   learning: {
     categoriesTitle: "Category Preferences",

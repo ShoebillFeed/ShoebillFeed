@@ -525,6 +525,8 @@ const fi = {
     symbolSourceIconsDesc: "Pieni kuvake lähteen nimen vieressä näyttää, millainen lähde on kyseessä: 📰 RSS/Atom, 🔴 Reddit, ✉️ sähköpostiuutiskirje, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Kategoriamerkki",
     symbolCategoryPillDesc: "Kortin värillinen merkki näyttää, mihin kategoriaasi artikkeli lajiteltiin — väri vastaa sitä, jonka valitsit kohdassa Asetukset → Kategoriat.",
+    podcastTitle: "Podcastit",
+    podcastBody: "Muuta syötteesi päivittäiseksi podcastiksi. Määritä enintään kolme tekoälyjuontajaa — kullekin oma persoonallisuus, jonka kirjoitat itse — keskustelemaan tärkeimmistä uutisista valitsemistasi kategorioista, lähteistä ja aikaikkunasta, omalla kielelläsi, itse määrittämälläsi pituudella ja ajankohdalla. Äänet luodaan oletuksena paikallisesti Piperillä; Kokoro ja Chatterbox ovat saatavilla vaihtoehtoisina, itse isännöityinä moottoreina. Jaksot näkyvät suoraan sovelluksessa, tai lisää yksityinen linkki mihin tahansa podcast-sovellukseen kuunnellaksesi missä tahansa.",
   },
   users: {
     title: "Käyttäjät",

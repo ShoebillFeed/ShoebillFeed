@@ -525,6 +525,8 @@ const zh = {
     symbolSourceIconsDesc: "来源名称旁的小图标表示来源类型：📰 RSS/Atom，🔴 Reddit，✉️ 邮件通讯，🐘 Mastodon，🎓 arXiv。",
     symbolCategoryPill: "分类标签",
     symbolCategoryPillDesc: "卡片上的彩色标签显示文章被归入了你的哪个分类 — 颜色与你在「设置 → 分类」中选择的颜色一致。",
+    podcastTitle: "播客",
+    podcastBody: "把你的订阅源变成每日播客。最多可配置三位 AI 主持人——每位都有你自己撰写的个性设定——讨论你所选分类、来源和时间窗口内的重要新闻，使用你的语言，时长和播出时间也由你设定。默认情况下语音由本地运行的 Piper 生成；Kokoro 和 Chatterbox 也可作为替代的自托管引擎使用。节目会直接显示在应用内，你也可以将私密链接添加到任意播客应用中随时随地收听。",
   },
   users: {
     title: "用户",

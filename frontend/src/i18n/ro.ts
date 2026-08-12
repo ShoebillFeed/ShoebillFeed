@@ -525,6 +525,8 @@ const ro = {
     symbolSourceIconsDesc: "O pictogramă mică lângă numele sursei arată tipul acesteia: 📰 RSS/Atom, 🔴 Reddit, ✉️ newsletter prin e-mail, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Etichetă de categorie",
     symbolCategoryPillDesc: "Eticheta colorată de pe un card arată în care dintre categoriile tale a fost încadrat articolul — culoarea corespunde celei alese în Setări → Categorii.",
+    podcastTitle: "Podcasturi",
+    podcastBody: "Transformă fluxul tău într-un podcast zilnic. Configurează până la trei gazde AI — fiecare cu o personalitate pe care o descrii tu însuți — pentru a discuta cele mai importante știri din categoriile, sursele și intervalul de timp alese de tine, în limba ta, cu o durată și o oră stabilite de tine. Vocile sunt generate local, implicit, cu Piper; Kokoro și Chatterbox sunt disponibile ca motoare alternative găzduite propriu. Episoadele apar direct aici, în aplicație, sau adaugă un link privat în orice aplicație de podcasturi pentru a asculta oriunde.",
   },
   users: {
     title: "Utilizatori",

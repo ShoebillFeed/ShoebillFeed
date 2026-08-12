@@ -525,6 +525,8 @@ const hu = {
     symbolSourceIconsDesc: "A forrás neve melletti kis ikon mutatja a típusát: 📰 RSS/Atom, 🔴 Reddit, ✉️ e-mail hírlevél, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Kategóriacímke",
     symbolCategoryPillDesc: "A kártyán lévő színes címke mutatja, melyik kategóriádba sorolták a cikket — a szín megegyezik azzal, amit a Beállítások → Kategóriák alatt választottál.",
+    podcastTitle: "Podcastok",
+    podcastBody: "Alakítsd a hírfolyamodat napi podcasttá. Állíts be legfeljebb három mesterséges intelligencia műsorvezetőt — mindegyiknek olyan személyiséget adhatsz, amit magad írsz —, hogy megbeszéljék a legfontosabb híreket az általad választott kategóriákból, forrásokból és időablakból, a te nyelveden, az általad beállított hosszban és időpontban. A hangok alapértelmezés szerint helyben, a Piper segítségével készülnek; a Kokoro és a Chatterbox alternatív, saját magad üzemeltetett motorként is elérhető. Az epizódok közvetlenül itt jelennek meg az alkalmazásban, vagy adj hozzá egy privát linket bármelyik podcastalkalmazáshoz, hogy bárhol hallgathasd.",
   },
   users: {
     title: "Felhasználók",

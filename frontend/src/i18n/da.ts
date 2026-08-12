@@ -525,6 +525,8 @@ const da = {
     symbolSourceIconsDesc: "Et lille ikon ved siden af kildenavnet viser, hvilken slags kilde det er: 📰 RSS/Atom, 🔴 Reddit, ✉️ e-mail-nyhedsbrev, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Kategorimærke",
     symbolCategoryPillDesc: "Det farvede mærke på et kort viser, hvilken af dine kategorier artiklen blev sorteret i — farven svarer til den, du valgte under Indstillinger → Kategorier.",
+    podcastTitle: "Podcasts",
+    podcastBody: "Gør dit feed til en daglig podcast. Konfigurer op til tre AI-værter — hver med en personlighed, du selv skriver — der diskuterer de vigtigste historier fra de kategorier, feeds og tidsvindue, du vælger, på dit sprog, med en længde og et tidspunkt, du bestemmer. Stemmerne genereres som standard lokalt med Piper; Kokoro og Chatterbox er tilgængelige som alternative, selv-hostede motorer. Episoder vises direkte her i appen, eller tilføj et privat link til en hvilken som helst podcast-app for at lytte hvor som helst.",
   },
   users: {
     title: "Brugere",

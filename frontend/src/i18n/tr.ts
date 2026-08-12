@@ -525,6 +525,8 @@ const tr = {
     symbolSourceIconsDesc: "Kaynak adının yanındaki küçük simge, kaynağın türünü gösterir: 📰 RSS/Atom, 🔴 Reddit, ✉️ e-posta bülteni, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Kategori etiketi",
     symbolCategoryPillDesc: "Karttaki renkli etiket, makalenin hangi kategorine ayrıldığını gösterir — renk, Ayarlar → Kategoriler kısmında seçtiğinle eşleşir.",
+    podcastTitle: "Podcastler",
+    podcastBody: "Akışını günlük bir podcaste dönüştür. Her biri kendi yazdığın bir karaktere sahip en fazla üç yapay zekâ sunucusu ayarla; bunlar seçtiğin kategoriler, kaynaklar ve zaman aralığındaki en önemli haberleri, kendi dilinde, belirlediğin uzunluk ve saatte konuşsun. Sesler varsayılan olarak yerel Piper motoruyla üretilir; Kokoro ve Chatterbox alternatif, kendi barındırdığın motorlar olarak da kullanılabilir. Bölümler doğrudan uygulama içinde görünür veya herhangi bir podcast uygulamasına özel bir bağlantı ekleyerek her yerden dinleyebilirsin.",
   },
   users: {
     title: "Kullanıcılar",

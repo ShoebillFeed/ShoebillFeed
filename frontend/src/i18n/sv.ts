@@ -525,6 +525,8 @@ const sv = {
     symbolSourceIconsDesc: "En liten ikon bredvid källnamnet visar vilken typ av källa det är: 📰 RSS/Atom, 🔴 Reddit, ✉️ e-postnyhetsbrev, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Kategorietikett",
     symbolCategoryPillDesc: "Den färgade etiketten på ett kort visar vilken av dina kategorier artikeln sorterades in i — färgen matchar den du valde i Inställningar → Kategorier.",
+    podcastTitle: "Poddar",
+    podcastBody: "Gör om ditt flöde till en daglig podd. Ställ in upp till tre AI-programledare — var och en med en personlighet du själv skriver — som diskuterar de viktigaste nyheterna från de kategorier, flöden och tidsfönster du väljer, på ditt språk, med en längd och tid du bestämmer. Rösterna genereras lokalt som standard med Piper; Kokoro och Chatterbox finns tillgängliga som alternativa, självhostade motorer. Avsnitten visas direkt här i appen, eller lägg till en privat länk i valfri poddapp för att lyssna var som helst.",
   },
   users: {
     title: "Användare",

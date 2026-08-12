@@ -525,6 +525,8 @@ const nl = {
     symbolSourceIconsDesc: "Een klein pictogram naast de bronnaam toont het type bron: 📰 RSS/Atom, 🔴 Reddit, ✉️ e-mailnieuwsbrief, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Categorielabel",
     symbolCategoryPillDesc: "Het gekleurde label op een kaart toont in welke van je categorieën het artikel is ingedeeld — de kleur komt overeen met wat je koos bij Instellingen → Categorieën.",
+    podcastTitle: "Podcasts",
+    podcastBody: "Verander je feed in een dagelijkse podcast. Stel maximaal drie AI-hosts in — elk met een persoonlijkheid die je zelf beschrijft — die de belangrijkste verhalen bespreken uit de categorieën, feeds en het tijdvenster die je kiest, in jouw taal, met een lengte en tijdstip die je zelf instelt. Stemmen worden standaard lokaal gegenereerd met Piper; Kokoro en Chatterbox zijn beschikbaar als alternatieve, zelf gehoste engines. Afleveringen verschijnen direct hier in de app, of voeg een privélink toe aan een willekeurige podcast-app om overal te luisteren.",
   },
   users: {
     title: "Gebruikers",

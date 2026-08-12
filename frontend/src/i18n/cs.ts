@@ -525,6 +525,8 @@ const cs = {
     symbolSourceIconsDesc: "Malá ikona vedle názvu zdroje ukazuje jeho typ: 📰 RSS/Atom, 🔴 Reddit, ✉️ e-mailový newsletter, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Štítek kategorie",
     symbolCategoryPillDesc: "Barevný štítek na kartě ukazuje, do které z vašich kategorií byl článek zařazen — barva odpovídá té, kterou jste vybrali v Nastavení → Kategorie.",
+    podcastTitle: "Podcasty",
+    podcastBody: "Změňte svůj feed na denní podcast. Nastavte až tři AI moderátory — každého s osobností, kterou si sami popíšete — aby diskutovali o nejdůležitějších zprávách z vybraných kategorií, zdrojů a časového okna, ve vašem jazyce, s délkou a časem, které si zvolíte. Hlasy jsou ve výchozím nastavení generovány lokálně pomocí Piper; Kokoro a Chatterbox jsou k dispozici jako alternativní, vlastně hostované enginy. Epizody se zobrazují přímo v aplikaci, nebo přidejte soukromý odkaz do libovolné podcastové aplikace a poslouchejte kdekoli.",
   },
   users: {
     title: "Uživatelé",

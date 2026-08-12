@@ -557,6 +557,8 @@ const de = {
     symbolSourceIconsDesc: "Ein kleines Symbol neben dem Quellennamen zeigt die Art der Quelle: 📰 RSS/Atom, 🔴 Reddit, ✉️ E-Mail-Newsletter, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Kategorie-Label",
     symbolCategoryPillDesc: "Das farbige Label auf einer Karte zeigt, welcher deiner Kategorien der Artikel zugeordnet wurde — die Farbe entspricht der, die du unter Einstellungen → Kategorien gewählt hast.",
+    podcastTitle: "Podcasts",
+    podcastBody: "Verwandle deinen Feed in einen täglichen Podcast. Konfiguriere bis zu drei KI-Hosts — jeder mit einer Persönlichkeit, die du selbst beschreibst —, die die wichtigsten Neuigkeiten aus den von dir gewählten Kategorien, Feeds und dem Zeitfenster besprechen, in deiner Sprache, in einer Länge und zu einer Uhrzeit, die du festlegst. Die Stimmen werden standardmäßig lokal mit Piper erzeugt; Kokoro und Chatterbox stehen als alternative, selbst gehostete Engines zur Verfügung. Episoden erscheinen direkt hier in der App, oder du fügst einen privaten Link zu einer beliebigen Podcast-App hinzu, um überall zuzuhören.",
   },
   learning: {
     categoriesTitle: "Kategorie-Einstellungen",

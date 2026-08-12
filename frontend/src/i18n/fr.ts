@@ -525,6 +525,8 @@ const fr = {
     symbolSourceIconsDesc: "Une petite icône à côté du nom de la source indique son type : 📰 RSS/Atom, 🔴 Reddit, ✉️ newsletter par e-mail, 🐘 Mastodon, 🎓 arXiv.",
     symbolCategoryPill: "Étiquette de catégorie",
     symbolCategoryPillDesc: "L'étiquette colorée sur une carte indique dans quelle catégorie l'article a été classé — la couleur correspond à celle choisie dans Paramètres → Catégories.",
+    podcastTitle: "Podcasts",
+    podcastBody: "Transformez votre flux en podcast quotidien. Configurez jusqu'à trois hôtes IA — chacun avec une personnalité que vous décrivez vous-même — pour discuter des principales actualités des catégories, flux et fenêtre temporelle de votre choix, dans votre langue, avec une durée et un horaire que vous définissez. Les voix sont générées localement par défaut avec Piper ; Kokoro et Chatterbox sont disponibles comme moteurs alternatifs auto-hébergés. Les épisodes apparaissent directement dans l'application, ou ajoutez un lien privé à n'importe quelle application de podcast pour écouter partout.",
   },
   users: {
     title: "Utilisateurs",
