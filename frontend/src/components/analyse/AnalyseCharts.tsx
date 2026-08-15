@@ -10,7 +10,6 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { PauseCircle, RefreshCw, ThumbsUp } from "lucide-react";
-import { Accordion } from "./Accordion";
 import {
   useActivityStats, useCategoryStats, useSourceStats,
   useWeightHistory, useSourceClusters,
@@ -963,19 +962,90 @@ function PodcastEpisodesSection() {
   );
 }
 
-// ── Main panel ────────────────────────────────────────────────────────────────
+// ── Recording toggle (rendered in the Analyse page header) ────────────────────
 
-export default function StatsPanel() {
+export function StatsRecordingToggle() {
   const { t } = useTranslation();
-  const [activityDays, setActivityDays] = useState(30);
-  const [categoryDays, setCategoryDays] = useState(30);
-  const [sourceDays, setSourceDays] = useState(30);
-  const [weightDays, setWeightDays] = useState(60);
-  const [clusterDays, setClusterDays] = useState(30);
-
   const { data: settings } = useAdvancedSettings();
   const update = useUpdateAdvancedSettings();
   const statsEnabled = settings?.stats_enabled ?? true;
+
+  return (
+    <div className="flex items-center gap-2">
+      {!statsEnabled && (
+        <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+          <PauseCircle size={13} /> {t("stats.recordingPaused")}
+        </span>
+      )}
+      <span className="text-xs text-gray-500 dark:text-gray-400">{t("stats.recordHistory")}</span>
+      <button
+        role="switch"
+        aria-checked={statsEnabled}
+        title={statsEnabled ? t("stats.pauseRecording") : t("stats.resumeRecording")}
+        onClick={() => update.mutate({ stats_enabled: !statsEnabled })}
+        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${statsEnabled ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"}`}
+      >
+        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${statsEnabled ? "translate-x-4" : "translate-x-0"}`} />
+      </button>
+    </div>
+  );
+}
+
+// ── Tabs (composed by pages/AnalysePage.tsx) ───────────────────────────────────
+
+export function AnalyseActivityTab() {
+  const { t } = useTranslation();
+  const [activityDays, setActivityDays] = useState(30);
+  return (
+    <ChartCard
+      title={t("stats.activityTitle")}
+      description={t("stats.activityDesc")}
+      action={<RangePicker value={activityDays} onChange={setActivityDays} />}
+    >
+      <ActivityChart key={activityDays} days={activityDays} />
+    </ChartCard>
+  );
+}
+
+export function AnalyseCategoriesTab() {
+  const { t } = useTranslation();
+  const [categoryDays, setCategoryDays] = useState(30);
+  const [sourceDays, setSourceDays] = useState(30);
+  const [clusterDays, setClusterDays] = useState(30);
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ChartCard
+          title={t("stats.byCategoryTitle")}
+          description={t("stats.byCategoryDesc")}
+          action={<RangePicker value={categoryDays} onChange={setCategoryDays} />}
+        >
+          <ByCategoryChart key={categoryDays} days={categoryDays} />
+        </ChartCard>
+
+        <ChartCard
+          title={t("stats.bySourceTitle")}
+          description={t("stats.bySourceDesc")}
+          action={<RangePicker value={sourceDays} onChange={setSourceDays} />}
+        >
+          <BySourceChart key={sourceDays} days={sourceDays} />
+        </ChartCard>
+      </div>
+
+      <ChartCard
+        title={t("stats.sourceClusterTitle")}
+        description={t("stats.sourceClusterDesc")}
+        action={<RangePicker value={clusterDays} onChange={setClusterDays} />}
+      >
+        <SourceClustersChart key={clusterDays} days={clusterDays} />
+      </ChartCard>
+    </div>
+  );
+}
+
+export function AnalyseLearningTab() {
+  const { t } = useTranslation();
+  const [weightDays, setWeightDays] = useState(60);
   const qc = useQueryClient();
   const refreshClusters = useMutation({
     mutationFn: () => statsApi.refreshClusters(),
@@ -987,95 +1057,36 @@ export default function StatsPanel() {
   });
 
   return (
-    <div>
-      <Accordion
-        title={t("stats.title")}
-        description={t("stats.description")}
-        defaultOpen
+    <div className="flex flex-col gap-6">
+      <ChartCard
+        title={t("stats.weightHistoryTitle")}
+        description={t("stats.weightHistoryDesc")}
+        action={<RangePicker value={weightDays} onChange={setWeightDays} />}
+      >
+        <WeightHistoryChart key={weightDays} days={weightDays} />
+      </ChartCard>
+
+      <ChartCard
+        title={t("stats.kwClusterMapTitle")}
+        description={t("stats.kwClusterMapDesc")}
         action={
-          <div className="flex items-center gap-2">
-            {!statsEnabled && (
-              <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-                <PauseCircle size={13} /> {t("stats.recordingPaused")}
-              </span>
-            )}
-            <span className="text-xs text-gray-500 dark:text-gray-400">{t("stats.recordHistory")}</span>
-            <button
-              role="switch"
-              aria-checked={statsEnabled}
-              title={statsEnabled ? t("stats.pauseRecording") : t("stats.resumeRecording")}
-              onClick={() => update.mutate({ stats_enabled: !statsEnabled })}
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${statsEnabled ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"}`}
-            >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${statsEnabled ? "translate-x-4" : "translate-x-0"}`} />
-            </button>
-          </div>
+          <button
+            onClick={() => refreshClusters.mutate()}
+            disabled={refreshClusters.isPending}
+            title={t("stats.refreshClusters")}
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-40"
+          >
+            <RefreshCw size={12} className={refreshClusters.isPending ? "animate-spin" : ""} />
+            {t("stats.refreshClusters")}
+          </button>
         }
       >
-        <div className="flex flex-col gap-6">
-          <ChartCard
-            title={t("stats.activityTitle")}
-            description={t("stats.activityDesc")}
-            action={<RangePicker value={activityDays} onChange={setActivityDays} />}
-          >
-            <ActivityChart key={activityDays} days={activityDays} />
-          </ChartCard>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ChartCard
-              title={t("stats.byCategoryTitle")}
-              description={t("stats.byCategoryDesc")}
-              action={<RangePicker value={categoryDays} onChange={setCategoryDays} />}
-            >
-              <ByCategoryChart key={categoryDays} days={categoryDays} />
-            </ChartCard>
-
-            <ChartCard
-              title={t("stats.bySourceTitle")}
-              description={t("stats.bySourceDesc")}
-              action={<RangePicker value={sourceDays} onChange={setSourceDays} />}
-            >
-              <BySourceChart key={sourceDays} days={sourceDays} />
-            </ChartCard>
-          </div>
-
-          <ChartCard
-            title={t("stats.sourceClusterTitle")}
-            description={t("stats.sourceClusterDesc")}
-            action={<RangePicker value={clusterDays} onChange={setClusterDays} />}
-          >
-            <SourceClustersChart key={clusterDays} days={clusterDays} />
-          </ChartCard>
-
-          <ChartCard
-            title={t("stats.weightHistoryTitle")}
-            description={t("stats.weightHistoryDesc")}
-            action={<RangePicker value={weightDays} onChange={setWeightDays} />}
-          >
-            <WeightHistoryChart key={weightDays} days={weightDays} />
-          </ChartCard>
-
-          <ChartCard
-            title={t("stats.kwClusterMapTitle")}
-            description={t("stats.kwClusterMapDesc")}
-            action={
-              <button
-                onClick={() => refreshClusters.mutate()}
-                disabled={refreshClusters.isPending}
-                title={t("stats.refreshClusters")}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-40"
-              >
-                <RefreshCw size={12} className={refreshClusters.isPending ? "animate-spin" : ""} />
-                {t("stats.refreshClusters")}
-              </button>
-            }
-          >
-            <KeywordClusterMapChart />
-          </ChartCard>
-
-          <PodcastEpisodesSection />
-        </div>
-      </Accordion>
+        <KeywordClusterMapChart />
+      </ChartCard>
     </div>
   );
+}
+
+export function AnalysePodcastTab() {
+  return <PodcastEpisodesSection />;
 }

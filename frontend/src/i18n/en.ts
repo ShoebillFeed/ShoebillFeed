@@ -25,6 +25,7 @@ const en = {
   header: {
     feed: "Feed",
     podcasts: "Podcasts",
+    analyse: "Analytics",
     settings: "Settings",
     signOut: "Sign out",
     switchToLight: "Switch to light mode",
@@ -65,6 +66,15 @@ const en = {
       generating: "Generating…",
       ready: "Ready",
       failed: "Failed",
+    },
+  },
+  analyse: {
+    title: "Analytics",
+    tabs: {
+      activity: "Activity",
+      categories: "Categories & Sources",
+      learning: "Learning",
+      podcast: "Podcast",
     },
   },
   tabs: {
