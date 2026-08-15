@@ -139,10 +139,29 @@ setup this requires) can be scoped to a relevance threshold, specific
 categories, and/or a specific custom tab, so you're only notified about
 the subset of your feed you actually want interrupted for.
 
-## Stats
+## Analytics
 
-A per-user activity view: items fetched/read/starred over time, and a
-breakdown of your reading activity by category.
+**Analytics** (top-level nav, next to Podcasts) is a per-user activity
+view split into tabs:
+
+- **Activity** — items fetched/read/liked/disliked over time.
+- **Categories & Sources** — volume by category and by source, plus
+  which pairs of sources most often cover the same story.
+- **Trends** — how coverage of a keyword, or a loose group of
+  OR-matched keywords ("topic"), has evolved day by day. Add up to six
+  topics to compare on one chart, each built from your own keywords or
+  imported from an existing keyword cluster (see
+  {doc}`learning-and-scoring`), and optionally filter by category or
+  source. A topic built from a keyword cluster shows that cluster's
+  real historical coverage, not just a snapshot going forward.
+- **Learning** — category weight history and the keyword cluster map
+  (see {doc}`learning-and-scoring`).
+- **Podcast** — categories, keywords, and sources covered in each
+  generated episode of a selected show.
+
+Recording can be paused at any time from the toggle at the top of the
+page; pausing stops new history from being recorded without deleting
+what's already there.
 
 ## Admin: Users
 
