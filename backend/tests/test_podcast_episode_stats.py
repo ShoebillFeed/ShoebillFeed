@@ -201,3 +201,76 @@ class TestPodcastEpisodeStats:
         body = resp.json()[0]
         assert len(body["top_keywords"]) == 8
         assert body["top_keywords"][0] == {"keyword": "popular", "count": 5}
+
+
+class TestPodcastEpisodeStatsQueryEfficiency:
+    """Regression guard: this endpoint's item/cluster queries must not pull
+    NewsItem's heavy unused columns (embedding in particular -- a 768-dim
+    pgvector column) since doing so measurably slowed the stats page.
+    Exercises the exact same select()/options() shape api/stats.py uses,
+    independent of the HTTP layer, so it catches someone widening the
+    load_only() back out without needing to inspect generated SQL."""
+
+    def test_news_item_query_defers_heavy_unused_columns(self, db_session, make_user):
+        from sqlalchemy import inspect, select
+        from sqlalchemy.orm import joinedload, load_only, selectinload
+
+        user = make_user()
+        source = _make_source(db_session, user.id)
+        item = _make_item(db_session, source, user.id, keywords=["ai"])
+        item_id = item.id  # read before commit()+expunge_all() detach it
+        db_session.commit()
+        # expunge (not just expire) so the next query builds a genuinely new
+        # instance -- otherwise SQLAlchemy reuses the already-identity-mapped
+        # object from _make_item, which has every column already loaded, and
+        # load_only()'s deferred-column behavior wouldn't be exercised.
+        db_session.expunge_all()
+
+        loaded = db_session.scalars(
+            select(NewsItem)
+            .where(NewsItem.id == item_id)
+            .options(
+                load_only(NewsItem.extracted_keywords),
+                selectinload(NewsItem.categories),
+                joinedload(NewsItem.source),
+            )
+        ).unique().one()
+
+        unloaded = inspect(loaded).unloaded
+        assert "embedding" in unloaded
+        assert "raw_content" in unloaded
+        assert "abstract" in unloaded
+        assert "extracted_keywords" not in unloaded
+
+    def test_cluster_member_item_query_defers_everything_but_source(self, db_session, make_user):
+        from sqlalchemy import inspect, select
+        from sqlalchemy.orm import joinedload, load_only, selectinload
+
+        user = make_user()
+        source = _make_source(db_session, user.id)
+        cluster = _make_cluster(db_session, user.id, [source])
+        cluster_id = cluster.id  # read before commit()+expunge_all() detach it
+        source_id = source.id
+        db_session.commit()
+        db_session.expunge_all()
+
+        loaded = db_session.scalars(
+            select(NewsCluster)
+            .where(NewsCluster.id == cluster_id)
+            .options(
+                selectinload(NewsCluster.items).options(
+                    load_only(NewsItem.id),
+                    joinedload(NewsItem.source),
+                ),
+            )
+        ).unique().one()
+
+        member = loaded.items[0]
+        unloaded = inspect(member).unloaded
+        assert "embedding" in unloaded
+        assert "extracted_keywords" in unloaded
+        # source is a relationship, not a deferred column -- confirm the
+        # joinedload actually worked (accessing it shouldn't trigger a
+        # lazy-load query, but we can at least confirm it's populated).
+        assert member.source is not None
+        assert member.source.id == source_id

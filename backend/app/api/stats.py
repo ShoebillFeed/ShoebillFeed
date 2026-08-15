@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import Integer, select, func, cast, Date
-from sqlalchemy.orm import Session, selectinload, joinedload
+from sqlalchemy.orm import Session, selectinload, joinedload, load_only
 
 from app.api.deps import get_db, get_current_user
 from app.models import NewsItem, Category, Source, NewsCluster, PodcastShow, PodcastEpisode
@@ -431,12 +431,21 @@ def podcast_episode_stats(
         all_item_ids.update(ep.news_item_ids)
         all_cluster_ids.update(ep.news_cluster_ids)
 
+    # load_only() below matters more than usual here: NewsItem carries a
+    # 768-dim pgvector embedding plus raw_content/abstract, none of which
+    # this endpoint touches (only extracted_keywords, categories, and
+    # source.name are used) -- pulling full rows for every item/cluster
+    # referenced across up to `limit` episodes measurably slowed this page.
     items_by_id: dict[uuid.UUID, NewsItem] = {}
     if all_item_ids:
         items = db.scalars(
             select(NewsItem)
             .where(NewsItem.id.in_(all_item_ids))
-            .options(selectinload(NewsItem.categories), joinedload(NewsItem.source))
+            .options(
+                load_only(NewsItem.extracted_keywords),
+                selectinload(NewsItem.categories),
+                joinedload(NewsItem.source),
+            )
         ).unique().all()
         items_by_id = {i.id: i for i in items}
 
@@ -446,8 +455,16 @@ def podcast_episode_stats(
             select(NewsCluster)
             .where(NewsCluster.id.in_(all_cluster_ids))
             .options(
+                load_only(NewsCluster.extracted_keywords),
                 selectinload(NewsCluster.categories),
-                selectinload(NewsCluster.items).joinedload(NewsItem.source),
+                # Member items are only used for their source name -- the
+                # same load_only reasoning applies, and a single
+                # well-covered story's cluster can easily have 8-10 member
+                # items, multiplying the wasted cost.
+                selectinload(NewsCluster.items).options(
+                    load_only(NewsItem.id),
+                    joinedload(NewsItem.source),
+                ),
             )
         ).unique().all()
         clusters_by_id = {c.id: c for c in clusters}
