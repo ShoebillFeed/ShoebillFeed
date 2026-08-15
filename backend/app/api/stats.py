@@ -3,7 +3,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import Integer, select, func, cast, Date
+from pydantic import BaseModel, Field
+from sqlalchemy import Integer, select, func, cast, Date, exists
 from sqlalchemy.orm import Session, selectinload, joinedload, load_only
 
 from app.api.deps import get_db, get_current_user
@@ -12,6 +13,7 @@ from app.models.category_keyword_weight import CategoryKeywordWeight
 from app.models.category_weight_snapshot import CategoryWeightSnapshot
 from app.models.keyword_cluster import KeywordCluster
 from app.models.news_item import news_item_categories
+from app.models.news_cluster import news_cluster_categories
 from app.models.user import User
 
 router = APIRouter()
@@ -524,3 +526,107 @@ def podcast_episode_stats(
         })
 
     return result
+
+
+class KeywordTrendTopic(BaseModel):
+    label: str = Field(..., max_length=100)
+    # OR-matched: an article counts for this topic if it has ANY of these
+    # keywords. Lets a "topic" be a single keyword or a loose group (e.g.
+    # pre-filled from an existing KeywordCluster's keyword list).
+    keywords: list[str] = Field(..., min_length=1, max_length=25)
+
+
+class KeywordTrendRequest(BaseModel):
+    topics: list[KeywordTrendTopic] = Field(..., min_length=1, max_length=6)
+    category_ids: list[uuid.UUID] = Field(default_factory=list)
+    source_ids: list[uuid.UUID] = Field(default_factory=list)
+    days: int = Field(default=90, ge=1, le=365)
+
+
+def _keyword_overlap_exists(keyword_column, lowered_keywords: list[str]):
+    """EXISTS(...) predicate: true if any element of `keyword_column` (a
+    Postgres text[] column) case-insensitively matches one of
+    `lowered_keywords`. Deliberately not the array `&&` overlap operator --
+    that needs both sides in the same case, and extracted_keywords is stored
+    as whatever case the LLM produced, not normalized -- so this compares
+    case-insensitively via unnest() instead. That means no GIN index gets
+    used here (a plain GIN index only helps `&&`); acceptable for a
+    self-hosted single/few-user instance's article volume, but revisit with
+    an expression index on lower(unnest(...)) if this ever gets slow.
+    """
+    # render_derived() forces the "AS anon_1(kw)" column-alias list onto the
+    # FROM-clause function call -- without it, Postgres has no name to bind
+    # kw.c.kw to and errors with "column anon_1.kw does not exist".
+    kw = func.unnest(keyword_column).table_valued("kw").render_derived()
+    return exists(select(1).select_from(kw).where(func.lower(kw.c.kw).in_(lowered_keywords)))
+
+
+@router.post("/keyword-trend")
+def keyword_trend(
+    payload: KeywordTrendRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Daily article counts per topic (a topic = one or more OR-matched
+    keywords), optionally filtered to specific categories/sources -- "how
+    has coverage of X evolved over time". Counts both standalone NewsItems
+    and NewsClusters (each story counted once, not once per cluster member),
+    unlike by-category/by-source above which only look at NewsItem."""
+    since = _since(payload.days)
+
+    results = []
+    for topic in payload.topics:
+        lowered = sorted({k.strip().lower() for k in topic.keywords if k.strip()})
+        if not lowered:
+            results.append({"label": topic.label, "points": []})
+            continue
+
+        item_q = (
+            select(cast(NewsItem.fetched_at, Date).label("date"), func.count(NewsItem.id.distinct()).label("count"))
+            .where(
+                NewsItem.user_id == current_user.id,
+                NewsItem.fetched_at >= since,
+                _keyword_overlap_exists(NewsItem.extracted_keywords, lowered),
+            )
+        )
+        if payload.source_ids:
+            item_q = item_q.where(NewsItem.source_id.in_(payload.source_ids))
+        if payload.category_ids:
+            item_q = (
+                item_q.join(news_item_categories, news_item_categories.c.news_item_id == NewsItem.id)
+                .where(news_item_categories.c.category_id.in_(payload.category_ids))
+            )
+        item_rows = db.execute(item_q.group_by(cast(NewsItem.fetched_at, Date))).all()
+
+        cluster_q = (
+            select(cast(NewsCluster.created_at, Date).label("date"), func.count(NewsCluster.id.distinct()).label("count"))
+            .where(
+                NewsCluster.user_id == current_user.id,
+                NewsCluster.created_at >= since,
+                _keyword_overlap_exists(NewsCluster.extracted_keywords, lowered),
+            )
+        )
+        if payload.source_ids:
+            cluster_q = (
+                cluster_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+                .where(NewsItem.source_id.in_(payload.source_ids))
+            )
+        if payload.category_ids:
+            cluster_q = (
+                cluster_q.join(news_cluster_categories, news_cluster_categories.c.news_cluster_id == NewsCluster.id)
+                .where(news_cluster_categories.c.category_id.in_(payload.category_ids))
+            )
+        cluster_rows = db.execute(cluster_q.group_by(cast(NewsCluster.created_at, Date))).all()
+
+        counts: dict[str, int] = {}
+        for r in item_rows:
+            counts[str(r.date)] = counts.get(str(r.date), 0) + r.count
+        for r in cluster_rows:
+            counts[str(r.date)] = counts.get(str(r.date), 0) + r.count
+
+        results.append({
+            "label": topic.label,
+            "points": [{"date": d, "count": c} for d, c in sorted(counts.items())],
+        })
+
+    return results

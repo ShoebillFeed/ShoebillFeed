@@ -6,10 +6,11 @@ import {
   AnalyseCategoriesTab,
   AnalyseLearningTab,
   AnalysePodcastTab,
+  AnalyseTrendsTab,
   StatsRecordingToggle,
 } from "../components/analyse/AnalyseCharts";
 
-type Tab = "activity" | "categories" | "learning" | "podcast";
+type Tab = "activity" | "categories" | "trends" | "learning" | "podcast";
 
 export default function AnalysePage() {
   const { t } = useTranslation();
@@ -18,6 +19,7 @@ export default function AnalysePage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: "activity", label: t("analyse.tabs.activity") },
     { id: "categories", label: t("analyse.tabs.categories") },
+    { id: "trends", label: t("analyse.tabs.trends") },
     { id: "learning", label: t("analyse.tabs.learning") },
     { id: "podcast", label: t("analyse.tabs.podcast") },
   ];
@@ -51,6 +53,7 @@ export default function AnalysePage() {
 
       {activeTab === "activity" && <AnalyseActivityTab />}
       {activeTab === "categories" && <AnalyseCategoriesTab />}
+      {activeTab === "trends" && <AnalyseTrendsTab />}
       {activeTab === "learning" && <AnalyseLearningTab />}
       {activeTab === "podcast" && <AnalysePodcastTab />}
     </div>

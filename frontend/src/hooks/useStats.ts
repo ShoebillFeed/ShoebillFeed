@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { statsApi } from "../api/stats";
+import type { KeywordTrendRequest } from "../api/stats";
 
 export function useActivityStats(days: number) {
   return useQuery({
@@ -48,5 +49,14 @@ export function usePodcastEpisodeStats(showId: string | null) {
     queryKey: ["stats", "podcast-episodes", showId],
     queryFn: () => statsApi.podcastEpisodes(showId as string),
     enabled: !!showId,
+  });
+}
+
+// A POST driven by user-configured topics/filters, not a simple GET keyed by
+// static params -- a mutation (triggered from an effect) fits better than a
+// query key that would have to encode the full topic list.
+export function useKeywordTrend() {
+  return useMutation({
+    mutationFn: (payload: KeywordTrendRequest) => statsApi.keywordTrend(payload),
   });
 }

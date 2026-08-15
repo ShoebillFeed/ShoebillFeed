@@ -103,6 +103,28 @@ export interface PodcastEpisodeStat {
   top_sources: PodcastEpisodeSourceCount[];
 }
 
+export interface KeywordTrendTopicRequest {
+  label: string;
+  keywords: string[];
+}
+
+export interface KeywordTrendRequest {
+  topics: KeywordTrendTopicRequest[];
+  category_ids?: string[];
+  source_ids?: string[];
+  days?: number;
+}
+
+export interface KeywordTrendPoint {
+  date: string;
+  count: number;
+}
+
+export interface KeywordTrendResult {
+  label: string;
+  points: KeywordTrendPoint[];
+}
+
 export const statsApi = {
   activity: (days: number) =>
     client.get<ActivityPoint[]>("/stats/activity", { params: { days } }).then((r) => r.data),
@@ -122,4 +144,6 @@ export const statsApi = {
     client
       .get<PodcastEpisodeStat[]>("/stats/podcast-episodes", { params: { show_id: showId, limit } })
       .then((r) => r.data),
+  keywordTrend: (payload: KeywordTrendRequest) =>
+    client.post<KeywordTrendResult[]>("/stats/keyword-trend", payload).then((r) => r.data),
 };

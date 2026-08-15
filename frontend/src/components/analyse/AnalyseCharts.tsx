@@ -1,4 +1,4 @@
-import { useState, useMemo, Component } from "react";
+import { useState, useMemo, useEffect, useRef, Component } from "react";
 import type { ReactNode } from "react";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 import { useTranslation } from "react-i18next";
@@ -9,17 +9,20 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
 } from "recharts";
 import { format, parseISO } from "date-fns";
-import { PauseCircle, RefreshCw, ThumbsUp } from "lucide-react";
+import { Check, PauseCircle, Plus, RefreshCw, ThumbsUp, X } from "lucide-react";
+import { cn } from "../../lib/utils";
 import {
   useActivityStats, useCategoryStats, useSourceStats,
   useWeightHistory, useSourceClusters,
-  useKeywordClusterMap, usePodcastEpisodeStats,
+  useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend,
 } from "../../hooks/useStats";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { usePodcastShows } from "../../hooks/usePodcasts";
+import { useCategories } from "../../hooks/useCategories";
+import { useSources } from "../../hooks/useSources";
 import { statsApi } from "../../api/stats";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { KeywordClusterMapEntry, PodcastEpisodeStat } from "../../api/stats";
+import type { KeywordClusterMapEntry, KeywordTrendResult, PodcastEpisodeStat } from "../../api/stats";
 
 class ChartErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
   state = { crashed: false };
@@ -1089,4 +1092,341 @@ export function AnalyseLearningTab() {
 
 export function AnalysePodcastTab() {
   return <PodcastEpisodesSection />;
+}
+
+// ── Keyword/topic coverage trends ─────────────────────────────────────────────
+
+const MAX_TOPICS = 6;
+const TOPIC_COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#0ea5e9", "#a855f7"];
+
+interface LocalTopic {
+  id: string;
+  label: string;
+  keywords: string[];
+}
+
+function generateTopicId(): string {
+  // Local React key only, not security-sensitive -- see the identical
+  // fallback comment in PodcastShowForm.tsx's generateHostId.
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `topic-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function emptyTopic(): LocalTopic {
+  return { id: generateTopicId(), label: "", keywords: [] };
+}
+
+function TopicRow({
+  topic,
+  color,
+  canRemove,
+  onChange,
+  onRemove,
+}: {
+  topic: LocalTopic;
+  color: string;
+  canRemove: boolean;
+  onChange: (patch: Partial<LocalTopic>) => void;
+  onRemove: () => void;
+}) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState("");
+
+  const commitDraft = () => {
+    const value = draft.trim();
+    if (value && !topic.keywords.some((k) => k.toLowerCase() === value.toLowerCase())) {
+      onChange({ keywords: [...topic.keywords, value] });
+    }
+    setDraft("");
+  };
+
+  const removeKeyword = (kw: string) =>
+    onChange({ keywords: topic.keywords.filter((k) => k !== kw) });
+
+  return (
+    <div className="flex flex-col gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-2">
+        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+        <input
+          value={topic.label}
+          onChange={(e) => onChange({ label: e.target.value })}
+          placeholder={t("stats.trendTopicLabelPlaceholder")}
+          maxLength={100}
+          className="flex-1 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1 text-gray-800 dark:text-gray-100"
+        />
+        {canRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            title={t("common.delete")}
+            className="text-gray-400 hover:text-red-500 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {topic.keywords.map((kw) => (
+          <span
+            key={kw}
+            className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+          >
+            {kw}
+            <button type="button" onClick={() => removeKeyword(kw)} className="text-gray-400 hover:text-red-500">
+              <X size={11} />
+            </button>
+          </span>
+        ))}
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === ",") {
+              e.preventDefault();
+              commitDraft();
+            } else if (e.key === "Backspace" && draft === "" && topic.keywords.length > 0) {
+              onChange({ keywords: topic.keywords.slice(0, -1) });
+            }
+          }}
+          onBlur={commitDraft}
+          placeholder={t("stats.trendKeywordPlaceholder")}
+          className="flex-1 min-w-[100px] text-xs bg-transparent outline-none text-gray-800 dark:text-gray-100 placeholder:text-gray-400"
+        />
+      </div>
+    </div>
+  );
+}
+
+function TrendFilterPills({
+  title,
+  items,
+  selectedIds,
+  onToggle,
+  colorOf,
+}: {
+  title: string;
+  items: { id: string; name: string }[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  colorOf?: (id: string) => string | undefined;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">{title}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((item) => {
+          const selected = selectedIds.includes(item.id);
+          const color = colorOf?.(item.id);
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onToggle(item.id)}
+              className={cn(
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-colors",
+                selected
+                  ? "text-white border-transparent"
+                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400"
+              )}
+              style={selected ? { backgroundColor: color ?? "#4f46e5", borderColor: color ?? "#4f46e5" } : undefined}
+            >
+              {selected && <Check size={9} />}
+              {item.name}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function KeywordTrendChart({ results, days }: { results: KeywordTrendResult[]; days: number }) {
+  const gridColor = useGridColor();
+
+  const allDates = Array.from(new Set(results.flatMap((r) => r.points.map((p) => p.date)))).sort();
+  const chartData = allDates.map((date) => {
+    const row: Record<string, string | number> = { date: fmtDate(date, days) };
+    for (const r of results) {
+      const point = r.points.find((p) => p.date === date);
+      row[r.label] = point?.count ?? 0;
+    }
+    return row;
+  });
+
+  return (
+    <ResponsiveContainer width="100%" height={280}>
+      <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
+        <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+        <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+        <Tooltip
+          cursor={{ stroke: "rgba(99,102,241,0.2)", strokeWidth: 1 }}
+          wrapperStyle={WRAPPER_STYLE}
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null;
+            return (
+              <TooltipBox label={label as string}>
+                {payload
+                  .filter((p) => p.value !== undefined)
+                  .sort((a, b) => (b.value as number) - (a.value as number))
+                  .map((p) => (
+                    <TooltipRow key={String(p.name)} color={p.color} name={`${p.name ?? ""}`} value={p.value as number} />
+                  ))}
+              </TooltipBox>
+            );
+          }}
+        />
+        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, left: 0, width: "100%", textAlign: "center" }} />
+        {results.map((r, i) => (
+          <Line
+            key={r.label}
+            type="monotone"
+            dataKey={r.label}
+            stroke={TOPIC_COLORS[i % TOPIC_COLORS.length]}
+            strokeWidth={2}
+            dot={false}
+          />
+        ))}
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function AnalyseTrendsTab() {
+  const { t } = useTranslation();
+  const { data: categories = [] } = useCategories();
+  const { data: sources = [] } = useSources();
+  const { data: clusterMap = [] } = useKeywordClusterMap();
+  const [topics, setTopics] = useState<LocalTopic[]>([emptyTopic()]);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [sourceIds, setSourceIds] = useState<string[]>([]);
+  const [days, setDays] = useState(90);
+  const trend = useKeywordTrend();
+  const lastRequestKey = useRef<string | null>(null);
+
+  const updateTopic = (id: string, patch: Partial<LocalTopic>) =>
+    setTopics((prev) => prev.map((topic) => (topic.id === id ? { ...topic, ...patch } : topic)));
+  const removeTopic = (id: string) => setTopics((prev) => prev.filter((topic) => topic.id !== id));
+  const addTopic = () => setTopics((prev) => (prev.length < MAX_TOPICS ? [...prev, emptyTopic()] : prev));
+  const addTopicFromCluster = (entry: KeywordClusterMapEntry) =>
+    setTopics((prev) =>
+      prev.length < MAX_TOPICS
+        ? [...prev, { id: generateTopicId(), label: entry.cluster_label, keywords: entry.keywords.map((k) => k.keyword) }]
+        : prev
+    );
+  const toggleCategory = (id: string) =>
+    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleSource = (id: string) =>
+    setSourceIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const requestTopics = topics.filter((topic) => topic.keywords.length > 0);
+
+  useEffect(() => {
+    if (requestTopics.length === 0) return;
+    const payload = {
+      topics: requestTopics.map((topic) => ({
+        label: topic.label.trim() || topic.keywords[0],
+        keywords: topic.keywords,
+      })),
+      category_ids: categoryIds,
+      source_ids: sourceIds,
+      days,
+    };
+    const key = JSON.stringify(payload);
+    if (key === lastRequestKey.current) return;
+    lastRequestKey.current = key;
+    trend.mutate(payload);
+    // trend.mutate is stable across renders (react-query); only the payload should retrigger this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestTopics, categoryIds, sourceIds, days]);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">{t("stats.trendsTitle")}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{t("stats.trendsDesc")}</p>
+          </div>
+          <RangePicker value={days} onChange={setDays} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {topics.map((topic, i) => (
+            <TopicRow
+              key={topic.id}
+              topic={topic}
+              color={TOPIC_COLORS[i % TOPIC_COLORS.length]}
+              canRemove={topics.length > 1}
+              onChange={(patch) => updateTopic(topic.id, patch)}
+              onRemove={() => removeTopic(topic.id)}
+            />
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {topics.length < MAX_TOPICS && (
+            <button
+              type="button"
+              onClick={addTopic}
+              className="flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              <Plus size={13} /> {t("stats.addTrendTopic")}
+            </button>
+          )}
+          {topics.length < MAX_TOPICS && clusterMap.length > 0 && (
+            <select
+              value=""
+              onChange={(e) => {
+                const entry = clusterMap.find((c) => c.cluster_label === e.target.value);
+                if (entry) addTopicFromCluster(entry);
+              }}
+              className="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1 text-gray-500 dark:text-gray-400"
+            >
+              <option value="">{t("stats.importFromCluster")}</option>
+              {clusterMap.map((c) => (
+                <option key={c.cluster_label} value={c.cluster_label}>{c.cluster_label}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+          <TrendFilterPills
+            title={t("stats.filterByCategory")}
+            items={categories.filter((c) => c.is_active)}
+            selectedIds={categoryIds}
+            onToggle={toggleCategory}
+            colorOf={(id) => categories.find((c) => c.id === id)?.color}
+          />
+          <TrendFilterPills
+            title={t("stats.filterBySource")}
+            items={sources.filter((s) => s.is_active)}
+            selectedIds={sourceIds}
+            onToggle={toggleSource}
+          />
+        </div>
+      </div>
+
+      <ChartCard title={t("stats.trendsChartTitle")} description={t("stats.trendsChartDesc")}>
+        {requestTopics.length === 0 ? (
+          <div className="flex items-center justify-center h-40 text-sm text-gray-400 text-center px-4">
+            {t("stats.trendsAddTopicHint")}
+          </div>
+        ) : trend.isPending && !trend.data ? (
+          <Loading />
+        ) : trend.data && trend.data.every((r) => r.points.every((p) => p.count === 0)) ? (
+          <Empty />
+        ) : trend.data ? (
+          <KeywordTrendChart results={trend.data} days={days} />
+        ) : (
+          <Loading />
+        )}
+      </ChartCard>
+    </div>
+  );
 }
