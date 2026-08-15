@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import AppShell from "./components/layout/AppShell";
 import FeedPage from "./pages/FeedPage";
+import PodcastsPage from "./pages/PodcastsPage";
 import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import { useMe } from "./hooks/useAuth";
@@ -92,6 +93,7 @@ export default function App() {
               <AppShell>
                 <Routes>
                   <Route path="/" element={<FeedPage />} />
+                  <Route path="/podcasts" element={<PodcastsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                 </Routes>
               </AppShell>

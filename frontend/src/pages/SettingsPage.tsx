@@ -9,10 +9,11 @@ import StatsPanel from "../components/settings/StatsPanel";
 import LearningPanel from "../components/settings/LearningPanel";
 import PreferencesPanel from "../components/settings/PreferencesPanel";
 import NotificationsPanel from "../components/settings/NotificationsPanel";
+import PodcastsPanel from "../components/settings/PodcastsPanel";
 import AboutPanel from "../components/settings/AboutPanel";
 import { useMe } from "../hooks/useAuth";
 
-type BaseTab = "sources" | "categories" | "llm" | "learning" | "notifications" | "preferences" | "stats" | "about";
+type BaseTab = "sources" | "categories" | "llm" | "learning" | "notifications" | "podcasts" | "preferences" | "stats" | "about";
 type Tab = BaseTab | "users";
 
 export default function SettingsPage() {
@@ -26,6 +27,7 @@ export default function SettingsPage() {
     { id: "llm", label: t("settings.llm") },
     { id: "learning", label: t("settings.learning") },
     { id: "notifications", label: t("settings.notifications") },
+    { id: "podcasts", label: t("settings.podcasts") },
     { id: "preferences", label: t("settings.preferences") },
     { id: "stats", label: t("settings.statistics") },
     { id: "about", label: t("settings.about") },
@@ -64,6 +66,7 @@ export default function SettingsPage() {
         {activeTab === "llm" && <LLMConfigPanel />}
         {activeTab === "learning" && <LearningPanel />}
         {activeTab === "notifications" && <NotificationsPanel />}
+        {activeTab === "podcasts" && <PodcastsPanel />}
         {activeTab === "preferences" && <PreferencesPanel />}
         {activeTab === "stats" && <StatsPanel />}
         {activeTab === "about" && <AboutPanel />}

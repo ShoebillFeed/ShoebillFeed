@@ -77,6 +77,32 @@ export interface KeywordClusterMapEntry {
   keywords: KeywordInCluster[];
 }
 
+export interface PodcastEpisodeCategoryCount {
+  id: string;
+  name: string;
+  color: string;
+  count: number;
+}
+
+export interface PodcastEpisodeKeywordCount {
+  keyword: string;
+  count: number;
+}
+
+export interface PodcastEpisodeSourceCount {
+  name: string;
+  count: number;
+}
+
+export interface PodcastEpisodeStat {
+  id: string;
+  generated_at: string;
+  total_stories: number;
+  categories: PodcastEpisodeCategoryCount[];
+  top_keywords: PodcastEpisodeKeywordCount[];
+  top_sources: PodcastEpisodeSourceCount[];
+}
+
 export const statsApi = {
   activity: (days: number) =>
     client.get<ActivityPoint[]>("/stats/activity", { params: { days } }).then((r) => r.data),
@@ -92,4 +118,8 @@ export const statsApi = {
     client.get<KeywordClusterMapEntry[]>("/stats/keyword-cluster-map").then((r) => r.data),
   refreshClusters: () =>
     client.post("/stats/refresh-clusters").then((r) => r.data),
+  podcastEpisodes: (showId: string, limit = 20) =>
+    client
+      .get<PodcastEpisodeStat[]>("/stats/podcast-episodes", { params: { show_id: showId, limit } })
+      .then((r) => r.data),
 };

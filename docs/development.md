@@ -30,6 +30,24 @@ npm install
 npm run dev
 ```
 
+```{note}
+**Accessing the dev stack through a reverse proxy / custom domain** (e.g.
+testing a branch on a server before merging): Vite 6's dev server rejects
+any request whose `Host` header isn't `localhost`/`127.0.0.1` by default
+(DNS-rebinding protection). Behind Traefik/Nginx terminating a real
+domain, this surfaces as a `403 Blocked request` — for *every* request,
+not just some, since it happens before Vite even looks at the path or
+method. Set `VITE_ALLOWED_HOSTS` in `.env` (comma-separated if more than
+one) and `docker-compose.override.yml` passes it through to the `frontend`
+service automatically:
+
+    VITE_ALLOWED_HOSTS=your-domain.example
+
+This only affects the dev stack (`docker-compose.override.yml`'s Vite
+server) — the production `frontend` container ({doc}`deployment`) serves
+prebuilt static files via Nginx and has no such check.
+```
+
 ## Running the tests
 
 ### Backend (pytest)

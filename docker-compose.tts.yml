@@ -1,0 +1,61 @@
+# Standalone TTS stack — run this on whichever machine should perform
+# podcast speech synthesis (e.g. one with a GPU). Independent of the main
+# docker-compose.yml stack; Shoebill's backend/celery-worker-podcast talk to
+# it over plain HTTP, the same way they'd talk to a standalone Ollama
+# instance (see docker-compose.ollama.yml) for LLM calls.
+#
+# Usage (CPU, default, Piper engine):
+#   docker compose -f docker-compose.tts.yml up -d --build
+#
+# Usage (a different engine — currently piper, kokoro, or chatterbox):
+#   TTS_ENGINE=kokoro docker compose -f docker-compose.tts.yml up -d --build
+#   All engines' dependencies are always in the image, so this is a plain
+#   env var change — no rebuild needed to switch, only to change TTS_GPU.
+#
+# Usage (GPU):
+#   TTS_GPU=true TTS_DEVICE=cuda docker compose -f docker-compose.tts.yml up -d --build
+#   (also uncomment the NVIDIA GPU block below)
+#   Strongly recommended for TTS_ENGINE=chatterbox specifically — real-time
+#   factor on CPU is roughly 10x (a few seconds of audio takes tens of
+#   seconds to generate), unlike piper/kokoro which are CPU-comfortable.
+#
+# Then point Shoebill at it (.env of the main stack):
+#   TTS_PROVIDER=network
+#   TTS_SERVICE_URL=http://<this-machine-ip>:8100
+
+services:
+  tts:
+    build:
+      context: ./tts_service
+      dockerfile: Dockerfile
+      args:
+        TTS_GPU: ${TTS_GPU:-false}
+    ports:
+      - "8100:8100"
+    environment:
+      TTS_ENGINE: ${TTS_ENGINE:-piper}
+      TTS_DEVICE: ${TTS_DEVICE:-cpu}
+      TTS_MODEL_DIR: /data/voices
+    volumes:
+      - tts_voices:/data/voices
+    restart: unless-stopped
+    healthcheck:
+      # python:3.12-slim has no wget/curl; urllib is stdlib so this needs no extra package.
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8100/health', timeout=5)"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 15s
+
+    # ── NVIDIA GPU (uncomment to enable; also build with TTS_GPU=true and set TTS_DEVICE=cuda) ──
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    # ─────────────────────────────────────────────────────────────────────────
+
+volumes:
+  tts_voices:

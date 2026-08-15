@@ -20,3 +20,13 @@ export function useUpdateAdvancedSettings() {
     },
   });
 }
+
+export function usePodcastTtsHealth() {
+  return useQuery({
+    queryKey: ["settings", "podcast-health"],
+    queryFn: settingsApi.getPodcastHealth,
+    // A deployment's TTS engine doesn't change at runtime -- one fetch per
+    // show-form mount is plenty, no need to poll.
+    staleTime: Infinity,
+  });
+}

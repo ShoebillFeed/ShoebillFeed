@@ -119,3 +119,22 @@ class HealthOut(BaseModel):
     redis: bool
     llm: bool
     provider_health: list[ProviderHealth] = []
+
+
+class TTSHealthOut(BaseModel):
+    provider: str  # "piper" or "network"
+    healthy: bool
+    base_url: str | None = None  # only set for "network"
+    # Whether the configured engine actually honors PodcastShow.speech_rate
+    # (Chatterbox doesn't) -- lets the podcast show form warn instead of
+    # showing a Speech Speed slider that silently does nothing.
+    supports_speech_rate: bool = True
+    # Whether the configured engine honors a per-host exaggeration value
+    # (only Chatterbox does) -- lets the podcast show form show that control
+    # only when it would actually do something.
+    supports_exaggeration: bool = False
+    # Whether TTS_SERVICE_URL is set, i.e. whether "network" is usable as a
+    # per-host engine pin (PodcastHostSchema.tts_provider) regardless of
+    # which provider is the deployment's global default -- Piper needs no
+    # such check since it's always available in-process.
+    network_configured: bool = False

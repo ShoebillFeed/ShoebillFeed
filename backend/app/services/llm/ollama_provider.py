@@ -9,6 +9,36 @@ from app.services.llm.base import (
 )
 
 
+def _num_ctx_for(system: str, user: str, max_tokens: int) -> int:
+    """Ollama does not grow num_ctx to fit the prompt automatically -- a
+    model's default context window (often 2048, and not always big enough
+    even for e.g. the podcast script prompt's story content) silently
+    truncates or empties the response when system+user text plus the
+    requested output exceeds it, instead of erroring. ~3 chars/token is a
+    deliberately conservative estimate (real English text averages closer to
+    4) so this errs toward a larger window rather than an exact one.
+    """
+    estimated_prompt_tokens = (len(system) + len(user)) // 3
+    return max(4096, estimated_prompt_tokens + max_tokens + 512)
+
+
+# Conservative (slow-CPU) generation speed estimate, seconds per output token.
+_SECONDS_PER_TOKEN_ESTIMATE = 0.2
+
+
+def _timeout_for(max_tokens: int, floor: float) -> float:
+    """Generation time scales with the requested output length, especially
+    on CPU-only hosts -- a fixed client timeout sized for small
+    classification calls gets hit by larger generations (e.g. the podcast
+    script). This was most visible once _num_ctx_for started sizing the
+    context window correctly: calls that used to fail fast with a
+    silently-truncated response now actually run to completion, which takes
+    real time. Real hardware is often faster than this estimate, which just
+    means the request returns well before the deadline.
+    """
+    return max(floor, max_tokens * _SECONDS_PER_TOKEN_ESTIMATE)
+
+
 class OllamaProvider(LLMProvider):
     provider_name = "ollama"
 
@@ -21,7 +51,8 @@ class OllamaProvider(LLMProvider):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.model_name = model
-        self.client = httpx.Client(timeout=float(timeout))
+        self.default_timeout = float(timeout)
+        self.client = httpx.Client(timeout=self.default_timeout)
 
     def _post(self, payload: dict, timeout: float | None = None) -> dict:
         kw = {"timeout": timeout} if timeout is not None else {}
@@ -40,9 +71,13 @@ class OllamaProvider(LLMProvider):
             "format": "json",
             "system": system,
             "prompt": user,
-            "options": {"num_predict": max_tokens, "temperature": 0.1},
+            "options": {
+                "num_predict": max_tokens,
+                "num_ctx": _num_ctx_for(system, user, max_tokens),
+                "temperature": 0.1,
+            },
         }
-        return self._post(payload)["response"]
+        return self._post(payload, timeout=_timeout_for(max_tokens, self.default_timeout))["response"]
 
     def process_item(self, title, content, categories, max_content_chars=1500, social_post=False, output_language=None) -> ProcessedResult:
         truncated = (content or title)[:max_content_chars]
@@ -59,9 +94,14 @@ class OllamaProvider(LLMProvider):
             "format": "json",
             "system": system,
             "prompt": user,
-            "options": {"num_predict": 1024, "temperature": 0.1},
+            "options": {
+                "num_predict": 1024,
+                "num_ctx": _num_ctx_for(system, user, 1024),
+                "temperature": 0.1,
+            },
         }
-        result = parse_llm_response(self._post(payload)["response"], known, social_post=social_post)
+        response = self._post(payload, timeout=_timeout_for(1024, self.default_timeout))["response"]
+        result = parse_llm_response(response, known, social_post=social_post)
         result.provider_name = self.provider_name
         result.model_name = self.model_name
         return result
@@ -75,6 +115,7 @@ class OllamaProvider(LLMProvider):
             content = (item.get("content") or item["title"])[:max_content_chars]
             parts.append(f"Item {i} (Source: {item['source_name']}):\nTitle: {item['title']}\nContent: {content}")
 
+        user = "\n\n".join(parts)
         payload = {
             "model": self.model,
             "stream": False,
@@ -82,10 +123,15 @@ class OllamaProvider(LLMProvider):
             "keep_alive": self.KEEP_ALIVE,
             "format": "json",
             "system": system,
-            "prompt": "\n\n".join(parts),
-            "options": {"num_predict": 2048, "temperature": 0.1},
+            "prompt": user,
+            "options": {
+                "num_predict": 2048,
+                "num_ctx": _num_ctx_for(system, user, 2048),
+                "temperature": 0.1,
+            },
         }
-        result = parse_cluster_response(self._post(payload)["response"], len(items), known)
+        response = self._post(payload, timeout=_timeout_for(2048, self.default_timeout))["response"]
+        result = parse_cluster_response(response, len(items), known)
         result.provider_name = self.provider_name
         result.model_name = self.model_name
         return result
@@ -93,6 +139,7 @@ class OllamaProvider(LLMProvider):
     def extract_newsletter_items(self, content: str, categories: list[dict], output_language=None) -> NewsletterResult:
         known = [c["name"] for c in categories]
         system = NEWSLETTER_SYSTEM_PROMPT.format(categories_json=json.dumps(categories, ensure_ascii=False)) + language_suffix(output_language)
+        user = f"Newsletter content:\n\n{content[:8000]}"
         payload = {
             "model": self.model,
             "stream": False,
@@ -100,10 +147,15 @@ class OllamaProvider(LLMProvider):
             "keep_alive": self.KEEP_ALIVE,
             "format": "json",
             "system": system,
-            "prompt": f"Newsletter content:\n\n{content[:8000]}",
-            "options": {"num_predict": 4096, "temperature": 0.1},
+            "prompt": user,
+            "options": {
+                "num_predict": 4096,
+                "num_ctx": _num_ctx_for(system, user, 4096),
+                "temperature": 0.1,
+            },
         }
-        result = parse_newsletter_response(self._post(payload, timeout=600.0)["response"], known)
+        response = self._post(payload, timeout=_timeout_for(4096, self.default_timeout))["response"]
+        result = parse_newsletter_response(response, known)
         result.provider_name = self.provider_name
         result.model_name = self.model_name
         return result

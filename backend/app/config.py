@@ -43,6 +43,35 @@ class Settings(BaseSettings):
     vapid_private_key: str = ""
     vapid_subject: str = "mailto:admin@localhost"
 
+    # Podcast text-to-speech provider: 'piper' (in-process, self-hosted CPU/ONNX)
+    # or 'network' (talks to a standalone tts_service/ container -- see
+    # docker-compose.tts.yml -- so synthesis can run on a different machine,
+    # e.g. one with a GPU).
+    tts_provider: str = "piper"
+    piper_model_dir: str = "/data/piper-voices"
+    podcast_audio_dir: str = "/data/podcast-audio"
+    tts_service_url: str = ""
+    tts_service_timeout: float = 120.0
+
+    # Spoken-words-per-minute used to size podcast scripts (both the LLM's
+    # word-count target and how many stories get selected for a given target
+    # length). Default (210) was measured against Piper's
+    # en_US-libritts_r-medium voice -- see PODCAST_WORDS_PER_MINUTE in
+    # services/llm/base.py. Kokoro speaks at a different natural pace and
+    # should be tuned separately. Chatterbox (default voice) measured close
+    # to Piper -- ~222 wpm actual across two real synthesis samples, despite
+    # being much slower to *compute* (~10x real-time on CPU) -- 195 is a
+    # reasonable starting point for it specifically, though this was only
+    # checked against the default voice/English; verify against a real
+    # generated episode and adjust if you're on a cloned voice or another
+    # language.
+    podcast_words_per_minute: int = 210
+
+    # Required to enable a podcast show's public feed link (RSS enclosure/link
+    # URLs must be fully-qualified for podcast apps to consume them). No
+    # trailing slash, e.g. https://shoebill.example.com
+    public_base_url: str = ""
+
 
     @property
     def llm_provider(self) -> str:

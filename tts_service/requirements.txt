@@ -1,0 +1,16 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.3
+pydantic==2.11.4
+pydantic-settings==2.9.1
+httpx==0.28.1
+piper-tts==1.6.0
+# torch/torchaudio are intentionally not pinned here -- the Dockerfile
+# installs them first, at the exact version chatterbox-tts requires (see
+# below), from the CPU-only wheel index so they're not pulled in a second
+# time (larger, CUDA-bundled by default) by either package's own
+# dependency on them; see Dockerfile for the GPU build.
+kokoro==0.9.4
+# Pins transformers==5.2.0 and torch/torchaudio==2.6.0 exactly -- verified
+# these don't conflict with kokoro's own (unconstrained) transformers/torch
+# requirements before adding this.
+chatterbox-tts==0.1.7

@@ -35,6 +35,14 @@ services:
     volumes:
       - ./backend:/app
 
+  celery-worker-podcast:
+    image: shoebill-backend:dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+
   celery-beat:
     image: shoebill-backend:dev
     build:
@@ -56,3 +64,8 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+    environment:
+      # Only needed when accessing this dev stack through a reverse proxy on
+      # a real domain -- Vite 6 otherwise rejects the request's Host header.
+      # See docs/development.md.
+      VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-}

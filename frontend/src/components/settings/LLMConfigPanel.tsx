@@ -27,6 +27,12 @@ interface Health {
   provider_health: ProviderHealth[];
 }
 
+interface TTSHealth {
+  provider: string;
+  healthy: boolean;
+  base_url: string | null;
+}
+
 const PROVIDER_LABEL: Record<string, string> = {
   anthropic: "Anthropic",
   ollama: "Ollama",
@@ -36,6 +42,7 @@ export default function LLMConfigPanel() {
   const { t } = useTranslation();
   const [config, setConfig] = useState<LLMConfig | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
+  const [ttsHealth, setTtsHealth] = useState<TTSHealth | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
 
   useEffect(() => {
@@ -45,8 +52,15 @@ export default function LLMConfigPanel() {
   const checkHealth = async () => {
     setHealthLoading(true);
     try {
-      const r = await client.get<Health>("/settings/health");
-      setHealth(r.data);
+      // Two independent endpoints (podcast-health is deliberately not folded
+      // into /health -- see backend api/settings.py) fetched together so
+      // one "Check" click still covers everything on this tab.
+      const [healthResp, ttsResp] = await Promise.all([
+        client.get<Health>("/settings/health"),
+        client.get<TTSHealth>("/settings/podcast-health"),
+      ]);
+      setHealth(healthResp.data);
+      setTtsHealth(ttsResp.data);
     } finally {
       setHealthLoading(false);
     }
@@ -126,6 +140,13 @@ export default function LLMConfigPanel() {
                 ))
               : <HealthRow label="LLM" ok={health.llm} />
             }
+            {ttsHealth && (
+              <HealthRow
+                label={`${t("llm.podcastTts")} (${ttsHealth.provider})`}
+                ok={ttsHealth.healthy}
+                detail={ttsHealth.base_url ?? undefined}
+              />
+            )}
           </div>
         ) : null}
       </Accordion>
@@ -133,7 +154,7 @@ export default function LLMConfigPanel() {
   );
 }
 
-function HealthRow({ label, ok }: { label: string; ok: boolean }) {
+function HealthRow({ label, ok, detail }: { label: string; ok: boolean; detail?: string }) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
@@ -142,8 +163,11 @@ function HealthRow({ label, ok }: { label: string; ok: boolean }) {
       ) : (
         <XCircle size={16} className="text-red-500 shrink-0" />
       )}
-      <span className="text-sm font-medium">{label}</span>
-      <span className={`ml-auto text-xs font-medium px-1.5 py-0.5 rounded ${ok ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"}`}>
+      <div className="min-w-0">
+        <span className="text-sm font-medium">{label}</span>
+        {detail && <p className="text-xs text-gray-400 font-mono truncate">{detail}</p>}
+      </div>
+      <span className={`ml-auto shrink-0 text-xs font-medium px-1.5 py-0.5 rounded ${ok ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"}`}>
         {ok ? t("llm.healthy") : t("llm.unreachable")}
       </span>
     </div>

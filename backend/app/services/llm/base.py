@@ -138,6 +138,55 @@ Respond ONLY with valid JSON. No markdown fences, no extra text.""".format(
 )
 
 
+PODCAST_SCRIPT_SYSTEM_PROMPT = """You are writing the script for a {host_count}-host conversational news podcast. The hosts discuss the stories below together — reacting to each other, handing off between stories, asking follow-up questions — like a real podcast, not a series of solo summaries.
+{show_description_block}
+Hosts:
+{hosts_block}
+
+Each host has a distinct character described above — write their lines to match that character's tone, vocabulary, and personality consistently throughout.
+
+Structure:
+- Open with a brief, natural welcome (all hosts can participate).
+- Discuss each story in turn, with genuine back-and-forth between hosts — not just one host reading a summary while the others stay silent.
+- Close with a brief, natural sign-off.
+- Base everything strictly on the story content given below — do not invent facts, quotes, or details not present in the source material.
+- Target an overall spoken length of approximately {target_minutes} minute(s). At this pace, your combined script (every turn's text added together) must be approximately {target_words} words in total — treat that as a hard target, not a rough guide; it is already calibrated to real playback speed, not reading speed. With {story_count} stories to cover, that is roughly {words_per_story} words of genuine back-and-forth per story on average — develop each one with follow-up questions, reactions, and specifics instead of one line each before moving on. Do not stop early, and do not pad with filler just to reach the count.
+
+Return a JSON object with exactly this shape:
+{{"turns": [{{"host_id": "<id from the hosts list above>", "story_index": <0-based index of the "Story N" below this line is mainly about, or null for the welcome/sign-off/banter>, "text": "<what this host says>"}}, ...]}}
+
+Each array entry is one host's uninterrupted line. Use only the host ids given above.
+
+Respond ONLY with valid JSON. No markdown fences, no extra text."""
+
+# Not a textbook speech rate -- measured directly from a real Piper synthesis
+# run (en_US-libritts_r-medium): ~236 wpm of actual spoken audio, excluding
+# the SILENCE_GAP_SECONDS pause between turns. Set a bit below that measured
+# figure so the per-turn gaps (which add real duration but no words) are
+# implicitly covered rather than pushing the episode over target.
+#
+# This is the Piper-calibrated *default* only, used when a caller doesn't
+# pass an explicit words_per_minute (e.g. direct tests). Real callers read
+# Settings.podcast_words_per_minute instead (see config.py) -- Kokoro and
+# especially Chatterbox speak at a meaningfully different natural pace, so
+# hardcoding this one figure for every engine would reintroduce the same
+# "episode way too short/long" problem this constant was originally
+# calibrated to fix, just for non-Piper deployments instead.
+PODCAST_WORDS_PER_MINUTE = 210
+
+
+def podcast_script_max_tokens(target_minutes: int) -> int:
+    """Output token budget for a podcast script generation call.
+
+    A fixed budget silently truncates longer episodes: json_repair closes the
+    cut-off JSON instead of erroring, so the script (and the resulting audio)
+    quietly ends up far shorter than target_minutes. Anthropic bills by tokens
+    actually generated, not by this ceiling, so scaling generously with the
+    target length costs nothing when unused.
+    """
+    return min(8192, max(2048, target_minutes * 600))
+
+
 LANGUAGE_NAMES: dict[str, str] = {
     "en": "English",
     "de": "German",
@@ -221,6 +270,20 @@ class NewsletterItem:
 @dataclass
 class NewsletterResult:
     items: list[NewsletterItem]
+    provider_name: str = ""
+    model_name: str = ""
+
+
+@dataclass
+class PodcastScriptTurn:
+    host_id: str
+    text: str
+    story_index: int | None = None
+
+
+@dataclass
+class PodcastScriptResult:
+    turns: list[PodcastScriptTurn]
     provider_name: str = ""
     model_name: str = ""
 
@@ -507,6 +570,45 @@ def parse_newsletter_response(text: str, known_categories: list[str]) -> Newslet
     return NewsletterResult(items=items)
 
 
+def parse_podcast_script_response(text: str, valid_host_ids: list[str], story_count: int = 0) -> PodcastScriptResult:
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = json.loads(repair_json(text))
+
+    raw_turns = data.get("turns", []) if isinstance(data, dict) else []
+    if not isinstance(raw_turns, list):
+        raw_turns = []
+
+    valid = set(valid_host_ids)
+    turns: list[PodcastScriptTurn] = []
+    for entry in raw_turns:
+        if not isinstance(entry, dict):
+            continue
+        host_id = str(entry.get("host_id", "")).strip()
+        text_val = str(entry.get("text", "")).strip()
+        if not host_id or not text_val:
+            continue
+        if host_id not in valid:
+            logger.warning("Podcast script returned unrecognised host_id %r (known: %s)", host_id, valid_host_ids)
+            continue
+        story_index = entry.get("story_index")
+        try:
+            story_index = int(story_index)
+            if not (0 <= story_index < story_count):
+                story_index = None
+        except (TypeError, ValueError):
+            story_index = None
+        turns.append(PodcastScriptTurn(host_id=host_id, text=text_val, story_index=story_index))
+
+    return PodcastScriptResult(turns=turns)
+
+
 def parse_scraper_selector_response(text: str) -> dict:
     """Parse an LLM response suggesting CSS selectors for the web scraper.
     Raises ValueError if no usable item_selector was returned."""
@@ -689,6 +791,56 @@ class LLMProvider(ABC):
             max_tokens=300,
         )
         return result[:max_chars]
+
+    def generate_podcast_script(
+        self,
+        hosts: list[dict],
+        stories: list[dict],
+        target_minutes: int,
+        language: str,
+        show_description: str | None = None,
+        words_per_minute: int = PODCAST_WORDS_PER_MINUTE,
+    ) -> PodcastScriptResult:
+        """Generate a conversational multi-host podcast script covering `stories`.
+
+        `hosts` = [{"id": ..., "name": ..., "character_prompt": ...}, ...]
+        `stories` = [{"title": ..., "content": ..., "source_name": ...}, ...]
+        `show_description` is a free-text concept/angle for the show as a whole
+        (distinct from each host's own character_prompt) -- e.g. "focus on
+        market impact, skeptical tone, skip celebrity gossip".
+        `words_per_minute` should reflect the actual TTS engine's measured
+        spoken pace (see PODCAST_WORDS_PER_MINUTE above) -- callers read it
+        from settings rather than relying on this default, since the default
+        is Piper-calibrated and other engines pace differently.
+        """
+        hosts_block = "\n".join(
+            f"- {h['name']} (id: {h['id']}): {h['character_prompt']}" for h in hosts
+        )
+        show_description_block = (
+            f"\nShow concept: {show_description.strip()}\n" if show_description and show_description.strip() else ""
+        )
+        target_words = target_minutes * words_per_minute
+        story_count = max(1, len(stories))
+        system = PODCAST_SCRIPT_SYSTEM_PROMPT.format(
+            host_count=len(hosts), hosts_block=hosts_block, target_minutes=target_minutes,
+            show_description_block=show_description_block,
+            target_words=target_words, story_count=story_count,
+            words_per_story=target_words // story_count,
+        )
+        name = LANGUAGE_NAMES.get(language, language)
+        system += f"\n\nIMPORTANT: All spoken dialogue (the \"text\" field of every turn) MUST be written in grammatically correct, standard {name}, regardless of the source stories' original language."
+
+        parts = []
+        for i, story in enumerate(stories):
+            content = (story.get("content") or story["title"])[:1200]
+            parts.append(f"Story {i} (Source: {story['source_name']}):\nTitle: {story['title']}\nContent: {content}")
+        user = "\n\n".join(parts)
+
+        text = self._complete(system=system, user=user, max_tokens=podcast_script_max_tokens(target_minutes))
+        result = parse_podcast_script_response(text, [h["id"] for h in hosts], story_count=len(stories))
+        result.provider_name = self.provider_name
+        result.model_name = self.model_name
+        return result
 
     @abstractmethod
     def health_check(self) -> bool: ...

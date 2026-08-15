@@ -111,6 +111,38 @@ def make_user(db_session):
 
 
 @pytest.fixture()
+def podcast_dirs(tmp_path, monkeypatch):
+    """Redirects podcast audio/voice-model storage to a temp dir for the test.
+
+    get_tts_provider() is process-lifetime lru_cache'd, so its cache is
+    cleared before and after so no test leaks a provider bound to another
+    test's (by then deleted) tmp_path.
+    """
+    from app.config import get_settings
+    from app.services.tts.factory import get_tts_provider
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "podcast_audio_dir", str(tmp_path / "podcast-audio"))
+    monkeypatch.setattr(settings, "piper_model_dir", str(tmp_path / "piper-voices"))
+    get_tts_provider.cache_clear()
+    yield settings
+    get_tts_provider.cache_clear()
+
+
+@pytest.fixture()
+def public_base_url(monkeypatch):
+    """Sets settings.public_base_url for tests exercising the podcast public
+    feed feature, which requires it to be configured. Not requesting this
+    fixture leaves it at the default empty string, for the "not configured"
+    error-path test."""
+    from app.config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "public_base_url", "https://podcast.test")
+    return settings.public_base_url
+
+
+@pytest.fixture()
 def auth_client(client, make_user, db_session):
     """A TestClient already carrying a valid session cookie for a fresh user.
 

@@ -2,12 +2,12 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import Integer, select, func, cast, Date
-from sqlalchemy.orm import Session, selectinload, joinedload
+from sqlalchemy.orm import Session, selectinload, joinedload, load_only
 
 from app.api.deps import get_db, get_current_user
-from app.models import NewsItem, Category, Source, NewsCluster
+from app.models import NewsItem, Category, Source, NewsCluster, PodcastShow, PodcastEpisode
 from app.models.category_keyword_weight import CategoryKeywordWeight
 from app.models.category_weight_snapshot import CategoryWeightSnapshot
 from app.models.keyword_cluster import KeywordCluster
@@ -390,6 +390,136 @@ def source_clusters(
             "categories": [
                 {"name": n, "count": c, "color": cat_colors.get(n, "#9ca3af")}
                 for n, c in sorted(cats.items(), key=lambda x: -x[1])
+            ],
+        })
+
+    return result
+
+
+_TOP_N_PER_EPISODE = 8
+
+
+@router.get("/podcast-episodes")
+def podcast_episode_stats(
+    show_id: uuid.UUID = Query(...),
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Per-episode category/keyword/source breakdown for a podcast show, for
+    the "which topics has this show actually been covering" chart. Only
+    ready episodes have news_item_ids/news_cluster_ids populated (see
+    tasks/podcast_tasks.py::_run_generation), so pending/failed episodes are
+    excluded rather than showing up as empty bars."""
+    show = db.scalar(
+        select(PodcastShow).where(PodcastShow.id == show_id, PodcastShow.user_id == current_user.id)
+    )
+    if not show:
+        raise HTTPException(status_code=404, detail="Podcast show not found")
+
+    episodes = db.scalars(
+        select(PodcastEpisode)
+        .where(PodcastEpisode.show_id == show_id, PodcastEpisode.status == "ready")
+        .order_by(PodcastEpisode.created_at.desc())
+        .limit(limit)
+    ).all()
+    episodes = list(reversed(episodes))  # oldest -> newest, left-to-right like the other charts
+
+    all_item_ids: set[uuid.UUID] = set()
+    all_cluster_ids: set[uuid.UUID] = set()
+    for ep in episodes:
+        all_item_ids.update(ep.news_item_ids)
+        all_cluster_ids.update(ep.news_cluster_ids)
+
+    # load_only() below matters more than usual here: NewsItem carries a
+    # 768-dim pgvector embedding plus raw_content/abstract, none of which
+    # this endpoint touches (only extracted_keywords, categories, and
+    # source.name are used) -- pulling full rows for every item/cluster
+    # referenced across up to `limit` episodes measurably slowed this page.
+    items_by_id: dict[uuid.UUID, NewsItem] = {}
+    if all_item_ids:
+        items = db.scalars(
+            select(NewsItem)
+            .where(NewsItem.id.in_(all_item_ids))
+            .options(
+                load_only(NewsItem.extracted_keywords),
+                selectinload(NewsItem.categories),
+                joinedload(NewsItem.source),
+            )
+        ).unique().all()
+        items_by_id = {i.id: i for i in items}
+
+    clusters_by_id: dict[uuid.UUID, NewsCluster] = {}
+    if all_cluster_ids:
+        clusters = db.scalars(
+            select(NewsCluster)
+            .where(NewsCluster.id.in_(all_cluster_ids))
+            .options(
+                load_only(NewsCluster.extracted_keywords),
+                selectinload(NewsCluster.categories),
+                # Member items are only used for their source name -- the
+                # same load_only reasoning applies, and a single
+                # well-covered story's cluster can easily have 8-10 member
+                # items, multiplying the wasted cost.
+                selectinload(NewsCluster.items).options(
+                    load_only(NewsItem.id),
+                    joinedload(NewsItem.source),
+                ),
+            )
+        ).unique().all()
+        clusters_by_id = {c.id: c for c in clusters}
+
+    result = []
+    for ep in episodes:
+        cat_counts: dict[uuid.UUID, dict] = {}
+        keyword_counts: dict[str, int] = {}
+        source_counts: dict[str, int] = {}
+
+        def _tally_categories(categories):
+            for cat in categories:
+                entry = cat_counts.setdefault(
+                    cat.id, {"id": str(cat.id), "name": cat.name, "color": cat.color, "count": 0}
+                )
+                entry["count"] += 1
+
+        def _tally_keywords(keywords):
+            for kw in (keywords or []):
+                keyword_counts[kw] = keyword_counts.get(kw, 0) + 1
+
+        for item_id in ep.news_item_ids:
+            item = items_by_id.get(item_id)
+            if not item:
+                continue
+            _tally_categories(item.categories)
+            _tally_keywords(item.extracted_keywords)
+            if item.source:
+                source_counts[item.source.name] = source_counts.get(item.source.name, 0) + 1
+
+        for cluster_id in ep.news_cluster_ids:
+            cluster = clusters_by_id.get(cluster_id)
+            if not cluster:
+                continue
+            _tally_categories(cluster.categories)
+            _tally_keywords(cluster.extracted_keywords)
+            # Distinct outlets per cluster (not one count per member item) --
+            # a single popular story with a dozen member items shouldn't let
+            # one outlet dominate the episode's source tally just because it
+            # published early duplicates.
+            for name in sorted({item.source.name for item in cluster.items if item.source}):
+                source_counts[name] = source_counts.get(name, 0) + 1
+
+        result.append({
+            "id": str(ep.id),
+            "generated_at": (ep.generated_at or ep.created_at).isoformat(),
+            "total_stories": len(ep.news_item_ids) + len(ep.news_cluster_ids),
+            "categories": sorted(cat_counts.values(), key=lambda c: -c["count"]),
+            "top_keywords": [
+                {"keyword": k, "count": c}
+                for k, c in sorted(keyword_counts.items(), key=lambda x: -x[1])[:_TOP_N_PER_EPISODE]
+            ],
+            "top_sources": [
+                {"name": n, "count": c}
+                for n, c in sorted(source_counts.items(), key=lambda x: -x[1])[:_TOP_N_PER_EPISODE]
             ],
         })
 

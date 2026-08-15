@@ -1,0 +1,127 @@
+import uuid
+from datetime import datetime
+from typing import Literal
+from pydantic import BaseModel, Field
+
+
+class PodcastHostSchema(BaseModel):
+    # crypto.randomUUID() (used client-side) produces a 36-char string
+    # (8-4-4-4-12 hex + 4 hyphens) -- give real headroom above that.
+    id: str = Field(..., max_length=64)
+    name: str = Field(..., max_length=50)
+    character_prompt: str = Field(..., max_length=1000)
+    voice: str = Field(..., max_length=100)
+    # Chatterbox-specific emotion/delivery intensity (library default 0.5,
+    # range per its own docs roughly 0.25-2.0 before it starts sounding
+    # unnatural). None = use the engine's own default. Silently has no
+    # effect on Piper/Kokoro -- the frontend only shows this control when
+    # TTSHealthOut.supports_exaggeration is true.
+    exaggeration: float | None = Field(None, ge=0.0, le=2.0)
+    # Pins this host to a specific engine instead of the deployment's global
+    # Settings.tts_provider default -- e.g. one host on the free in-process
+    # Piper voice, another on a remote Chatterbox tts_service for a more
+    # expressive character. None = use the global default (the only option
+    # before this field existed; existing shows keep working unchanged).
+    # "network" only actually works if TTS_SERVICE_URL is configured --
+    # unvalidated here (would need a live check against the remote service),
+    # surfaces as a failed episode/turn at generation time instead, same as
+    # any other TTS synthesis failure.
+    tts_provider: Literal["piper", "network"] | None = None
+
+
+class PodcastShowBase(BaseModel):
+    name: str = Field(..., max_length=200)
+    # Shapes what the LLM talks about and how, on top of each host's own
+    # character_prompt -- e.g. "focus on market impact, skip celebrity gossip".
+    description: str | None = Field(None, max_length=1000)
+    hosts: list[PodcastHostSchema] = Field(..., min_length=1, max_length=3)
+    category_ids: list[uuid.UUID] = Field(default_factory=list)
+    source_ids: list[uuid.UUID] = Field(default_factory=list)
+    time_window_hours: int = Field(default=24, ge=1, le=168)
+    target_length_minutes: int = Field(default=10, ge=1, le=15)
+    language: str = Field(default="en", max_length=10)
+    schedule_time: str = Field(default="07:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    timezone: str = Field(default="UTC", max_length=64)
+    # Listener-facing speed (1.0 = normal); see PodcastShow.speech_rate for the
+    # length_scale conversion at the TTS call site. 0.75-1.5 keeps Piper output
+    # intelligible at either extreme -- more than that starts to distort.
+    speech_rate: float = Field(default=1.0, ge=0.75, le=1.5)
+    is_active: bool = True
+
+
+class PodcastShowCreate(PodcastShowBase):
+    pass
+
+
+class PodcastShowUpdate(BaseModel):
+    name: str | None = Field(None, max_length=200)
+    description: str | None = Field(None, max_length=1000)
+    hosts: list[PodcastHostSchema] | None = Field(None, min_length=1, max_length=3)
+    category_ids: list[uuid.UUID] | None = None
+    source_ids: list[uuid.UUID] | None = None
+    time_window_hours: int | None = Field(None, ge=1, le=168)
+    target_length_minutes: int | None = Field(None, ge=1, le=15)
+    language: str | None = Field(None, max_length=10)
+    schedule_time: str | None = Field(None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    timezone: str | None = Field(None, max_length=64)
+    speech_rate: float | None = Field(None, ge=0.75, le=1.5)
+    is_active: bool | None = None
+
+
+class PodcastShowOut(PodcastShowBase):
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    public_feed_enabled: bool = False
+    # Server-computed from public_feed_token + settings.public_base_url at
+    # response time -- the raw token is never exposed as its own field, only
+    # this assembled URL (or null when disabled/not yet generated).
+    public_feed_url: str | None = None
+    # Server-computed from cover_image_path at response time -- same
+    # never-expose-the-raw-path convention as public_feed_url above.
+    cover_image_url: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class PodcastScriptTurnSchema(BaseModel):
+    host_id: str
+    # Absent on episodes generated before this field existed.
+    host_name: str | None = None
+    story_index: int | None = None
+    text: str
+
+
+class PodcastShownoteSchema(BaseModel):
+    title: str
+    source_name: str
+    url: str | None = None
+    start_seconds: float
+
+
+class PodcastEpisodeOut(BaseModel):
+    id: uuid.UUID
+    show_id: uuid.UUID
+    show_name: str = ""
+    # Server-computed from the owning show's cover_image_path, same
+    # never-expose-the-raw-path convention as PodcastShowOut.cover_image_url.
+    show_cover_image_url: str | None = None
+    status: Literal["pending", "generating", "ready", "failed"]
+    script: list[PodcastScriptTurnSchema] | None = None
+    shownotes: list[PodcastShownoteSchema] | None = None
+    # Server-computed summary text -- the same value used for this episode's
+    # RSS <description> (services/podcast_feed.py::episode_description()).
+    description: str = ""
+    news_item_ids: list[uuid.UUID] = []
+    news_cluster_ids: list[uuid.UUID] = []
+    duration_seconds: int | None = None
+    error_message: str | None = None
+    created_at: datetime
+    generated_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class VoiceOut(BaseModel):
+    id: str
+    label: str

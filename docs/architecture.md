@@ -9,6 +9,7 @@
 | `backend` | FastAPI REST API |
 | `celery-worker` | `fetch` and `default` queues, concurrency 4 |
 | `celery-worker-process` | `process` queue only, concurrency 1 — deliberately serialized: Ollama runs LLM calls on one GPU, so higher concurrency here just causes queue spikes with no throughput gain |
+| `celery-worker-podcast` | `podcast` queue only — script generation (LLM) plus CPU-bound TTS synthesis and ffmpeg encoding for podcast episodes; kept off the `process` queue so it never delays news processing |
 | `celery-beat` | Cron scheduler; schedule persisted to a named volume so it survives restarts |
 | `frontend` | React app served by Nginx, proxies `/api` to the backend |
 
@@ -37,6 +38,16 @@ shared external network.
    multiplicatively over time — see {doc}`learning-and-scoring`.
 5. **Cleanup** (daily): deletes non-relevant, non-read-later items older
    than 30 days, then removes any clusters left with zero items.
+6. **Podcast dispatch** (every 15 minutes): a per-user, timezone-aware
+   scheduler checks every active podcast show and dispatches generation
+   for any whose local `schedule_time` has just passed and that hasn't
+   already produced an episode today. Generation selects the show's top
+   stories (reusing the same ranking as the Relevant feed tab, filtered by
+   the show's time window), asks the LLM for a multi-host conversational
+   script, synthesizes each host's lines with a pluggable TTS provider
+   (Piper by default — self-hosted, no cloud service), and assembles the
+   result into one MP3 via ffmpeg. A separate daily job deletes episodes
+   (and their audio files) older than 30 days.
 
 ## Backend layout (`backend/app/`)
 
@@ -45,22 +56,32 @@ shared external network.
 - **`models/`** — SQLAlchemy models
 - **`schemas/`** — Pydantic request/response DTOs
 - **`api/`** — route handlers (`news`, `sources`, `categories`, `settings`,
-  `auth`, `clusters`, `stats`, `tabs`, `push`, `learning`, `tokens`)
+  `auth`, `clusters`, `stats`, `tabs`, `push`, `learning`, `tokens`,
+  `podcasts`)
 - **`services/`**
   - `llm/` — pluggable provider factory + fallback wrapper, plus Anthropic
-    Batch API handling
+    Batch API handling and podcast script generation
   - `fetchers/` — one module per source type, registered via a
     `@register_fetcher("type")` decorator (see {doc}`sources`)
   - `clustering.py`, `embedding.py` — see {doc}`clustering`
   - `scoring.py`, `keyword_clustering.py` — see {doc}`learning-and-scoring`
+  - `feed_ranking.py` — the Relevant/Impact/Newest ranking used by both
+    the feed API and podcast episode selection
   - `deduplication.py` — canonical URL hashing and content hashing
   - `push_service.py` — Web Push notifications
+  - `tts/` — pluggable text-to-speech provider factory (`piper_provider.py`
+    is the self-hosted default) plus ffmpeg-based audio assembly
+  - `podcast_script.py` — episode item selection and LLM script generation
+  - `podcast_scheduling.py` — the per-user timezone due-window logic
+    behind podcast dispatch
+  - `range_streaming.py` — HTTP Range (206 Partial Content) support for
+    episode audio playback/seeking
 - **`tasks/`** — `celery_app.py` (app + full beat schedule), `fetch_tasks.py`,
-  `process_tasks.py`
+  `process_tasks.py`, `podcast_tasks.py`
 
 ## Frontend layout (`frontend/src/`)
 
-- **`App.tsx`** — routes: `/login`, `/` (feed), `/settings`
+- **`App.tsx`** — routes: `/login`, `/` (feed), `/podcasts`, `/settings`
 - **`api/`** — Axios client + typed endpoint wrappers
 - **`stores/`** — Zustand (filter state, theme/locale preferences)
 - **`hooks/`** — TanStack Query hooks for server state
@@ -79,3 +100,13 @@ shared external network.
 - **Non-root containers.** Backend/Celery run as UID 1000. If a named
   volume (e.g. `celerybeat-data`) already exists owned by root from an
   older setup, remove it: `docker volume rm shoebill_feed_celerybeat-data`.
+- **Podcast character vs. voice.** A host's free-text character prompt
+  only shapes how the LLM *writes* that host's lines — Piper has no
+  emotion/delivery control, so voice timbre is just a mechanically
+  assigned speaker. Two hosts sharing a language's only available voice
+  will sound identical despite very different character prompts.
+- **Per-user timezone scheduling.** Podcast dispatch is the first feature
+  needing per-user, timezone-aware timing — every other Beat schedule is a
+  fixed global UTC crontab. Beat entries are static, so the per-user
+  variability lives in `due_shows()` (a frequent fixed-UTC tick that asks
+  "is this show due right now, in its own timezone"), not in Beat config.

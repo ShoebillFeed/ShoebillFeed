@@ -7,7 +7,7 @@ from app.api.deps import get_db, get_current_user
 from app.config import get_settings
 from app.models.user import User
 from app.models.user_settings import UserSettings
-from app.schemas.news_item import HealthOut, LLMConfigOut, LLMConfigUpdate, ProviderInfo, ProviderHealth
+from app.schemas.news_item import HealthOut, LLMConfigOut, LLMConfigUpdate, ProviderInfo, ProviderHealth, TTSHealthOut
 from app.schemas.user_settings import UserSettingsOut, UserSettingsUpdate
 from app.services.llm.factory import get_llm_provider
 
@@ -60,6 +60,37 @@ def health_check(db: Session = Depends(get_db)):
         pass
 
     return HealthOut(db=db_ok, redis=redis_ok, llm=llm_ok, provider_health=provider_health)
+
+
+@router.get("/podcast-health", response_model=TTSHealthOut)
+def podcast_health_check():
+    # Matches /health and /llm above: unauthenticated, consistent with the
+    # rest of this settings-diagnostics file (not a change introduced here).
+    # Deliberately its own endpoint, not folded into /health: that one is
+    # also hit by the docker-compose healthcheck every 30s, and a slow or
+    # unreachable TTS_PROVIDER=network host would make the container's own
+    # healthcheck flaky. This is only ever called on-demand from Settings.
+    from app.services.tts.factory import get_tts_provider
+
+    settings = get_settings()
+    try:
+        provider = get_tts_provider()
+        healthy = provider.health_check()
+        supports_speech_rate = provider.supports_speech_rate
+        supports_exaggeration = provider.supports_exaggeration
+    except Exception:
+        healthy = False
+        supports_speech_rate = True
+        supports_exaggeration = False
+
+    return TTSHealthOut(
+        provider=settings.tts_provider,
+        healthy=healthy,
+        base_url=settings.tts_service_url if settings.tts_provider == "network" else None,
+        supports_speech_rate=supports_speech_rate,
+        supports_exaggeration=supports_exaggeration,
+        network_configured=bool(settings.tts_service_url),
+    )
 
 
 def _build_llm_config() -> LLMConfigOut:

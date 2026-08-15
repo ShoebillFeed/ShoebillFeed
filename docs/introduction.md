@@ -30,6 +30,11 @@ sources you choose and organizes it around what you actually read and like.
   story, Shoebill clusters them into one card with a synthesized summary
   of the common ground, instead of showing the same headline five times.
   See {doc}`clustering`.
+- **Listen instead of read.** Configure a podcast — up to three AI hosts,
+  each with a character you describe in a text prompt — that discuss the
+  top stories from your chosen categories, feeds, and time window, voiced
+  locally with no cloud text-to-speech service required. See
+  {doc}`user-guide`.
 - **Multi-user.** Separate accounts, separate feeds, separate learned
   preferences, all on one instance.
 
