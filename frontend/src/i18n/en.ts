@@ -407,6 +407,7 @@ const en = {
     trendsChartTitle: "Coverage trend",
     trendsChartDesc: "Daily article count per topic. Counts standalone articles and clustered stories alike, so a story picked up by multiple sources is only counted once.",
     trendsAddTopicHint: "Add at least one keyword to a topic to see its trend.",
+    trendTopicColor: "Choose a color for this topic's line",
     trendTopicLabelPlaceholder: "Topic name (optional)",
     trendKeywordPlaceholder: "Add keyword, press Enter",
     addTrendTopic: "Add topic",

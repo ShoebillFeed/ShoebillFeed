@@ -15,6 +15,12 @@ describe("useAnalyseTrendsStore", () => {
     expect(useAnalyseTrendsStore.getState().topics).toEqual(topics);
   });
 
+  it("setTopics preserves a user-picked color", () => {
+    const topics = [{ id: "t1", label: "AI", keywords: ["ai"], color: "#ff00aa" }];
+    useAnalyseTrendsStore.getState().setTopics(topics);
+    expect(useAnalyseTrendsStore.getState().topics[0].color).toBe("#ff00aa");
+  });
+
   it("setCategoryIds/setSourceIds replace their respective lists", () => {
     useAnalyseTrendsStore.getState().setCategoryIds(["cat-1", "cat-2"]);
     useAnalyseTrendsStore.getState().setSourceIds(["src-1"]);

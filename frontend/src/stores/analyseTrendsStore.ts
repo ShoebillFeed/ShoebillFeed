@@ -5,6 +5,10 @@ export interface TrendTopicConfig {
   id: string;
   label: string;
   keywords: string[];
+  // Hex color, user-editable via a native color picker. Optional so topics
+  // persisted before this field existed don't need a migration -- callers
+  // fall back to a palette color derived from position.
+  color?: string;
 }
 
 interface AnalyseTrendsState {

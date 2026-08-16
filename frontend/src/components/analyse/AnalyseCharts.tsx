@@ -1110,8 +1110,14 @@ function generateTopicId(): string {
   return `topic-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function emptyTopic(): TrendTopicConfig {
-  return { id: generateTopicId(), label: "", keywords: [] };
+function emptyTopic(index: number): TrendTopicConfig {
+  return { id: generateTopicId(), label: "", keywords: [], color: TOPIC_COLORS[index % TOPIC_COLORS.length] };
+}
+
+// Topics persisted before the color field existed fall back to a palette
+// color derived from position, same as the old index-only behavior.
+function topicColor(topic: TrendTopicConfig, index: number): string {
+  return topic.color ?? TOPIC_COLORS[index % TOPIC_COLORS.length];
 }
 
 function TopicRow({
@@ -1144,7 +1150,13 @@ function TopicRow({
   return (
     <div className="flex flex-col gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
       <div className="flex items-center gap-2">
-        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => onChange({ color: e.target.value })}
+          title={t("stats.trendTopicColor")}
+          className="w-4 h-4 rounded-full shrink-0 border-0 p-0 cursor-pointer overflow-hidden [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded-full [&::-moz-color-swatch]:border-0 [&::-moz-color-swatch]:rounded-full"
+        />
         <input
           value={topic.label}
           onChange={(e) => onChange({ label: e.target.value })}
@@ -1308,7 +1320,15 @@ function downloadCsv(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function KeywordTrendChart({ results, days }: { results: KeywordTrendResult[]; days: number | null }) {
+function KeywordTrendChart({
+  results,
+  colors,
+  days,
+}: {
+  results: KeywordTrendResult[];
+  colors: string[];
+  days: number | null;
+}) {
   const gridColor = useGridColor();
 
   const allDates = Array.from(new Set(results.flatMap((r) => r.points.map((p) => p.date)))).sort();
@@ -1350,7 +1370,7 @@ function KeywordTrendChart({ results, days }: { results: KeywordTrendResult[]; d
             key={r.label}
             type="monotone"
             dataKey={r.label}
-            stroke={TOPIC_COLORS[i % TOPIC_COLORS.length]}
+            stroke={colors[i] ?? TOPIC_COLORS[i % TOPIC_COLORS.length]}
             strokeWidth={2}
             dot={false}
           />
@@ -1383,7 +1403,7 @@ export function AnalyseTrendsTab() {
   // so there's something to type into, rather than baking a randomly-ID'd
   // topic into the store's static default state.
   useEffect(() => {
-    if (topics.length === 0) setTopics([emptyTopic()]);
+    if (topics.length === 0) setTopics([emptyTopic(0)]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1391,13 +1411,18 @@ export function AnalyseTrendsTab() {
     setTopics(topics.map((topic) => (topic.id === id ? { ...topic, ...patch } : topic)));
   const removeTopic = (id: string) => setTopics(topics.filter((topic) => topic.id !== id));
   const addTopic = () => {
-    if (topics.length < MAX_TOPICS) setTopics([...topics, emptyTopic()]);
+    if (topics.length < MAX_TOPICS) setTopics([...topics, emptyTopic(topics.length)]);
   };
   const addTopicFromCluster = (entry: KeywordClusterMapEntry) => {
     if (topics.length < MAX_TOPICS) {
       setTopics([
         ...topics,
-        { id: generateTopicId(), label: entry.cluster_label, keywords: entry.keywords.map((k) => k.keyword) },
+        {
+          id: generateTopicId(),
+          label: entry.cluster_label,
+          keywords: entry.keywords.map((k) => k.keyword),
+          color: TOPIC_COLORS[topics.length % TOPIC_COLORS.length],
+        },
       ]);
     }
   };
@@ -1443,7 +1468,7 @@ export function AnalyseTrendsTab() {
             <TopicRow
               key={topic.id}
               topic={topic}
-              color={TOPIC_COLORS[i % TOPIC_COLORS.length]}
+              color={topicColor(topic, i)}
               canRemove={topics.length > 1}
               onChange={(patch) => updateTopic(topic.id, patch)}
               onRemove={() => removeTopic(topic.id)}
@@ -1526,7 +1551,11 @@ export function AnalyseTrendsTab() {
         ) : trend.data && trend.data.every((r) => r.points.every((p) => p.count === 0)) ? (
           <Empty />
         ) : trend.data ? (
-          <KeywordTrendChart results={trend.data} days={days} />
+          <KeywordTrendChart
+            results={trend.data}
+            colors={requestTopics.map((topic, i) => topicColor(topic, i))}
+            days={days}
+          />
         ) : (
           <Loading />
         )}
