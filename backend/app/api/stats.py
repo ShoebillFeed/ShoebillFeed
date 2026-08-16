@@ -1,10 +1,10 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import Integer, select, func, cast, Date, exists
+from sqlalchemy import Integer, select, func, cast, Date, exists, true
 from sqlalchemy.orm import Session, selectinload, joinedload, load_only
 
 from app.api.deps import get_db, get_current_user
@@ -769,5 +769,194 @@ def category_trend(
             "color": "#9ca3af",
             "points": [{"date": d, "count": n} for d, n in sorted(uncat_counts.items())],
         })
+
+    return results
+
+
+_RISING_WEEKLY_BUCKETS = 8
+_RISING_MONTHLY_BUCKETS = 6
+_RISING_MIN_TOTAL_MENTIONS = 5
+_RISING_MIN_RECENT_FOR_NEWCOMER = 2
+_RISING_TOP_N = 30
+_RISING_SLOPE_EPSILON = 0.5
+
+
+def _slope(values: list[float]) -> float:
+    """Ordinary-least-squares slope of `values` against x = 0..n-1 (oldest
+    to newest, one point per bucket). 0 for fewer than 2 points -- can't
+    fit a line."""
+    n = len(values)
+    if n < 2:
+        return 0.0
+    x_mean = (n - 1) / 2
+    y_mean = sum(values) / n
+    num = sum((i - x_mean) * (v - y_mean) for i, v in enumerate(values))
+    den = sum((i - x_mean) ** 2 for i in range(n))
+    return num / den if den else 0.0
+
+
+def _relative_slope(values: list[float]) -> float:
+    """Slope as a fraction of the series' own mean, so a high-volume
+    keyword growing by a few extra mentions doesn't outrank a low-volume
+    one that's tripled in size -- ranking is about rate of change, not
+    absolute volume. +epsilon in the denominator keeps near-zero-mean
+    keywords from producing wild ratios off a single mention."""
+    mean = sum(values) / len(values) if values else 0.0
+    return _slope(values) / (mean + _RISING_SLOPE_EPSILON)
+
+
+def _week_starts(n: int, now: datetime) -> list[date]:
+    """The last n ISO week starts (Mondays), oldest first -- matches
+    Postgres's date_trunc('week', ...), which also returns the Monday."""
+    monday = (now - timedelta(days=now.weekday())).date()
+    return [monday - timedelta(weeks=i) for i in range(n - 1, -1, -1)]
+
+
+def _month_starts(n: int, now: datetime) -> list[date]:
+    """The last n calendar month starts, oldest first."""
+    starts = []
+    for i in range(n - 1, -1, -1):
+        total_months = (now.year * 12 + (now.month - 1)) - i
+        y, m = divmod(total_months, 12)
+        starts.append(datetime(y, m + 1, 1).date())
+    return starts
+
+
+def _keyword_bucket_query(keyword_column, date_column, id_column, unit: str, since: datetime):
+    """Case-insensitive keyword counts grouped by (keyword, date_trunc(unit,
+    ...)) -- same unnest()+render_derived() technique as
+    _keyword_overlap_exists above, but joined (not an EXISTS subquery) since
+    this needs to select the exploded keyword and group by it directly.
+    SQLAlchemy renders the join as LATERAL automatically because `kw`
+    correlates to the outer table (Postgres also auto-laterals plain
+    function calls in FROM/JOIN even without the keyword, but the explicit
+    LATERAL SQLAlchemy emits here is harmless and clearer)."""
+    kw = func.unnest(keyword_column).table_valued("kw").render_derived()
+    # Built once and reused (not called again for GROUP BY) -- two separate
+    # func.date_trunc(unit, ...) calls compile to two distinct bind
+    # parameters even with an identical `unit` value, which Postgres then
+    # can't verify are the same expression for grouping purposes.
+    keyword_expr = func.lower(kw.c.kw)
+    bucket_expr = func.date_trunc(unit, date_column)
+    return (
+        select(
+            keyword_expr.label("keyword"),
+            bucket_expr.label("bucket"),
+            func.count(id_column.distinct()).label("count"),
+        )
+        .join(kw, true())
+        .where(date_column >= since)
+        .group_by(keyword_expr, bucket_expr)
+    )
+
+
+def _merge_bucket_rows(rows, acc: dict[str, dict]):
+    for r in rows:
+        bucket_date = r.bucket.date()
+        day_counts = acc.setdefault(r.keyword, {})
+        day_counts[bucket_date] = day_counts.get(bucket_date, 0) + r.count
+
+
+@router.get("/rising-keywords")
+def rising_keywords(
+    source_ids: list[uuid.UUID] | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Surfaces keywords whose usage is *accelerating* -- "which topics are
+    gaining relevance" -- rather than keyword-trend's "how has coverage of
+    a keyword I already picked evolved". Two growth signals per keyword,
+    both derived from the same case-insensitive unnest() aggregation
+    keyword-trend/category-trend already use:
+      - weekly_slope: relative OLS slope of the last 8 weekly-bucket counts
+        -- catches sudden short-term spikes.
+      - monthly_slope: same, but over the last 6 monthly buckets -- catches
+        slow, sustained growth a weekly window is too short to see (e.g. a
+        research topic that gains one more paper every few weeks, which
+        barely moves week over week but is unmistakably climbing month
+        over month).
+    Both are *relative* slopes (see _relative_slope) so ranking is about
+    rate of change, not absolute volume.
+    "Newcomer" is a third, distinct signal: a keyword with zero mentions in
+    every monthly bucket except the most recent one (which must clear
+    _RISING_MIN_RECENT_FOR_NEWCOMER, so two mentions in one day don't
+    qualify). Kept separate from the slope ranking -- a keyword with only a
+    couple of total mentions doesn't have enough data points for a
+    meaningful slope, but is still worth surfacing as "brand new".
+    Candidates are bounded to keywords with at least
+    _RISING_MIN_TOTAL_MENTIONS total mentions across the 6-month lookback,
+    both to filter one-off noise and because the monthly window is a
+    superset of the weekly one, so it alone determines the full candidate
+    set -- no separate query needed to establish "which keywords exist".
+    """
+    now = datetime.now(timezone.utc)
+    week_starts = _week_starts(_RISING_WEEKLY_BUCKETS, now)
+    month_starts = _month_starts(_RISING_MONTHLY_BUCKETS, now)
+    since = datetime.combine(month_starts[0], datetime.min.time(), tzinfo=timezone.utc)
+
+    weekly: dict[str, dict] = {}
+    monthly: dict[str, dict] = {}
+
+    item_weekly_q = (
+        _keyword_bucket_query(NewsItem.extracted_keywords, NewsItem.fetched_at, NewsItem.id, "week", since)
+        .where(NewsItem.user_id == current_user.id)
+    )
+    item_monthly_q = (
+        _keyword_bucket_query(NewsItem.extracted_keywords, NewsItem.fetched_at, NewsItem.id, "month", since)
+        .where(NewsItem.user_id == current_user.id)
+    )
+    cluster_weekly_q = (
+        _keyword_bucket_query(NewsCluster.extracted_keywords, NewsCluster.created_at, NewsCluster.id, "week", since)
+        .where(NewsCluster.user_id == current_user.id)
+    )
+    cluster_monthly_q = (
+        _keyword_bucket_query(NewsCluster.extracted_keywords, NewsCluster.created_at, NewsCluster.id, "month", since)
+        .where(NewsCluster.user_id == current_user.id)
+    )
+
+    if source_ids:
+        item_weekly_q = item_weekly_q.where(NewsItem.source_id.in_(source_ids))
+        item_monthly_q = item_monthly_q.where(NewsItem.source_id.in_(source_ids))
+        cluster_weekly_q = (
+            cluster_weekly_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+            .where(NewsItem.source_id.in_(source_ids))
+        )
+        cluster_monthly_q = (
+            cluster_monthly_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+            .where(NewsItem.source_id.in_(source_ids))
+        )
+
+    _merge_bucket_rows(db.execute(item_weekly_q).all(), weekly)
+    _merge_bucket_rows(db.execute(cluster_weekly_q).all(), weekly)
+    _merge_bucket_rows(db.execute(item_monthly_q).all(), monthly)
+    _merge_bucket_rows(db.execute(cluster_monthly_q).all(), monthly)
+
+    results = []
+    for kw_text, month_counts in monthly.items():
+        monthly_series = [month_counts.get(d, 0) for d in month_starts]
+        total_mentions = sum(monthly_series)
+        if total_mentions < _RISING_MIN_TOTAL_MENTIONS:
+            continue
+
+        week_counts = weekly.get(kw_text, {})
+        weekly_series = [week_counts.get(d, 0) for d in week_starts]
+
+        is_newcomer = (
+            monthly_series[-1] >= _RISING_MIN_RECENT_FOR_NEWCOMER
+            and all(v == 0 for v in monthly_series[:-1])
+        )
+
+        results.append({
+            "keyword": kw_text,
+            "total_mentions": total_mentions,
+            "is_newcomer": is_newcomer,
+            "weekly_slope": round(_relative_slope(weekly_series), 4),
+            "monthly_slope": round(_relative_slope(monthly_series), 4),
+            "weekly_points": [{"date": str(d), "count": c} for d, c in zip(week_starts, weekly_series)],
+            "monthly_points": [{"date": str(d), "count": c} for d, c in zip(month_starts, monthly_series)],
+        })
+
+    results.sort(key=lambda r: max(r["weekly_slope"], r["monthly_slope"]), reverse=True)
+    return results[:_RISING_TOP_N]
 
     return results

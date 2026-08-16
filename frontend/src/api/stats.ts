@@ -138,6 +138,25 @@ export interface CategoryTrendResult {
   points: CategoryTrendPoint[];
 }
 
+export interface RisingKeywordPoint {
+  date: string;
+  count: number;
+}
+
+export interface RisingKeywordResult {
+  keyword: string;
+  total_mentions: number;
+  is_newcomer: boolean;
+  // Relative (rate-of-change-vs-own-mean) slopes, not raw counts -- see the
+  // backend's _relative_slope docstring. weekly catches sudden spikes,
+  // monthly catches slow sustained growth a weekly window is too short to
+  // show.
+  weekly_slope: number;
+  monthly_slope: number;
+  weekly_points: RisingKeywordPoint[];
+  monthly_points: RisingKeywordPoint[];
+}
+
 export const statsApi = {
   activity: (days: number) =>
     client.get<ActivityPoint[]>("/stats/activity", { params: { days } }).then((r) => r.data),
@@ -163,6 +182,13 @@ export const statsApi = {
     client
       .get<CategoryTrendResult[]>("/stats/category-trend", {
         params: { days, ...(sourceIds.length ? { source_ids: sourceIds } : {}) },
+        paramsSerializer: { indexes: null },
+      })
+      .then((r) => r.data),
+  risingKeywords: (sourceIds: string[]) =>
+    client
+      .get<RisingKeywordResult[]>("/stats/rising-keywords", {
+        params: sourceIds.length ? { source_ids: sourceIds } : undefined,
         paramsSerializer: { indexes: null },
       })
       .then((r) => r.data),

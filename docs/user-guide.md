@@ -149,8 +149,16 @@ view split into tabs:
   pairs of sources most often cover the same story, and a category
   coverage trend (one line per category, day by day, up to a year)
   that can be filtered down to specific sources.
-- **Trends** — how coverage of a keyword, or a loose group of
-  OR-matched keywords ("topic"), has evolved day by day. Add up to six
+- **Trends** — a **Rising keywords** panel at the top surfaces
+  keywords whose usage is accelerating, so you don't have to already
+  know what to look for: "This week" catches sudden spikes, "This
+  month" catches slow, sustained growth (e.g. a topic gaining one
+  more mention every few weeks) that a weekly view is too short to
+  show. A **NEW** badge marks a keyword with no history before this
+  period. Click the `+` next to any rising keyword to start tracking
+  it as a proper topic below. Below that: how coverage of a keyword,
+  or a loose group of OR-matched keywords ("topic"), has evolved day
+  by day. Add up to six
   topics to compare on one chart, each built from your own keywords or
   imported from an existing keyword cluster (see
   {doc}`learning-and-scoring`), and optionally filter by category or

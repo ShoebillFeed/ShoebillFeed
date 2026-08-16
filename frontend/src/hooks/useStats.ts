@@ -67,3 +67,10 @@ export function useCategoryTrend(days: number, sourceIds: string[]) {
     queryFn: () => statsApi.categoryTrend(days, sourceIds),
   });
 }
+
+export function useRisingKeywords(sourceIds: string[]) {
+  return useQuery({
+    queryKey: ["stats", "rising-keywords", sourceIds],
+    queryFn: () => statsApi.risingKeywords(sourceIds),
+  });
+}

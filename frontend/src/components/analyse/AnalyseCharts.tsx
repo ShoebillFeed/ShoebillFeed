@@ -14,7 +14,7 @@ import { cn } from "../../lib/utils";
 import {
   useActivityStats, useCategoryStats, useSourceStats,
   useWeightHistory, useSourceClusters,
-  useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend, useCategoryTrend,
+  useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend, useCategoryTrend, useRisingKeywords,
 } from "../../hooks/useStats";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { usePodcastShows } from "../../hooks/usePodcasts";
@@ -578,7 +578,7 @@ function SourceClustersChart({ days }: { days: number }) {
 
 // ── Category coverage over time ───────────────────────────────────────────────
 
-function CategorySourceFilterPills({
+function SourceFilterPills({
   sourceIds,
   onToggle,
 }: {
@@ -1150,7 +1150,7 @@ export function AnalyseCategoriesTab() {
         action={<RangePicker value={categoryTrendDays} onChange={setCategoryTrendDays} />}
       >
         <div className="flex flex-col gap-4">
-          <CategorySourceFilterPills sourceIds={categoryTrendSourceIds} onToggle={toggleCategoryTrendSource} />
+          <SourceFilterPills sourceIds={categoryTrendSourceIds} onToggle={toggleCategoryTrendSource} />
           <CategoryTrendChart
             key={`${categoryTrendDays}-${categoryTrendSourceIds.join(",")}`}
             days={categoryTrendDays}
@@ -1494,6 +1494,140 @@ function KeywordTrendChart({
   );
 }
 
+// ── Rising keywords ────────────────────────────────────────────────────────
+
+const RISING_TOP_N = 10;
+const RISING_SPARKLINE_COLOR = "#10b981";
+
+function Sparkline({ points }: { points: number[] }) {
+  const w = 60, h = 20, pad = 2;
+  const max = Math.max(...points, 1);
+  const min = Math.min(...points, 0);
+  const range = max - min || 1;
+  const stepX = points.length > 1 ? (w - pad * 2) / (points.length - 1) : 0;
+  const coords = points
+    .map((v, i) => {
+      const x = pad + i * stepX;
+      const y = h - pad - ((v - min) / range) * (h - pad * 2);
+      return `${x},${y}`;
+    })
+    .join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="shrink-0">
+      <polyline
+        points={coords}
+        fill="none"
+        stroke={RISING_SPARKLINE_COLOR}
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function RisingKeywordsPanel() {
+  const { t } = useTranslation();
+  const [period, setPeriod] = useState<"weekly" | "monthly">("monthly");
+  const [sourceIds, setSourceIds] = useState<string[]>([]);
+  const toggleSource = (id: string) =>
+    setSourceIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const { data, isLoading } = useRisingKeywords(sourceIds);
+
+  const topics = useAnalyseTrendsStore((s) => s.topics);
+  const setTopics = useAnalyseTrendsStore((s) => s.setTopics);
+  const isTracked = (keyword: string) =>
+    topics.some((topic) => topic.keywords.some((k) => k.toLowerCase() === keyword.toLowerCase()));
+  const addToTrends = (keyword: string) => {
+    if (topics.length >= MAX_TOPICS || isTracked(keyword)) return;
+    setTopics([
+      ...topics,
+      { id: generateTopicId(), label: keyword, keywords: [keyword], color: TOPIC_COLORS[topics.length % TOPIC_COLORS.length] },
+    ]);
+  };
+
+  const rows = (data ?? [])
+    .map((r) => ({
+      ...r,
+      slope: period === "weekly" ? r.weekly_slope : r.monthly_slope,
+      points: (period === "weekly" ? r.weekly_points : r.monthly_points).map((p) => p.count),
+    }))
+    .filter((r) => r.slope > 0)
+    .sort((a, b) => b.slope - a.slope)
+    .slice(0, RISING_TOP_N);
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">{t("stats.risingKeywordsTitle")}</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{t("stats.risingKeywordsDesc")}</p>
+        </div>
+        <div className="flex gap-1 shrink-0">
+          <button
+            onClick={() => setPeriod("weekly")}
+            className={`px-2.5 py-1 text-xs rounded transition-colors ${period === "weekly" ? "bg-indigo-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+          >
+            {t("stats.risingWeekly")}
+          </button>
+          <button
+            onClick={() => setPeriod("monthly")}
+            className={`px-2.5 py-1 text-xs rounded transition-colors ${period === "monthly" ? "bg-indigo-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+          >
+            {t("stats.risingMonthly")}
+          </button>
+        </div>
+      </div>
+
+      <SourceFilterPills sourceIds={sourceIds} onToggle={toggleSource} />
+
+      {isLoading ? (
+        <Loading />
+      ) : rows.length === 0 ? (
+        <div className="flex items-center justify-center h-20 text-sm text-gray-400 text-center px-4">
+          {t("stats.risingEmpty")}
+        </div>
+      ) : (
+        <div className="flex flex-col divide-y divide-gray-100 dark:divide-gray-800">
+          {rows.map((r) => {
+            const tracked = isTracked(r.keyword);
+            return (
+              <div key={r.keyword} className="flex items-center gap-3 py-2">
+                <Sparkline points={r.points} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{r.keyword}</span>
+                    {r.is_newcomer && (
+                      <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                        {t("stats.risingNewcomer")}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    {t("stats.risingMentions", { count: r.total_mentions })}
+                  </span>
+                </div>
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums shrink-0">
+                  +{Math.round(r.slope * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => addToTrends(r.keyword)}
+                  disabled={tracked || topics.length >= MAX_TOPICS}
+                  title={tracked ? t("stats.risingAlreadyTracked") : t("stats.risingAddToTrends")}
+                  className="shrink-0 text-gray-400 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AnalyseTrendsTab() {
   const { t } = useTranslation();
   const { data: categories = [] } = useCategories();
@@ -1568,6 +1702,8 @@ export function AnalyseTrendsTab() {
 
   return (
     <div className="flex flex-col gap-6">
+      <RisingKeywordsPanel />
+
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
           <div>
