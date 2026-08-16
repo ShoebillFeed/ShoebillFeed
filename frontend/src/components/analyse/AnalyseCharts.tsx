@@ -14,7 +14,7 @@ import { cn } from "../../lib/utils";
 import {
   useActivityStats, useCategoryStats, useSourceStats,
   useWeightHistory, useSourceClusters,
-  useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend,
+  useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend, useCategoryTrend,
 } from "../../hooks/useStats";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { usePodcastShows } from "../../hooks/usePodcasts";
@@ -576,6 +576,100 @@ function SourceClustersChart({ days }: { days: number }) {
   );
 }
 
+// ── Category coverage over time ───────────────────────────────────────────────
+
+function CategorySourceFilterPills({
+  sourceIds,
+  onToggle,
+}: {
+  sourceIds: string[];
+  onToggle: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  const { data: sources = [] } = useSources();
+  const active = sources.filter((s) => s.is_active);
+  if (active.length === 0) return null;
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">{t("stats.filterBySource")}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {active.map((source) => {
+          const selected = sourceIds.includes(source.id);
+          return (
+            <button
+              key={source.id}
+              type="button"
+              onClick={() => onToggle(source.id)}
+              className={cn(
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-colors",
+                selected
+                  ? "bg-indigo-600 text-white border-transparent"
+                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400"
+              )}
+            >
+              {selected && <Check size={9} />}
+              {source.name}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CategoryTrendChart({ days, sourceIds }: { days: number; sourceIds: string[] }) {
+  const gridColor = useGridColor();
+  const { data, isLoading } = useCategoryTrend(days, sourceIds);
+  if (isLoading) return <Loading />;
+
+  // Categories with zero coverage in this window/filter would otherwise
+  // render as a flat line at 0 -- excluded so the legend only lists
+  // categories that actually had something happen.
+  const covered = (data ?? []).filter((r) => r.points.some((p) => p.count > 0));
+  if (covered.length === 0) return <Empty />;
+
+  const allDates = Array.from(new Set(covered.flatMap((r) => r.points.map((p) => p.date)))).sort();
+  const chartData = allDates.map((date) => {
+    const row: Record<string, string | number> = { date: fmtDate(date, days) };
+    for (const r of covered) {
+      const point = r.points.find((p) => p.date === date);
+      row[r.name] = point?.count ?? 0;
+    }
+    return row;
+  });
+
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
+        <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+        <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+        <Tooltip
+          cursor={{ stroke: "rgba(99,102,241,0.2)", strokeWidth: 1 }}
+          wrapperStyle={WRAPPER_STYLE}
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null;
+            return (
+              <TooltipBox label={label as string}>
+                {payload
+                  .filter((p) => p.value !== undefined)
+                  .sort((a, b) => (b.value as number) - (a.value as number))
+                  .map((p) => (
+                    <TooltipRow key={String(p.name)} color={p.color} name={`${p.name ?? ""}`} value={p.value as number} />
+                  ))}
+              </TooltipBox>
+            );
+          }}
+        />
+        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, left: 0, width: "100%", textAlign: "center" }} />
+        {covered.map((r) => (
+          <Line key={r.id} type="monotone" dataKey={r.name} stroke={r.color} strokeWidth={2} dot={false} />
+        ))}
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
 // ── Keyword cluster map ───────────────────────────────────────────────────────
 
 const SIM_W = 560;
@@ -1017,6 +1111,11 @@ export function AnalyseCategoriesTab() {
   const [categoryDays, setCategoryDays] = useState(30);
   const [sourceDays, setSourceDays] = useState(30);
   const [clusterDays, setClusterDays] = useState(30);
+  const [categoryTrendDays, setCategoryTrendDays] = useState(30);
+  const [categoryTrendSourceIds, setCategoryTrendSourceIds] = useState<string[]>([]);
+  const toggleCategoryTrendSource = (id: string) =>
+    setCategoryTrendSourceIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1043,6 +1142,21 @@ export function AnalyseCategoriesTab() {
         action={<RangePicker value={clusterDays} onChange={setClusterDays} />}
       >
         <SourceClustersChart key={clusterDays} days={clusterDays} />
+      </ChartCard>
+
+      <ChartCard
+        title={t("stats.categoryTrendTitle")}
+        description={t("stats.categoryTrendDesc")}
+        action={<RangePicker value={categoryTrendDays} onChange={setCategoryTrendDays} />}
+      >
+        <div className="flex flex-col gap-4">
+          <CategorySourceFilterPills sourceIds={categoryTrendSourceIds} onToggle={toggleCategoryTrendSource} />
+          <CategoryTrendChart
+            key={`${categoryTrendDays}-${categoryTrendSourceIds.join(",")}`}
+            days={categoryTrendDays}
+            sourceIds={categoryTrendSourceIds}
+          />
+        </div>
       </ChartCard>
     </div>
   );

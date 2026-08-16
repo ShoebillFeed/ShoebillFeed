@@ -126,6 +126,18 @@ export interface KeywordTrendResult {
   points: KeywordTrendPoint[];
 }
 
+export interface CategoryTrendPoint {
+  date: string;
+  count: number;
+}
+
+export interface CategoryTrendResult {
+  id: string;
+  name: string;
+  color: string;
+  points: CategoryTrendPoint[];
+}
+
 export const statsApi = {
   activity: (days: number) =>
     client.get<ActivityPoint[]>("/stats/activity", { params: { days } }).then((r) => r.data),
@@ -147,4 +159,11 @@ export const statsApi = {
       .then((r) => r.data),
   keywordTrend: (payload: KeywordTrendRequest) =>
     client.post<KeywordTrendResult[]>("/stats/keyword-trend", payload).then((r) => r.data),
+  categoryTrend: (days: number, sourceIds: string[]) =>
+    client
+      .get<CategoryTrendResult[]>("/stats/category-trend", {
+        params: { days, ...(sourceIds.length ? { source_ids: sourceIds } : {}) },
+        paramsSerializer: { indexes: null },
+      })
+      .then((r) => r.data),
 };

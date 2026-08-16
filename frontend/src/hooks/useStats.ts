@@ -60,3 +60,10 @@ export function useKeywordTrend() {
     mutationFn: (payload: KeywordTrendRequest) => statsApi.keywordTrend(payload),
   });
 }
+
+export function useCategoryTrend(days: number, sourceIds: string[]) {
+  return useQuery({
+    queryKey: ["stats", "category-trend", days, sourceIds],
+    queryFn: () => statsApi.categoryTrend(days, sourceIds),
+  });
+}

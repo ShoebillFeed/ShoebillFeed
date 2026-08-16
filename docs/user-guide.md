@@ -145,8 +145,10 @@ the subset of your feed you actually want interrupted for.
 view split into tabs:
 
 - **Activity** — items fetched/read/liked/disliked over time.
-- **Categories & Sources** — volume by category and by source, plus
-  which pairs of sources most often cover the same story.
+- **Categories & Sources** — volume by category and by source, which
+  pairs of sources most often cover the same story, and a category
+  coverage trend (one line per category, day by day, up to a year)
+  that can be filtered down to specific sources.
 - **Trends** — how coverage of a keyword, or a loose group of
   OR-matched keywords ("topic"), has evolved day by day. Add up to six
   topics to compare on one chart, each built from your own keywords or

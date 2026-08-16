@@ -379,6 +379,8 @@ const en = {
     bySourceDesc: "Volume per source. Hover a bar to see the category breakdown for that source.",
     sourceClusterTitle: "Source co-clustering",
     sourceClusterDesc: "Which pairs of sources most often cover the same story (appear in the same cluster), broken down by category. High overlap means two sources report on the same topics.",
+    categoryTrendTitle: "Category coverage over time",
+    categoryTrendDesc: "Daily article count per category, so you can see which topics are picking up or quieting down. Filter to specific sources to see how just those feeds are trending.",
     weightHistoryTitle: "Category weight history",
     weightHistoryDesc: "How each category's learned relevance score has grown over time. Steeper curves mean you're consistently finding that category relevant. Requires recording to be enabled.",
     kwClusterMapTitle: "Keyword cluster map",

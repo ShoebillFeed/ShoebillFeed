@@ -634,3 +634,140 @@ def keyword_trend(
         })
 
     return results
+
+
+@router.get("/category-trend")
+def category_trend(
+    days: Annotated[int, Query(ge=1, le=365)] = 30,
+    source_ids: list[uuid.UUID] | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Daily article counts per category, optionally filtered by source --
+    "how has coverage of each category evolved over time". Two grouped
+    queries (one per category+date, for items and clusters) rather than one
+    query pair per category -- unlike keyword-trend's max-6-topics loop,
+    category count can be much higher, so this stays at a fixed query count
+    regardless of how many categories a user has. Counts both standalone
+    NewsItems and NewsClusters (each story counted once, not once per
+    cluster member) plus an "uncategorized" bucket, matching by-category's
+    shape above but time-bucketed instead of a single-window total. days is
+    a plain int here (not the int | None "all time" of keyword-trend) since
+    a GET query string can't distinguish an explicit null from an omitted
+    param the way a POST body can -- matches the other GET stat endpoints'
+    convention (activity/by-category/by-source) instead."""
+    since = _since(days)
+
+    categories = db.scalars(
+        select(Category)
+        .where(Category.user_id == current_user.id, Category.is_active == True)
+        .order_by(Category.name)
+    ).all()
+
+    cat_ids = [c.id for c in categories]
+    counts: dict[str, dict[str, int]] = {str(c.id): {} for c in categories}
+
+    def _accumulate(rows, key_attr):
+        for r in rows:
+            key = str(getattr(r, key_attr))
+            if key in counts:
+                counts[key][str(r.date)] = counts[key].get(str(r.date), 0) + r.count
+
+    if cat_ids:
+        item_q = (
+            select(
+                news_item_categories.c.category_id,
+                cast(NewsItem.fetched_at, Date).label("date"),
+                func.count(NewsItem.id.distinct()).label("count"),
+            )
+            .join(NewsItem, NewsItem.id == news_item_categories.c.news_item_id)
+            .where(
+                NewsItem.user_id == current_user.id,
+                news_item_categories.c.category_id.in_(cat_ids),
+                NewsItem.fetched_at >= since,
+            )
+        )
+        if source_ids:
+            item_q = item_q.where(NewsItem.source_id.in_(source_ids))
+        item_rows = db.execute(
+            item_q.group_by(news_item_categories.c.category_id, cast(NewsItem.fetched_at, Date))
+        ).all()
+        _accumulate(item_rows, "category_id")
+
+        cluster_q = (
+            select(
+                news_cluster_categories.c.category_id,
+                cast(NewsCluster.created_at, Date).label("date"),
+                func.count(NewsCluster.id.distinct()).label("count"),
+            )
+            .join(NewsCluster, NewsCluster.id == news_cluster_categories.c.news_cluster_id)
+            .where(
+                NewsCluster.user_id == current_user.id,
+                news_cluster_categories.c.category_id.in_(cat_ids),
+                NewsCluster.created_at >= since,
+            )
+        )
+        if source_ids:
+            cluster_q = (
+                cluster_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+                .where(NewsItem.source_id.in_(source_ids))
+            )
+        cluster_rows = db.execute(
+            cluster_q.group_by(news_cluster_categories.c.category_id, cast(NewsCluster.created_at, Date))
+        ).all()
+        _accumulate(cluster_rows, "category_id")
+
+    results = [
+        {
+            "id": str(c.id),
+            "name": c.name,
+            "color": c.color,
+            "points": [{"date": d, "count": n} for d, n in sorted(counts[str(c.id)].items())],
+        }
+        for c in categories
+    ]
+
+    uncat_counts: dict[str, int] = {}
+
+    uncat_item_q = (
+        select(cast(NewsItem.fetched_at, Date).label("date"), func.count(NewsItem.id.distinct()).label("count"))
+        .where(
+            NewsItem.user_id == current_user.id,
+            ~select(news_item_categories.c.news_item_id)
+            .where(news_item_categories.c.news_item_id == NewsItem.id)
+            .exists(),
+            NewsItem.fetched_at >= since,
+        )
+    )
+    if source_ids:
+        uncat_item_q = uncat_item_q.where(NewsItem.source_id.in_(source_ids))
+    for r in db.execute(uncat_item_q.group_by(cast(NewsItem.fetched_at, Date))).all():
+        uncat_counts[str(r.date)] = uncat_counts.get(str(r.date), 0) + r.count
+
+    uncat_cluster_q = (
+        select(cast(NewsCluster.created_at, Date).label("date"), func.count(NewsCluster.id.distinct()).label("count"))
+        .where(
+            NewsCluster.user_id == current_user.id,
+            ~select(news_cluster_categories.c.news_cluster_id)
+            .where(news_cluster_categories.c.news_cluster_id == NewsCluster.id)
+            .exists(),
+            NewsCluster.created_at >= since,
+        )
+    )
+    if source_ids:
+        uncat_cluster_q = (
+            uncat_cluster_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+            .where(NewsItem.source_id.in_(source_ids))
+        )
+    for r in db.execute(uncat_cluster_q.group_by(cast(NewsCluster.created_at, Date))).all():
+        uncat_counts[str(r.date)] = uncat_counts.get(str(r.date), 0) + r.count
+
+    if uncat_counts:
+        results.append({
+            "id": "uncategorized",
+            "name": "Uncategorized",
+            "color": "#9ca3af",
+            "points": [{"date": d, "count": n} for d, n in sorted(uncat_counts.items())],
+        })
+
+    return results
