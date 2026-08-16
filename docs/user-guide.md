@@ -153,7 +153,10 @@ view split into tabs:
   imported from an existing keyword cluster (see
   {doc}`learning-and-scoring`), and optionally filter by category or
   source. A topic built from a keyword cluster shows that cluster's
-  real historical coverage, not just a snapshot going forward.
+  real historical coverage, not just a snapshot going forward. The
+  time range goes from 7 days up to a year, or "All" for your entire
+  history. "Export CSV" downloads the chart's underlying counts (one
+  column per topic, one row per date).
 - **Learning** — category weight history and the keyword cluster map
   (see {doc}`learning-and-scoring`).
 - **Podcast** — categories, keywords, and sources covered in each

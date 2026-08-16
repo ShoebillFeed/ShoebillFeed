@@ -203,3 +203,31 @@ class TestKeywordTrend:
     def test_rejects_a_topic_with_no_keywords(self, auth_client):
         resp = _post(auth_client, topics=[{"label": "Empty", "keywords": []}])
         assert resp.status_code == 422
+
+    def test_days_none_means_all_time_no_lower_bound(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        now = datetime.now(timezone.utc)
+        _make_item(db_session, source, user.id, keywords=["ai"], fetched_at=now - timedelta(days=1000))
+        db_session.commit()
+
+        resp = _post(auth_client, topics=[{"label": "AI", "keywords": ["ai"]}], days=None)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert sum(p["count"] for p in body[0]["points"]) == 1
+
+    def test_accepts_a_day_window_beyond_the_old_365_cap(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        now = datetime.now(timezone.utc)
+        _make_item(db_session, source, user.id, keywords=["ai"], fetched_at=now - timedelta(days=500))
+        db_session.commit()
+
+        resp = _post(auth_client, topics=[{"label": "AI", "keywords": ["ai"]}], days=730)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert sum(p["count"] for p in body[0]["points"]) == 1
+
+    def test_rejects_a_day_window_beyond_the_hard_cap(self, auth_client):
+        resp = _post(auth_client, topics=[{"label": "AI", "keywords": ["ai"]}], days=99999)
+        assert resp.status_code == 422

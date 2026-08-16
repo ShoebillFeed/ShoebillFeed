@@ -540,7 +540,10 @@ class KeywordTrendRequest(BaseModel):
     topics: list[KeywordTrendTopic] = Field(..., min_length=1, max_length=6)
     category_ids: list[uuid.UUID] = Field(default_factory=list)
     source_ids: list[uuid.UUID] = Field(default_factory=list)
-    days: int = Field(default=90, ge=1, le=365)
+    # None means "all time" -- no lower bound on the query at all, rather
+    # than a large-but-finite day count, so a user's very first article is
+    # never silently excluded by whatever cap we pick.
+    days: int | None = Field(default=90, ge=1, le=3650)
 
 
 def _keyword_overlap_exists(keyword_column, lowered_keywords: list[str]):
@@ -571,8 +574,9 @@ def keyword_trend(
     keywords), optionally filtered to specific categories/sources -- "how
     has coverage of X evolved over time". Counts both standalone NewsItems
     and NewsClusters (each story counted once, not once per cluster member),
-    unlike by-category/by-source above which only look at NewsItem."""
-    since = _since(payload.days)
+    unlike by-category/by-source above which only look at NewsItem. days=None
+    means all time -- no lower-bound filter at all."""
+    since = _since(payload.days) if payload.days is not None else None
 
     results = []
     for topic in payload.topics:
@@ -585,7 +589,7 @@ def keyword_trend(
             select(cast(NewsItem.fetched_at, Date).label("date"), func.count(NewsItem.id.distinct()).label("count"))
             .where(
                 NewsItem.user_id == current_user.id,
-                NewsItem.fetched_at >= since,
+                *([NewsItem.fetched_at >= since] if since is not None else []),
                 _keyword_overlap_exists(NewsItem.extracted_keywords, lowered),
             )
         )
@@ -602,7 +606,7 @@ def keyword_trend(
             select(cast(NewsCluster.created_at, Date).label("date"), func.count(NewsCluster.id.distinct()).label("count"))
             .where(
                 NewsCluster.user_id == current_user.id,
-                NewsCluster.created_at >= since,
+                *([NewsCluster.created_at >= since] if since is not None else []),
                 _keyword_overlap_exists(NewsCluster.extracted_keywords, lowered),
             )
         )

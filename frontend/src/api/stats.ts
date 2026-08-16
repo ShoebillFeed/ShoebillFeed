@@ -112,7 +112,8 @@ export interface KeywordTrendRequest {
   topics: KeywordTrendTopicRequest[];
   category_ids?: string[];
   source_ids?: string[];
-  days?: number;
+  // null means all time -- no lower bound on the query.
+  days?: number | null;
 }
 
 export interface KeywordTrendPoint {

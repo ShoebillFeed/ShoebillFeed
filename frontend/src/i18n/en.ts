@@ -413,6 +413,7 @@ const en = {
     importFromCluster: "Import from keyword cluster…",
     filterByCategory: "Filter by category",
     filterBySource: "Filter by source",
+    exportTrendData: "Export CSV",
   },
   advanced: {
     title: "Advanced",
@@ -596,7 +597,7 @@ const en = {
     podcastTitle: "Podcasts",
     podcastBody: "Turn your feed into a daily podcast. Configure up to three AI hosts — each with a personality you write yourself — to discuss the top stories from whichever categories, feeds, and time window you pick, in your language, at a length and time you set. Voices are generated locally by default with Piper; Kokoro and Chatterbox are available as alternative self-hosted engines. Episodes appear right here in the app, or add a private link to any podcast app to listen anywhere.",
     analyticsTitle: "Analytics",
-    analyticsBody: "The Analytics page (top-level nav, next to Podcasts) breaks down your reading history: activity over time, volume by category and source, which sources tend to cover the same stories, how your learned category weights and keyword clusters have evolved, and per-episode podcast topics. The Trends tab lets you track how coverage of a keyword or group of related keywords — your own, or imported from an existing keyword cluster — has evolved day by day, filterable by category or source and comparable across up to six topics on one chart. Recording can be paused at any time from the toggle at the top of the page.",
+    analyticsBody: "The Analytics page (top-level nav, next to Podcasts) breaks down your reading history: activity over time, volume by category and source, which sources tend to cover the same stories, how your learned category weights and keyword clusters have evolved, and per-episode podcast topics. The Trends tab lets you track how coverage of a keyword or group of related keywords — your own, or imported from an existing keyword cluster — has evolved day by day, filterable by category or source and comparable across up to six topics on one chart, over anything from the last 7 days to your entire history. Its data can be exported as CSV. Recording can be paused at any time from the toggle at the top of the page.",
   },
   learning: {
     categoriesTitle: "Category Preferences",

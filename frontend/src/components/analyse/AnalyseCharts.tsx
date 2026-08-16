@@ -9,7 +9,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
 } from "recharts";
 import { format, parseISO } from "date-fns";
-import { Check, PauseCircle, Plus, RefreshCw, ThumbsUp, X } from "lucide-react";
+import { Check, Download, PauseCircle, Plus, RefreshCw, ThumbsUp, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 import {
   useActivityStats, useCategoryStats, useSourceStats,
@@ -1244,12 +1244,80 @@ function TrendFilterPills({
   );
 }
 
-function KeywordTrendChart({ results, days }: { results: KeywordTrendResult[]; days: number }) {
+// Trend range covers up to 10 years (see TREND_RANGE_OPTIONS below), well
+// past the point where the shared fmtDate's "MMM d" (no year) is
+// unambiguous -- a distinct formatter that adds the year once the range is
+// wide enough to actually span one.
+function fmtTrendDate(iso: string, days: number | null) {
+  try {
+    const d = parseISO(iso);
+    if (days !== null && days <= 7) return format(d, "EEE d");
+    if (days !== null && days <= 120) return format(d, "MMM d");
+    return format(d, "MMM d, yy");
+  } catch {
+    return iso;
+  }
+}
+
+const TREND_RANGE_OPTIONS: { label: string; days: number | null }[] = [
+  { label: "7 d", days: 7 },
+  { label: "30 d", days: 30 },
+  { label: "90 d", days: 90 },
+  { label: "180 d", days: 180 },
+  { label: "1 y", days: 365 },
+  { label: "All", days: null },
+];
+
+function TrendRangePicker({ value, onChange }: { value: number | null; onChange: (d: number | null) => void }) {
+  return (
+    <div className="flex gap-1">
+      {TREND_RANGE_OPTIONS.map(({ label, days }) => (
+        <button
+          key={label}
+          onClick={() => onChange(days)}
+          className={`px-2.5 py-1 text-xs rounded transition-colors ${
+            value === days
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function csvEscape(value: string): string {
+  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+function keywordTrendToCsv(results: KeywordTrendResult[]): string {
+  const allDates = Array.from(new Set(results.flatMap((r) => r.points.map((p) => p.date)))).sort();
+  const header = ["date", ...results.map((r) => csvEscape(r.label))].join(",");
+  const rows = allDates.map((date) => {
+    const counts = results.map((r) => String(r.points.find((p) => p.date === date)?.count ?? 0));
+    return [date, ...counts].join(",");
+  });
+  return [header, ...rows].join("\n");
+}
+
+function downloadCsv(content: string, filename: string) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function KeywordTrendChart({ results, days }: { results: KeywordTrendResult[]; days: number | null }) {
   const gridColor = useGridColor();
 
   const allDates = Array.from(new Set(results.flatMap((r) => r.points.map((p) => p.date)))).sort();
   const chartData = allDates.map((date) => {
-    const row: Record<string, string | number> = { date: fmtDate(date, days) };
+    const row: Record<string, string | number> = { date: fmtTrendDate(date, days) };
     for (const r of results) {
       const point = r.points.find((p) => p.date === date);
       row[r.label] = point?.count ?? 0;
@@ -1304,7 +1372,7 @@ export function AnalyseTrendsTab() {
   const [topics, setTopics] = useState<LocalTopic[]>([emptyTopic()]);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [sourceIds, setSourceIds] = useState<string[]>([]);
-  const [days, setDays] = useState(90);
+  const [days, setDays] = useState<number | null>(90);
   const trend = useKeywordTrend();
   const lastRequestKey = useRef<string | null>(null);
 
@@ -1352,7 +1420,7 @@ export function AnalyseTrendsTab() {
             <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">{t("stats.trendsTitle")}</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{t("stats.trendsDesc")}</p>
           </div>
-          <RangePicker value={days} onChange={setDays} />
+          <TrendRangePicker value={days} onChange={setDays} />
         </div>
 
         <div className="flex flex-col gap-2">
@@ -1412,7 +1480,28 @@ export function AnalyseTrendsTab() {
         </div>
       </div>
 
-      <ChartCard title={t("stats.trendsChartTitle")} description={t("stats.trendsChartDesc")}>
+      <ChartCard
+        title={t("stats.trendsChartTitle")}
+        description={t("stats.trendsChartDesc")}
+        action={
+          trend.data && (
+            <button
+              type="button"
+              onClick={() =>
+                downloadCsv(
+                  keywordTrendToCsv(trend.data),
+                  `shoebill-keyword-trends-${new Date().toISOString().slice(0, 10)}.csv`
+                )
+              }
+              title={t("stats.exportTrendData")}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 transition-colors"
+            >
+              <Download size={12} />
+              {t("stats.exportTrendData")}
+            </button>
+          )
+        }
+      >
         {requestTopics.length === 0 ? (
           <div className="flex items-center justify-center h-40 text-sm text-gray-400 text-center px-4">
             {t("stats.trendsAddTopicHint")}
