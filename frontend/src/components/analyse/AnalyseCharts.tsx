@@ -20,6 +20,8 @@ import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useS
 import { usePodcastShows } from "../../hooks/usePodcasts";
 import { useCategories } from "../../hooks/useCategories";
 import { useSources } from "../../hooks/useSources";
+import { useAnalyseTrendsStore } from "../../stores/analyseTrendsStore";
+import type { TrendTopicConfig } from "../../stores/analyseTrendsStore";
 import { statsApi } from "../../api/stats";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { KeywordClusterMapEntry, KeywordTrendResult, PodcastEpisodeStat } from "../../api/stats";
@@ -1099,12 +1101,6 @@ export function AnalysePodcastTab() {
 const MAX_TOPICS = 6;
 const TOPIC_COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#0ea5e9", "#a855f7"];
 
-interface LocalTopic {
-  id: string;
-  label: string;
-  keywords: string[];
-}
-
 function generateTopicId(): string {
   // Local React key only, not security-sensitive -- see the identical
   // fallback comment in PodcastShowForm.tsx's generateHostId.
@@ -1114,7 +1110,7 @@ function generateTopicId(): string {
   return `topic-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function emptyTopic(): LocalTopic {
+function emptyTopic(): TrendTopicConfig {
   return { id: generateTopicId(), label: "", keywords: [] };
 }
 
@@ -1125,10 +1121,10 @@ function TopicRow({
   onChange,
   onRemove,
 }: {
-  topic: LocalTopic;
+  topic: TrendTopicConfig;
   color: string;
   canRemove: boolean;
-  onChange: (patch: Partial<LocalTopic>) => void;
+  onChange: (patch: Partial<TrendTopicConfig>) => void;
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
@@ -1369,27 +1365,46 @@ export function AnalyseTrendsTab() {
   const { data: categories = [] } = useCategories();
   const { data: sources = [] } = useSources();
   const { data: clusterMap = [] } = useKeywordClusterMap();
-  const [topics, setTopics] = useState<LocalTopic[]>([emptyTopic()]);
-  const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  const [sourceIds, setSourceIds] = useState<string[]>([]);
-  const [days, setDays] = useState<number | null>(90);
+  // Persisted (localStorage) so a user's configured topics/filters/range
+  // survive a reload or navigating away from this tab -- see
+  // stores/analyseTrendsStore.ts.
+  const topics = useAnalyseTrendsStore((s) => s.topics);
+  const setTopics = useAnalyseTrendsStore((s) => s.setTopics);
+  const categoryIds = useAnalyseTrendsStore((s) => s.categoryIds);
+  const setCategoryIds = useAnalyseTrendsStore((s) => s.setCategoryIds);
+  const sourceIds = useAnalyseTrendsStore((s) => s.sourceIds);
+  const setSourceIds = useAnalyseTrendsStore((s) => s.setSourceIds);
+  const days = useAnalyseTrendsStore((s) => s.days);
+  const setDays = useAnalyseTrendsStore((s) => s.setDays);
   const trend = useKeywordTrend();
   const lastRequestKey = useRef<string | null>(null);
 
-  const updateTopic = (id: string, patch: Partial<LocalTopic>) =>
-    setTopics((prev) => prev.map((topic) => (topic.id === id ? { ...topic, ...patch } : topic)));
-  const removeTopic = (id: string) => setTopics((prev) => prev.filter((topic) => topic.id !== id));
-  const addTopic = () => setTopics((prev) => (prev.length < MAX_TOPICS ? [...prev, emptyTopic()] : prev));
-  const addTopicFromCluster = (entry: KeywordClusterMapEntry) =>
-    setTopics((prev) =>
-      prev.length < MAX_TOPICS
-        ? [...prev, { id: generateTopicId(), label: entry.cluster_label, keywords: entry.keywords.map((k) => k.keyword) }]
-        : prev
-    );
+  // First-ever visit (nothing persisted yet) starts with one empty topic row
+  // so there's something to type into, rather than baking a randomly-ID'd
+  // topic into the store's static default state.
+  useEffect(() => {
+    if (topics.length === 0) setTopics([emptyTopic()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const updateTopic = (id: string, patch: Partial<TrendTopicConfig>) =>
+    setTopics(topics.map((topic) => (topic.id === id ? { ...topic, ...patch } : topic)));
+  const removeTopic = (id: string) => setTopics(topics.filter((topic) => topic.id !== id));
+  const addTopic = () => {
+    if (topics.length < MAX_TOPICS) setTopics([...topics, emptyTopic()]);
+  };
+  const addTopicFromCluster = (entry: KeywordClusterMapEntry) => {
+    if (topics.length < MAX_TOPICS) {
+      setTopics([
+        ...topics,
+        { id: generateTopicId(), label: entry.cluster_label, keywords: entry.keywords.map((k) => k.keyword) },
+      ]);
+    }
+  };
   const toggleCategory = (id: string) =>
-    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setCategoryIds(categoryIds.includes(id) ? categoryIds.filter((x) => x !== id) : [...categoryIds, id]);
   const toggleSource = (id: string) =>
-    setSourceIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSourceIds(sourceIds.includes(id) ? sourceIds.filter((x) => x !== id) : [...sourceIds, id]);
 
   const requestTopics = topics.filter((topic) => topic.keywords.length > 0);
 

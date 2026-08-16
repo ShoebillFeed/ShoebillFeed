@@ -156,7 +156,9 @@ view split into tabs:
   real historical coverage, not just a snapshot going forward. The
   time range goes from 7 days up to a year, or "All" for your entire
   history. "Export CSV" downloads the chart's underlying counts (one
-  column per topic, one row per date).
+  column per topic, one row per date). Your topics and filters are
+  remembered in the browser, so they're still there next time you
+  open this tab.
 - **Learning** — category weight history and the keyword cluster map
   (see {doc}`learning-and-scoring`).
 - **Podcast** — categories, keywords, and sources covered in each
