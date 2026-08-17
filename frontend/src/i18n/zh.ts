@@ -427,6 +427,10 @@ const zh = {
     risingEmpty: "目前没有上升的关键词——请在有更多文章后再回来查看。",
     risingAddToTrends: "在趋势中追踪此关键词",
     risingAlreadyTracked: "已在趋势中追踪",
+    fallingKeywordsTitle: "下降关键词",
+    fallingKeywordsDesc: "使用频率正在下降的关键词——“本周”捕捉突然的骤降，“本月”捕捉周视图过短、无法体现的缓慢消退。QUIET 表示该关键词曾经活跃但现已完全沉寂。点击 + 即可在下方的趋势中将该关键词作为主题进行追踪。",
+    fallingEmpty: "目前没有下降的内容——请稍后再查看。",
+    fallingDormant: "QUIET",
   },
   advanced: {
     title: "高级",

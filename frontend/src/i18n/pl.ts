@@ -432,6 +432,10 @@ const pl = {
     risingEmpty: "Nic obecnie nie rośnie — sprawdź ponownie, gdy pojawi się więcej artykułów.",
     risingAddToTrends: "Śledź to słowo kluczowe w Trendach",
     risingAlreadyTracked: "Już śledzone w Trendach",
+    fallingKeywordsTitle: "Słowa kluczowe w spadku",
+    fallingKeywordsDesc: "Słowa kluczowe, których popularność najszybciej spada — „Ten tydzień” wychwytuje nagłe spadki, „Ten miesiąc” wychwytuje powolne wygasanie, którego nie widać w ujęciu tygodniowym. Oznaczenie CISZA wskazuje słowo kluczowe, które całkowicie ucichło po wcześniejszej aktywności. Kliknij +, aby zacząć śledzić słowo kluczowe jako temat w sekcji Trendy poniżej.",
+    fallingEmpty: "Obecnie nic nie spada — sprawdź ponownie później.",
+    fallingDormant: "CISZA",
   },
   advanced: {
     title: "Zaawansowane",

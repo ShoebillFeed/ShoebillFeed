@@ -14,7 +14,7 @@ import { cn } from "../../lib/utils";
 import {
   useActivityStats, useCategoryStats, useSourceStats,
   useWeightHistory, useSourceClusters,
-  useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend, useCategoryTrend, useRisingKeywords,
+  useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend, useCategoryTrend, useKeywordMomentum,
 } from "../../hooks/useStats";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { usePodcastShows } from "../../hooks/usePodcasts";
@@ -24,7 +24,7 @@ import { useAnalyseTrendsStore } from "../../stores/analyseTrendsStore";
 import type { TrendTopicConfig } from "../../stores/analyseTrendsStore";
 import { statsApi } from "../../api/stats";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { KeywordClusterMapEntry, KeywordTrendResult, PodcastEpisodeStat } from "../../api/stats";
+import type { KeywordClusterMapEntry, KeywordMomentumDirection, KeywordTrendResult, PodcastEpisodeStat } from "../../api/stats";
 
 class ChartErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
   state = { crashed: false };
@@ -1494,12 +1494,46 @@ function KeywordTrendChart({
   );
 }
 
-// ── Rising keywords ────────────────────────────────────────────────────────
+// ── Keyword momentum (rising / falling) ───────────────────────────────────────
 
-const RISING_TOP_N = 10;
-const RISING_SPARKLINE_COLOR = "#10b981";
+const MOMENTUM_TOP_N = 10;
 
-function Sparkline({ points }: { points: number[] }) {
+const MOMENTUM_CONFIG: Record<
+  KeywordMomentumDirection,
+  {
+    color: string;
+    percentClass: string;
+    badgeClass: string;
+    titleKey: string;
+    descKey: string;
+    emptyKey: string;
+    flagKey: string;
+    flagField: "is_newcomer" | "is_dormant";
+  }
+> = {
+  rising: {
+    color: "#10b981",
+    percentClass: "text-emerald-600 dark:text-emerald-400",
+    badgeClass: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
+    titleKey: "stats.risingKeywordsTitle",
+    descKey: "stats.risingKeywordsDesc",
+    emptyKey: "stats.risingEmpty",
+    flagKey: "stats.risingNewcomer",
+    flagField: "is_newcomer",
+  },
+  falling: {
+    color: "#f87171",
+    percentClass: "text-red-500 dark:text-red-400",
+    badgeClass: "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+    titleKey: "stats.fallingKeywordsTitle",
+    descKey: "stats.fallingKeywordsDesc",
+    emptyKey: "stats.fallingEmpty",
+    flagKey: "stats.fallingDormant",
+    flagField: "is_dormant",
+  },
+};
+
+function Sparkline({ points, color }: { points: number[]; color: string }) {
   const w = 60, h = 20, pad = 2;
   const max = Math.max(...points, 1);
   const min = Math.min(...points, 0);
@@ -1517,7 +1551,7 @@ function Sparkline({ points }: { points: number[] }) {
       <polyline
         points={coords}
         fill="none"
-        stroke={RISING_SPARKLINE_COLOR}
+        stroke={color}
         strokeWidth={1.5}
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -1526,8 +1560,9 @@ function Sparkline({ points }: { points: number[] }) {
   );
 }
 
-function RisingKeywordsPanel() {
+function KeywordMomentumPanel({ direction }: { direction: KeywordMomentumDirection }) {
   const { t } = useTranslation();
+  const config = MOMENTUM_CONFIG[direction];
   const [period, setPeriod] = useState<"weekly" | "monthly">("monthly");
   const [sourceIds, setSourceIds] = useState<string[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
@@ -1536,7 +1571,7 @@ function RisingKeywordsPanel() {
   const toggleCategory = (id: string) =>
     setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   const { data: categories = [] } = useCategories();
-  const { data, isLoading } = useRisingKeywords(sourceIds, categoryIds);
+  const { data, isLoading } = useKeywordMomentum(sourceIds, categoryIds, direction);
 
   const topics = useAnalyseTrendsStore((s) => s.topics);
   const setTopics = useAnalyseTrendsStore((s) => s.setTopics);
@@ -1556,16 +1591,16 @@ function RisingKeywordsPanel() {
       slope: period === "weekly" ? r.weekly_slope : r.monthly_slope,
       points: (period === "weekly" ? r.weekly_points : r.monthly_points).map((p) => p.count),
     }))
-    .filter((r) => r.slope > 0)
-    .sort((a, b) => b.slope - a.slope)
-    .slice(0, RISING_TOP_N);
+    .filter((r) => (direction === "rising" ? r.slope > 0 : r.slope < 0))
+    .sort((a, b) => (direction === "rising" ? b.slope - a.slope : a.slope - b.slope))
+    .slice(0, MOMENTUM_TOP_N);
 
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">{t("stats.risingKeywordsTitle")}</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{t("stats.risingKeywordsDesc")}</p>
+          <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">{t(config.titleKey)}</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{t(config.descKey)}</p>
         </div>
         <div className="flex gap-1 shrink-0">
           <button
@@ -1598,21 +1633,22 @@ function RisingKeywordsPanel() {
         <Loading />
       ) : rows.length === 0 ? (
         <div className="flex items-center justify-center h-20 text-sm text-gray-400 text-center px-4">
-          {t("stats.risingEmpty")}
+          {t(config.emptyKey)}
         </div>
       ) : (
         <div className="flex flex-col divide-y divide-gray-100 dark:divide-gray-800">
           {rows.map((r) => {
             const tracked = isTracked(r.keyword);
+            const flagged = r[config.flagField];
             return (
               <div key={r.keyword} className="flex items-center gap-3 py-2">
-                <Sparkline points={r.points} />
+                <Sparkline points={r.points} color={config.color} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{r.keyword}</span>
-                    {r.is_newcomer && (
-                      <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
-                        {t("stats.risingNewcomer")}
+                    {flagged && (
+                      <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${config.badgeClass}`}>
+                        {t(config.flagKey)}
                       </span>
                     )}
                   </div>
@@ -1620,8 +1656,9 @@ function RisingKeywordsPanel() {
                     {t("stats.risingMentions", { count: r.total_mentions })}
                   </span>
                 </div>
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums shrink-0">
-                  +{Math.round(r.slope * 100)}%
+                <span className={`text-xs font-semibold tabular-nums shrink-0 ${config.percentClass}`}>
+                  {r.slope >= 0 ? "+" : ""}
+                  {Math.round(r.slope * 100)}%
                 </span>
                 <button
                   type="button"
@@ -1715,7 +1752,8 @@ export function AnalyseTrendsTab() {
 
   return (
     <div className="flex flex-col gap-6">
-      <RisingKeywordsPanel />
+      <KeywordMomentumPanel direction="rising" />
+      <KeywordMomentumPanel direction="falling" />
 
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">

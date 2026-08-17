@@ -138,23 +138,31 @@ export interface CategoryTrendResult {
   points: CategoryTrendPoint[];
 }
 
-export interface RisingKeywordPoint {
+export type KeywordMomentumDirection = "rising" | "falling";
+
+export interface KeywordMomentumPoint {
   date: string;
   count: number;
 }
 
-export interface RisingKeywordResult {
+export interface KeywordMomentumResult {
   keyword: string;
   total_mentions: number;
+  // is_newcomer only applies to direction="rising" (zero history before the
+  // most recent bucket); is_dormant only to direction="falling" (nonzero
+  // history but zero in the most recent bucket) -- both are always present
+  // in the response regardless of direction, since they're cheap to compute
+  // from the same monthly series either way.
   is_newcomer: boolean;
+  is_dormant: boolean;
   // Relative (rate-of-change-vs-own-mean) slopes, not raw counts -- see the
-  // backend's _relative_slope docstring. weekly catches sudden spikes,
-  // monthly catches slow sustained growth a weekly window is too short to
-  // show.
+  // backend's _relative_slope docstring. weekly catches sudden spikes/
+  // drop-offs, monthly catches slow sustained movement a weekly window is
+  // too short to show.
   weekly_slope: number;
   monthly_slope: number;
-  weekly_points: RisingKeywordPoint[];
-  monthly_points: RisingKeywordPoint[];
+  weekly_points: KeywordMomentumPoint[];
+  monthly_points: KeywordMomentumPoint[];
 }
 
 export const statsApi = {
@@ -185,10 +193,11 @@ export const statsApi = {
         paramsSerializer: { indexes: null },
       })
       .then((r) => r.data),
-  risingKeywords: (sourceIds: string[], categoryIds: string[]) =>
+  keywordMomentum: (sourceIds: string[], categoryIds: string[], direction: KeywordMomentumDirection) =>
     client
-      .get<RisingKeywordResult[]>("/stats/rising-keywords", {
+      .get<KeywordMomentumResult[]>("/stats/keyword-momentum", {
         params: {
+          direction,
           ...(sourceIds.length ? { source_ids: sourceIds } : {}),
           ...(categoryIds.length ? { category_ids: categoryIds } : {}),
         },

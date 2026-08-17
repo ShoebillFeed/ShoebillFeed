@@ -427,6 +427,10 @@ const it = {
     risingEmpty: "Al momento nessuna parola chiave in ascesa — ricontrolla quando saranno arrivati altri articoli.",
     risingAddToTrends: "Monitora questa parola chiave in Tendenze",
     risingAlreadyTracked: "Già monitorata in Tendenze",
+    fallingKeywordsTitle: "Parole chiave in calo",
+    fallingKeywordsDesc: "Parole chiave il cui utilizzo sta diminuendo — “Questa settimana” cattura i cali improvvisi, “Questo mese” cattura un declino lento che una vista settimanale è troppo breve per mostrare. SILENZIOSA indica una parola chiave diventata completamente silenziosa dopo essere stata attiva. Fai clic su + per iniziare a monitorare una parola chiave come argomento in Tendenze qui sotto.",
+    fallingEmpty: "Al momento nulla è in calo — ricontrolla più tardi.",
+    fallingDormant: "SILENZIOSA",
   },
   advanced: {
     title: "Avanzato",

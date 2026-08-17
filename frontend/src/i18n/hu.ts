@@ -427,6 +427,10 @@ const hu = {
     risingEmpty: "Jelenleg nincs felfutó kulcsszó -- nézz vissza, ha több cikk érkezett.",
     risingAddToTrends: "Kulcsszó követése a Trendek között",
     risingAlreadyTracked: "Már követve a Trendek között",
+    fallingKeywordsTitle: "Csökkenő kulcsszavak",
+    fallingKeywordsDesc: "Kulcsszavak, amelyek használata csökken -- a „Ezen a héten” a hirtelen visszaeséseket mutatja, a „Ebben a hónapban” pedig a lassú elhalványulást, amit egy heti nézet nem tudna megmutatni. A CSENDES jelölés azt jelenti, hogy a kulcsszó korábbi aktivitás után teljesen elcsendesedett. Kattints a + jelre, hogy egy kulcsszót témaként elkezdj követni az alábbi Trendek között.",
+    fallingEmpty: "Jelenleg semmi sem csökken — nézz vissza később.",
+    fallingDormant: "CSENDES",
   },
   advanced: {
     title: "Speciális",

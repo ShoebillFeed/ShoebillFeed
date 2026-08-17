@@ -427,6 +427,10 @@ const sv = {
     risingEmpty: "Inget stiger just nu — kom tillbaka när fler artiklar har kommit in.",
     risingAddToTrends: "Följ det här nyckelordet i Trender",
     risingAlreadyTracked: "Följs redan i Trender",
+    fallingKeywordsTitle: "Fallande nyckelord",
+    fallingKeywordsDesc: "Nyckelord vars användning minskar — ”Den här veckan” fångar plötsliga fall, ”Den här månaden” fångar en långsam avmattning som en veckovy är för kort för att visa. TYST markerar ett nyckelord som blivit helt tyst efter att ha varit aktivt. Klicka på + för att börja följa ett nyckelord som ett ämne i Trender nedan.",
+    fallingEmpty: "Inget är fallande just nu — kolla igen senare.",
+    fallingDormant: "TYST",
   },
   advanced: {
     title: "Avancerat",

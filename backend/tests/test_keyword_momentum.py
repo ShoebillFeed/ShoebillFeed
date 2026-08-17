@@ -62,16 +62,16 @@ def _make_cluster(db_session, user_id, source, *, keywords, categories=None, cre
 
 
 def _get(client, **params):
-    return client.get("/api/stats/rising-keywords", params=params)
+    return client.get("/api/stats/keyword-momentum", params=params)
 
 
 def _find(body, keyword):
     return next((r for r in body if r["keyword"] == keyword), None)
 
 
-class TestRisingKeywords:
+class TestKeywordMomentumRising:
     def test_requires_auth(self, client):
-        resp = client.get("/api/stats/rising-keywords")
+        resp = client.get("/api/stats/keyword-momentum")
         assert resp.status_code == 401
 
     def test_surfaces_a_keyword_with_gradual_monthly_growth(self, auth_client, db_session):
@@ -122,6 +122,7 @@ class TestRisingKeywords:
         entry = _find(body, "brand new term")
         assert entry is not None
         assert entry["is_newcomer"] is True
+        assert entry["is_dormant"] is False
 
     def test_does_not_flag_a_keyword_seen_in_an_earlier_month_as_newcomer(self, auth_client, db_session):
         user = auth_client.current_user
@@ -232,3 +233,126 @@ class TestRisingKeywords:
         resp = _get(auth_client)
         body = resp.json()
         assert _find(body, "ancient history") is None
+
+    def test_default_direction_excludes_a_purely_declining_keyword(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        now = datetime.now(timezone.utc)
+        for months_ago, count in [(5, 6), (4, 5), (3, 4), (2, 3), (1, 2), (0, 1)]:
+            _make_n(
+                db_session, source, user.id, count,
+                keywords=["fading fast"],
+                fetched_at=now - timedelta(days=30 * months_ago + 1),
+            )
+        db_session.commit()
+
+        resp = _get(auth_client)
+        body = resp.json()
+        assert _find(body, "fading fast") is None
+
+
+class TestKeywordMomentumFalling:
+    def test_surfaces_a_keyword_with_gradual_monthly_decline(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        now = datetime.now(timezone.utc)
+        # Roughly decreasing counts month over month.
+        for months_ago, count in [(5, 6), (4, 5), (3, 4), (2, 3), (1, 2), (0, 1)]:
+            _make_n(
+                db_session, source, user.id, count,
+                keywords=["fading topic"],
+                fetched_at=now - timedelta(days=30 * months_ago + 1),
+            )
+        db_session.commit()
+
+        resp = _get(auth_client, direction="falling")
+        assert resp.status_code == 200
+        body = resp.json()
+        entry = _find(body, "fading topic")
+        assert entry is not None
+        assert entry["monthly_slope"] < 0
+        assert entry["total_mentions"] == 21
+
+    def test_surfaces_a_keyword_with_a_recent_weekly_dropoff(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        now = datetime.now(timezone.utc)
+        _make_n(db_session, source, user.id, 6, keywords=["dropoff"], fetched_at=now - timedelta(weeks=7))
+        _make_n(db_session, source, user.id, 1, keywords=["dropoff"], fetched_at=now)
+        db_session.commit()
+
+        resp = _get(auth_client, direction="falling")
+        body = resp.json()
+        entry = _find(body, "dropoff")
+        assert entry is not None
+        assert entry["weekly_slope"] < 0
+
+    def test_flags_a_dormant_keyword(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        now = datetime.now(timezone.utc)
+        _make_n(db_session, source, user.id, 5, keywords=["gone quiet"], fetched_at=now - timedelta(days=100))
+        db_session.commit()
+
+        resp = _get(auth_client, direction="falling")
+        body = resp.json()
+        entry = _find(body, "gone quiet")
+        assert entry is not None
+        assert entry["is_dormant"] is True
+        assert entry["is_newcomer"] is False
+
+    def test_does_not_flag_an_active_keyword_as_dormant(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        now = datetime.now(timezone.utc)
+        # Steadily declining but still mentioned in the most recent bucket --
+        # a real decline (negative slope), just not gone quiet yet.
+        for months_ago, count in [(5, 6), (4, 5), (3, 4), (2, 3), (1, 2), (0, 1)]:
+            _make_n(
+                db_session, source, user.id, count,
+                keywords=["still active"],
+                fetched_at=now - timedelta(days=30 * months_ago + 1),
+            )
+        db_session.commit()
+
+        resp = _get(auth_client, direction="falling")
+        body = resp.json()
+        entry = _find(body, "still active")
+        assert entry is not None
+        assert entry["is_dormant"] is False
+
+    def test_excludes_a_purely_growing_keyword(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        now = datetime.now(timezone.utc)
+        for months_ago, count in [(5, 1), (4, 2), (3, 3), (2, 4), (1, 5), (0, 6)]:
+            _make_n(
+                db_session, source, user.id, count,
+                keywords=["growing fast"],
+                fetched_at=now - timedelta(days=30 * months_ago + 1),
+            )
+        db_session.commit()
+
+        resp = _get(auth_client, direction="falling")
+        body = resp.json()
+        assert _find(body, "growing fast") is None
+
+    def test_filters_by_source(self, auth_client, db_session):
+        user = auth_client.current_user
+        source_a = _make_source(db_session, user.id, name="A")
+        source_b = _make_source(db_session, user.id, name="B")
+        now = datetime.now(timezone.utc)
+        _make_n(db_session, source_a, user.id, 6, keywords=["only a fading"], fetched_at=now - timedelta(weeks=7))
+        _make_n(db_session, source_a, user.id, 1, keywords=["only a fading"], fetched_at=now)
+        _make_n(db_session, source_b, user.id, 6, keywords=["only b fading"], fetched_at=now - timedelta(weeks=7))
+        _make_n(db_session, source_b, user.id, 1, keywords=["only b fading"], fetched_at=now)
+        db_session.commit()
+
+        resp = _get(auth_client, direction="falling", source_ids=[str(source_a.id)])
+        body = resp.json()
+        assert _find(body, "only a fading") is not None
+        assert _find(body, "only b fading") is None
+
+    def test_rejects_an_invalid_direction(self, auth_client):
+        resp = _get(auth_client, direction="sideways")
+        assert resp.status_code == 422

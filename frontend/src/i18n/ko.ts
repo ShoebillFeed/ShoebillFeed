@@ -427,6 +427,10 @@ const ko = {
     risingEmpty: "현재 상승 중인 키워드가 없습니다 -- 기사가 더 들어온 후 다시 확인하세요.",
     risingAddToTrends: "트렌드에서 이 키워드 추적하기",
     risingAlreadyTracked: "이미 트렌드에서 추적 중",
+    fallingKeywordsTitle: "하락 중인 키워드",
+    fallingKeywordsDesc: "사용 빈도가 감소하고 있는 키워드입니다 -- \"이번 주\"는 급격한 감소를, \"이번 달\"은 주간 단위로는 보이지 않는 완만한 감소를 포착합니다. QUIET는 활발했다가 완전히 잠잠해진 키워드를 나타냅니다. +를 클릭하면 아래 트렌드에서 해당 키워드를 주제로 추적할 수 있습니다.",
+    fallingEmpty: "현재 하락 중인 항목이 없습니다 — 나중에 다시 확인하세요.",
+    fallingDormant: "QUIET",
   },
   advanced: {
     title: "고급",

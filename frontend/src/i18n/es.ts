@@ -427,6 +427,10 @@ const es = {
     risingEmpty: "Nada en auge por ahora — vuelve a comprobarlo cuando lleguen más artículos.",
     risingAddToTrends: "Seguir esta palabra clave en Tendencias",
     risingAlreadyTracked: "Ya se sigue en Tendencias",
+    fallingKeywordsTitle: "Palabras clave en declive",
+    fallingKeywordsDesc: "Palabras clave cuyo uso está disminuyendo — «Esta semana» detecta caídas repentinas, «Este mes» detecta un declive lento que una vista semanal es demasiado corta para mostrar. SILENCIO marca una palabra clave que se ha quedado completamente inactiva tras haber estado activa. Haz clic en + para empezar a seguir una palabra clave como tema en Tendencias más abajo.",
+    fallingEmpty: "Nada está en declive ahora mismo — vuelve más tarde.",
+    fallingDormant: "SILENCIO",
   },
   advanced: {
     title: "Avanzado",

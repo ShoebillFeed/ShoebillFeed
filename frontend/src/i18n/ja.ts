@@ -427,6 +427,10 @@ const ja = {
     risingEmpty: "現在、急上昇しているものはありません — 記事が増えてから再度確認してください。",
     risingAddToTrends: "このキーワードをトレンドで追跡",
     risingAlreadyTracked: "すでにトレンドで追跡中",
+    fallingKeywordsTitle: "下降中のキーワード",
+    fallingKeywordsDesc: "使用頻度が低下しているキーワードです — 「今週」は急激な急落を、「今月」は週単位の表示では見えない緩やかな衰退を捉えます。QUIET は、以前は活発だったが完全に静かになったキーワードを示します。+ をクリックすると、そのキーワードを下のトレンドのトピックとして追跡できます。",
+    fallingEmpty: "現在下降しているものはありません — また後で確認してください。",
+    fallingDormant: "QUIET",
   },
   advanced: {
     title: "詳細設定",

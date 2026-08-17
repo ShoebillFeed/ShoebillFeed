@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -773,12 +773,12 @@ def category_trend(
     return results
 
 
-_RISING_WEEKLY_BUCKETS = 8
-_RISING_MONTHLY_BUCKETS = 6
-_RISING_MIN_TOTAL_MENTIONS = 5
-_RISING_MIN_RECENT_FOR_NEWCOMER = 2
-_RISING_TOP_N = 30
-_RISING_SLOPE_EPSILON = 0.5
+_MOMENTUM_WEEKLY_BUCKETS = 8
+_MOMENTUM_MONTHLY_BUCKETS = 6
+_MOMENTUM_MIN_TOTAL_MENTIONS = 5
+_MOMENTUM_MIN_RECENT_FOR_NEWCOMER = 2
+_MOMENTUM_TOP_N = 30
+_MOMENTUM_SLOPE_EPSILON = 0.5
 
 
 def _slope(values: list[float]) -> float:
@@ -802,7 +802,7 @@ def _relative_slope(values: list[float]) -> float:
     absolute volume. +epsilon in the denominator keeps near-zero-mean
     keywords from producing wild ratios off a single mention."""
     mean = sum(values) / len(values) if values else 0.0
-    return _slope(values) / (mean + _RISING_SLOPE_EPSILON)
+    return _slope(values) / (mean + _MOMENTUM_SLOPE_EPSILON)
 
 
 def _week_starts(n: int, now: datetime) -> list[date]:
@@ -857,35 +857,43 @@ def _merge_bucket_rows(rows, acc: dict[str, dict]):
         day_counts[bucket_date] = day_counts.get(bucket_date, 0) + r.count
 
 
-@router.get("/rising-keywords")
-def rising_keywords(
+@router.get("/keyword-momentum")
+def keyword_momentum(
+    direction: Literal["rising", "falling"] = Query("rising"),
     source_ids: list[uuid.UUID] | None = Query(None),
     category_ids: list[uuid.UUID] | None = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Surfaces keywords whose usage is *accelerating* -- "which topics are
-    gaining relevance" -- rather than keyword-trend's "how has coverage of
-    a keyword I already picked evolved". Two growth signals per keyword,
-    both derived from the same case-insensitive unnest() aggregation
-    keyword-trend/category-trend already use:
+    """Surfaces keywords whose usage is *accelerating* or *decelerating* --
+    "which topics are gaining or losing relevance" -- rather than
+    keyword-trend's "how has coverage of a keyword I already picked
+    evolved". Two growth signals per keyword, both derived from the same
+    case-insensitive unnest() aggregation keyword-trend/category-trend
+    already use:
       - weekly_slope: relative OLS slope of the last 8 weekly-bucket counts
-        -- catches sudden short-term spikes.
+        -- catches sudden short-term spikes/drop-offs.
       - monthly_slope: same, but over the last 6 monthly buckets -- catches
-        slow, sustained growth a weekly window is too short to see (e.g. a
-        research topic that gains one more paper every few weeks, which
-        barely moves week over week but is unmistakably climbing month
-        over month).
+        slow, sustained movement a weekly window is too short to see (e.g. a
+        research topic that gains or loses one paper every few weeks, which
+        barely moves week over week but is unmistakable month over month).
     Both are *relative* slopes (see _relative_slope) so ranking is about
-    rate of change, not absolute volume.
-    "Newcomer" is a third, distinct signal: a keyword with zero mentions in
-    every monthly bucket except the most recent one (which must clear
-    _RISING_MIN_RECENT_FOR_NEWCOMER, so two mentions in one day don't
-    qualify). Kept separate from the slope ranking -- a keyword with only a
-    couple of total mentions doesn't have enough data points for a
-    meaningful slope, but is still worth surfacing as "brand new".
+    rate of change, not absolute volume. `direction` controls both which
+    sign of slope survives the filter and the sort order (steepest movement
+    first, in whichever direction) -- everything above this point in the
+    function is identical between the two directions, only the final
+    filter/sort and the newcomer/dormant flag below it differ.
+    "Newcomer"/"dormant" are a third, distinct signal, one or the other
+    depending on `direction`: newcomer = zero mentions in every monthly
+    bucket except the most recent one (which must clear
+    _MOMENTUM_MIN_RECENT_FOR_NEWCOMER, so two mentions in one day don't
+    qualify); dormant = the mirror image, nonzero mentions in some earlier
+    bucket but zero in the most recent one, i.e. a keyword that's gone
+    completely quiet. Kept separate from the slope ranking -- a keyword
+    with only a couple of total mentions doesn't have enough data points
+    for a meaningful slope, but is still worth flagging.
     Candidates are bounded to keywords with at least
-    _RISING_MIN_TOTAL_MENTIONS total mentions across the 6-month lookback,
+    _MOMENTUM_MIN_TOTAL_MENTIONS total mentions across the 6-month lookback,
     both to filter one-off noise and because the monthly window is a
     superset of the weekly one, so it alone determines the full candidate
     set -- no separate query needed to establish "which keywords exist".
@@ -893,8 +901,8 @@ def rising_keywords(
     keyword-trend/category-trend above.
     """
     now = datetime.now(timezone.utc)
-    week_starts = _week_starts(_RISING_WEEKLY_BUCKETS, now)
-    month_starts = _month_starts(_RISING_MONTHLY_BUCKETS, now)
+    week_starts = _week_starts(_MOMENTUM_WEEKLY_BUCKETS, now)
+    month_starts = _month_starts(_MOMENTUM_MONTHLY_BUCKETS, now)
     since = datetime.combine(month_starts[0], datetime.min.time(), tzinfo=timezone.utc)
 
     weekly: dict[str, dict] = {}
@@ -959,26 +967,34 @@ def rising_keywords(
     for kw_text, month_counts in monthly.items():
         monthly_series = [month_counts.get(d, 0) for d in month_starts]
         total_mentions = sum(monthly_series)
-        if total_mentions < _RISING_MIN_TOTAL_MENTIONS:
+        if total_mentions < _MOMENTUM_MIN_TOTAL_MENTIONS:
             continue
 
         week_counts = weekly.get(kw_text, {})
         weekly_series = [week_counts.get(d, 0) for d in week_starts]
 
         is_newcomer = (
-            monthly_series[-1] >= _RISING_MIN_RECENT_FOR_NEWCOMER
+            monthly_series[-1] >= _MOMENTUM_MIN_RECENT_FOR_NEWCOMER
             and all(v == 0 for v in monthly_series[:-1])
         )
+        is_dormant = monthly_series[-1] == 0 and any(v > 0 for v in monthly_series[:-1])
 
         results.append({
             "keyword": kw_text,
             "total_mentions": total_mentions,
             "is_newcomer": is_newcomer,
+            "is_dormant": is_dormant,
             "weekly_slope": round(_relative_slope(weekly_series), 4),
             "monthly_slope": round(_relative_slope(monthly_series), 4),
             "weekly_points": [{"date": str(d), "count": c} for d, c in zip(week_starts, weekly_series)],
             "monthly_points": [{"date": str(d), "count": c} for d, c in zip(month_starts, monthly_series)],
         })
 
-    results.sort(key=lambda r: max(r["weekly_slope"], r["monthly_slope"]), reverse=True)
-    return results[:_RISING_TOP_N]
+    if direction == "rising":
+        results = [r for r in results if max(r["weekly_slope"], r["monthly_slope"]) > 0]
+        results.sort(key=lambda r: max(r["weekly_slope"], r["monthly_slope"]), reverse=True)
+    else:
+        results = [r for r in results if min(r["weekly_slope"], r["monthly_slope"]) < 0]
+        results.sort(key=lambda r: min(r["weekly_slope"], r["monthly_slope"]))
+
+    return results[:_MOMENTUM_TOP_N]

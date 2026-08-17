@@ -427,6 +427,10 @@ const ro = {
     risingEmpty: "Nimic în creștere momentan -- reveniți după ce mai multe articole sunt procesate.",
     risingAddToTrends: "Urmăriți acest cuvânt cheie în Tendințe",
     risingAlreadyTracked: "Deja urmărit în Tendințe",
+    fallingKeywordsTitle: "Cuvinte cheie în scădere",
+    fallingKeywordsDesc: "Cuvinte cheie a căror utilizare este în scădere -- „Săptămâna aceasta” prinde scăderi bruște, „Luna aceasta” prinde o estompare lentă, prea scurtă pentru a fi vizibilă într-o vizualizare săptămânală. TĂCERE marchează un cuvânt cheie care a devenit complet inactiv după ce a fost activ. Faceți clic pe + pentru a începe să urmăriți un cuvânt cheie ca subiect în Tendințe, mai jos.",
+    fallingEmpty: "Nimic nu este în scădere acum — reveniți mai târziu.",
+    fallingDormant: "TĂCERE",
   },
   advanced: {
     title: "Avansat",

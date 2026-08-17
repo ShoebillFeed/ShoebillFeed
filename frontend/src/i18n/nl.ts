@@ -427,6 +427,10 @@ const nl = {
     risingEmpty: "Op dit moment niets opkomends — kom later terug zodra er meer artikelen binnenkomen.",
     risingAddToTrends: "Dit trefwoord volgen in Trends",
     risingAlreadyTracked: "Al gevolgd in Trends",
+    fallingKeywordsTitle: "Dalende trefwoorden",
+    fallingKeywordsDesc: "Trefwoorden waarvan het gebruik afneemt — “Deze week” vangt plotselinge dalingen, “Deze maand” vangt een langzame afname die te kort is om in een week te zien. STIL markeert een trefwoord dat volledig stil is geworden nadat het actief was. Klik op + om een trefwoord als onderwerp te gaan volgen in Trends hieronder.",
+    fallingEmpty: "Er is nu niets dalende — kom later terug.",
+    fallingDormant: "STIL",
   },
   advanced: {
     title: "Geavanceerd",

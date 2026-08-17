@@ -427,6 +427,10 @@ const da = {
     risingEmpty: "Intet stiger lige nu — kig forbi igen, når der er kommet flere artikler.",
     risingAddToTrends: "Følg dette nøgleord i Tendenser",
     risingAlreadyTracked: "Følges allerede i Tendenser",
+    fallingKeywordsTitle: "Faldende nøgleord",
+    fallingKeywordsDesc: "Nøgleord hvis brug falder — “Denne uge” fanger pludselige fald, “Denne måned” fanger en langsom aftagen, som en ugentlig visning er for kort til at vise. STILLE markerer et nøgleord, der er gået helt i stå efter at have været aktivt. Klik på + for at begynde at følge et nøgleord som et emne i Tendenser nedenfor.",
+    fallingEmpty: "Intet er faldende lige nu — tjek igen senere.",
+    fallingDormant: "STILLE",
   },
   advanced: {
     title: "Avanceret",

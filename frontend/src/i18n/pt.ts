@@ -427,6 +427,10 @@ const pt = {
     risingEmpty: "Nada em ascensão neste momento — volte a verificar quando chegarem mais artigos.",
     risingAddToTrends: "Acompanhar esta palavra-chave em Tendências",
     risingAlreadyTracked: "Já é acompanhada em Tendências",
+    fallingKeywordsTitle: "Palavras-chave em queda",
+    fallingKeywordsDesc: "Palavras-chave cujo uso está a diminuir — «Esta semana» apanha quedas súbitas, «Este mês» apanha um declínio lento que uma vista semanal é demasiado curta para mostrar. SILÊNCIO assinala uma palavra-chave que ficou completamente inativa depois de ter estado ativa. Clique em + para começar a acompanhar uma palavra-chave como tópico em Tendências, abaixo.",
+    fallingEmpty: "Nada está em declínio neste momento — volte mais tarde.",
+    fallingDormant: "SILÊNCIO",
   },
   advanced: {
     title: "Avançado",

@@ -427,6 +427,10 @@ const tr = {
     risingEmpty: "Şu anda yükselen bir şey yok — daha fazla makale geldikten sonra tekrar kontrol edin.",
     risingAddToTrends: "Bu anahtar kelimeyi Trendler'de takip et",
     risingAlreadyTracked: "Zaten Trendler'de takip ediliyor",
+    fallingKeywordsTitle: "Düşüşteki anahtar kelimeler",
+    fallingKeywordsDesc: "Kullanımı azalan anahtar kelimeler — “Bu hafta” ani düşüşleri, “Bu ay” ise haftalık görünümün yakalayamayacağı kadar yavaş bir sönümlenmeyi yakalar. SESSİZ etiketi, önceden aktifken tamamen sessizleşen bir anahtar kelimeyi gösterir. Bir anahtar kelimeyi aşağıdaki Trendler bölümünde konu olarak takip etmeye başlamak için + simgesine tıklayın.",
+    fallingEmpty: "Şu anda düşüşte olan bir şey yok — daha sonra tekrar kontrol edin.",
+    fallingDormant: "SESSİZ",
   },
   advanced: {
     title: "Gelişmiş",

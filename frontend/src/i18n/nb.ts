@@ -427,6 +427,10 @@ const nb = {
     risingEmpty: "Ingenting stiger akkurat nå — sjekk igjen når flere artikler har kommet inn.",
     risingAddToTrends: "Spor dette nøkkelordet i Trender",
     risingAlreadyTracked: "Allerede sporet i Trender",
+    fallingKeywordsTitle: "Fallende nøkkelord",
+    fallingKeywordsDesc: "Nøkkelord med avtakende bruk — «Denne uken» fanger opp plutselige fall, «Denne måneden» fanger opp en langsom nedgang som en ukevisning er for kort til å vise. STILLE markerer et nøkkelord som har blitt helt stille etter å ha vært aktivt. Klikk på + for å begynne å spore et nøkkelord som et emne i Trender nedenfor.",
+    fallingEmpty: "Ingenting er fallende akkurat nå — sjekk igjen senere.",
+    fallingDormant: "STILLE",
   },
   advanced: {
     title: "Avansert",

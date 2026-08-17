@@ -427,6 +427,10 @@ const fi = {
     risingEmpty: "Ei nousevia avainsanoja juuri nyt — käy tarkistamassa myöhemmin, kun lisää artikkeleita on saapunut.",
     risingAddToTrends: "Seuraa tätä avainsanaa Trendeissä",
     risingAlreadyTracked: "Seurataan jo Trendeissä",
+    fallingKeywordsTitle: "Laskevat avainsanat",
+    fallingKeywordsDesc: "Avainsanoja, joiden käyttö on vähenemässä — \"Tämä viikko\" tunnistaa äkilliset pudotukset, \"Tämä kuukausi\" hitaan hiipumisen, jota viikkonäkymä on liian lyhyt näyttämään. HILJAINEN merkitsee avainsanaa, joka on käynyt täysin hiljaiseksi oltuaan aiemmin aktiivinen. Napsauta +, jos haluat alkaa seurata avainsanaa aiheena alla olevissa Trendeissä.",
+    fallingEmpty: "Mikään ei ole juuri nyt laskussa — käy tarkistamassa myöhemmin.",
+    fallingDormant: "HILJAINEN",
   },
   advanced: {
     title: "Lisäasetukset",

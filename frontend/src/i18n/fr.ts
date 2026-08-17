@@ -427,6 +427,10 @@ const fr = {
     risingEmpty: "Rien en hausse pour le moment — revenez après l'arrivée de nouveaux articles.",
     risingAddToTrends: "Suivre ce mot-clé dans Tendances",
     risingAlreadyTracked: "Déjà suivi dans Tendances",
+    fallingKeywordsTitle: "Mots-clés en baisse",
+    fallingKeywordsDesc: "Mots-clés dont l'usage diminue — « Cette semaine » capte les chutes soudaines, « Ce mois-ci » capte un déclin lent qu'une vue hebdomadaire est trop courte pour révéler. SILENCIEUX signale un mot-clé devenu complètement silencieux après avoir été actif. Cliquez sur + pour commencer à suivre un mot-clé comme sujet dans Tendances ci-dessous.",
+    fallingEmpty: "Rien n'est en baisse pour le moment — revenez plus tard.",
+    fallingDormant: "SILENCIEUX",
   },
   advanced: {
     title: "Avancé",

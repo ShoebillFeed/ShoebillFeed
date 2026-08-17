@@ -427,6 +427,10 @@ const de = {
     risingEmpty: "Gerade nichts im Aufwind — schau später wieder vorbei, wenn mehr Artikel eingetroffen sind.",
     risingAddToTrends: "Dieses Schlüsselwort in Trends verfolgen",
     risingAlreadyTracked: "Bereits in Trends verfolgt",
+    fallingKeywordsTitle: "Fallende Schlüsselwörter",
+    fallingKeywordsDesc: "Schlüsselwörter, deren Nutzung abnimmt — „Diese Woche“ erfasst plötzliche Einbrüche, „Diesen Monat“ erfasst ein langsames Abklingen, das eine Wochenansicht nicht zeigen würde. STILL markiert ein Schlüsselwort, das nach vorheriger Aktivität komplett verstummt ist. Klicke auf +, um ein Schlüsselwort als Thema in Trends weiter unten zu verfolgen.",
+    fallingEmpty: "Gerade fällt nichts — schau später noch einmal vorbei.",
+    fallingDormant: "STILL",
   },
   advanced: {
     title: "Erweitert",

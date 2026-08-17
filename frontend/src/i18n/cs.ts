@@ -427,6 +427,10 @@ const cs = {
     risingEmpty: "Právě teď nic neroste — zkuste to znovu, až přibude více článků.",
     risingAddToTrends: "Sledovat toto klíčové slovo v Trendech",
     risingAlreadyTracked: "Již sledováno v Trendech",
+    fallingKeywordsTitle: "Klesající klíčová slova",
+    fallingKeywordsDesc: "Klíčová slova, jejichž používání klesá — „Tento týden“ zachytí náhlé propady, „Tento měsíc“ zachytí pomalý útlum, který je na týdenní pohled příliš dlouhý. TICHÉ označuje klíčové slovo, které úplně utichlo poté, co bylo aktivní. Kliknutím na + začnete sledovat klíčové slovo jako téma v sekci Trendy níže.",
+    fallingEmpty: "Momentálně nic neklesá — zkontrolujte to později.",
+    fallingDormant: "TICHÉ",
   },
   advanced: {
     title: "Pokročilé",

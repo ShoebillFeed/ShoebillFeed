@@ -427,6 +427,10 @@ const en = {
     risingEmpty: "Nothing rising right now -- check back after more articles come in.",
     risingAddToTrends: "Track this keyword in Trends",
     risingAlreadyTracked: "Already tracked in Trends",
+    fallingKeywordsTitle: "Falling keywords",
+    fallingKeywordsDesc: "Keywords whose usage is declining -- \"This week\" catches sudden drop-offs, \"This month\" catches a slow fade a weekly view is too short to show. QUIET marks a keyword that's gone completely silent after being active. Click + to start tracking a keyword as a topic in Trends below.",
+    fallingEmpty: "Nothing declining right now -- check back later.",
+    fallingDormant: "QUIET",
   },
   advanced: {
     title: "Advanced",

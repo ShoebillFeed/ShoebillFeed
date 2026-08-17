@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { statsApi } from "../api/stats";
-import type { KeywordTrendRequest } from "../api/stats";
+import type { KeywordMomentumDirection, KeywordTrendRequest } from "../api/stats";
 
 export function useActivityStats(days: number) {
   return useQuery({
@@ -68,9 +68,9 @@ export function useCategoryTrend(days: number, sourceIds: string[]) {
   });
 }
 
-export function useRisingKeywords(sourceIds: string[], categoryIds: string[]) {
+export function useKeywordMomentum(sourceIds: string[], categoryIds: string[], direction: KeywordMomentumDirection) {
   return useQuery({
-    queryKey: ["stats", "rising-keywords", sourceIds, categoryIds],
-    queryFn: () => statsApi.risingKeywords(sourceIds, categoryIds),
+    queryKey: ["stats", "keyword-momentum", sourceIds, categoryIds, direction],
+    queryFn: () => statsApi.keywordMomentum(sourceIds, categoryIds, direction),
   });
 }
