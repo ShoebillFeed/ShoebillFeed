@@ -146,6 +146,8 @@ const it = {
     sharedSearch: "Cerca fonti…",
     sharedNoMatch: "Nessuna fonte corrisponde alla ricerca.",
     adoptSource: "Aggiungi alle mie fonti",
+    staleWarningLabel: "Nessun articolo recente",
+    staleWarningTitle: "Questa fonte è attiva, ma non ha recuperato nuovi articoli negli ultimi 7 giorni — il suo feed potrebbe essere rotto, vuoto o configurato in modo errato. Controlla la configurazione o prova a recuperarlo manualmente.",
   },
   categories: {
     title: "Categorie",

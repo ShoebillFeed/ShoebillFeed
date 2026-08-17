@@ -146,6 +146,8 @@ const cs = {
     sharedSearch: "Hledat zdroje…",
     sharedNoMatch: "Žádné zdroje neodpovídají vašemu hledání.",
     adoptSource: "Přidat do mých zdrojů",
+    staleWarningLabel: "Žádné nové články",
+    staleWarningTitle: "Tento zdroj je aktivní, ale za posledních 7 dní nezískal žádné nové články — jeho kanál může být rozbitý, prázdný nebo špatně nastavený. Zkontrolujte konfiguraci nebo zkuste ruční načtení.",
   },
   categories: {
     title: "Kategorie",

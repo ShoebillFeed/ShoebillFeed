@@ -146,6 +146,8 @@ const zh = {
     sharedSearch: "搜索来源…",
     sharedNoMatch: "没有匹配的来源。",
     adoptSource: "添加到我的来源",
+    staleWarningLabel: "无新文章",
+    staleWarningTitle: "此来源处于活跃状态，但过去 7 天内未获取到任何新文章——其信息源可能已损坏、为空或配置错误。请检查其配置，或尝试手动获取。",
   },
   categories: {
     title: "分类",

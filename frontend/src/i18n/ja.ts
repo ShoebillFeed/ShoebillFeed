@@ -146,6 +146,8 @@ const ja = {
     sharedSearch: "ソースを検索…",
     sharedNoMatch: "検索に一致するソースがありません。",
     adoptSource: "マイソースに追加",
+    staleWarningLabel: "新着記事なし",
+    staleWarningTitle: "このソースは有効ですが、過去7日間新しい記事を取得できていません — フィードが壊れている、空である、または設定が間違っている可能性があります。設定を確認するか、手動での取得をお試しください。",
   },
   categories: {
     title: "カテゴリ",

@@ -146,6 +146,8 @@ const fr = {
     sharedSearch: "Rechercher des sources…",
     sharedNoMatch: "Aucune source ne correspond à la recherche.",
     adoptSource: "Ajouter à mes sources",
+    staleWarningLabel: "Aucun article récent",
+    staleWarningTitle: "Cette source est active, mais n'a récupéré aucun nouvel article au cours des 7 derniers jours — son flux est peut-être cassé, vide ou mal configuré. Vérifiez sa configuration ou essayez une récupération manuelle.",
   },
   categories: {
     title: "Catégories",

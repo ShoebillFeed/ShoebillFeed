@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Play, Pencil, RefreshCw, Download, Upload, Search } from "lucide-react";
+import { Plus, Trash2, Play, Pencil, RefreshCw, Download, Upload, Search, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../ui/Toaster";
 import { Accordion } from "../ui/Accordion";
@@ -133,6 +133,15 @@ export default function SourcesPanel() {
                     <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500">
                       {source.source_type}
                     </span>
+                    {source.is_stale && (
+                      <span
+                        title={t("sources.staleWarningTitle")}
+                        className="flex items-center gap-1 shrink-0 text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+                      >
+                        <AlertTriangle size={11} />
+                        {t("sources.staleWarningLabel")}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {t("sources.itemCount", { count: source.item_count })} ·{" "}

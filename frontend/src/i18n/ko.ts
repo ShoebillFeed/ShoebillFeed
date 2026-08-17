@@ -146,6 +146,8 @@ const ko = {
     sharedSearch: "소스 검색…",
     sharedNoMatch: "검색과 일치하는 소스가 없습니다.",
     adoptSource: "내 소스에 추가",
+    staleWarningLabel: "새 기사 없음",
+    staleWarningTitle: "이 소스는 활성화되어 있지만 지난 7일 동안 새 기사를 가져오지 못했습니다 — 피드가 손상되었거나, 비어 있거나, 잘못 구성되었을 수 있습니다. 설정을 확인하거나 수동으로 가져오기를 시도해 보세요.",
   },
   categories: {
     title: "카테고리",

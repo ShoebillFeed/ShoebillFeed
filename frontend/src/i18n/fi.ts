@@ -146,6 +146,8 @@ const fi = {
     sharedSearch: "Etsi lähteitä…",
     sharedNoMatch: "Mikään lähde ei vastaa hakuasi.",
     adoptSource: "Lisää omiin lähteisiini",
+    staleWarningLabel: "Ei uusia artikkeleita",
+    staleWarningTitle: "Tämä lähde on aktiivinen, mutta se ei ole hakenut uusia artikkeleita viimeisen 7 päivän aikana — sen syöte saattaa olla rikki, tyhjä tai väärin määritetty. Tarkista asetukset tai kokeile hakea manuaalisesti.",
   },
   categories: {
     title: "Kategoriat",

@@ -146,6 +146,8 @@ const nl = {
     sharedSearch: "Bronnen zoeken…",
     sharedNoMatch: "Geen bronnen komen overeen met de zoekopdracht.",
     adoptSource: "Toevoegen aan mijn bronnen",
+    staleWarningLabel: "Geen recente artikelen",
+    staleWarningTitle: "Deze bron is actief, maar heeft de afgelopen 7 dagen geen nieuwe artikelen opgehaald — de feed is mogelijk kapot, leeg of verkeerd geconfigureerd. Controleer de configuratie of probeer handmatig op te halen.",
   },
   categories: {
     title: "Categorieën",

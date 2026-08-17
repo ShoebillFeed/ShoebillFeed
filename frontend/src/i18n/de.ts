@@ -146,6 +146,8 @@ const de = {
     sharedSearch: "Quellen suchen…",
     sharedNoMatch: "Keine Quellen entsprechen der Suche.",
     adoptSource: "Zu meinen Quellen hinzufügen",
+    staleWarningLabel: "Keine neuen Artikel",
+    staleWarningTitle: "Diese Quelle ist aktiv, hat aber in den letzten 7 Tagen keine neuen Artikel abgerufen — ihr Feed könnte defekt, leer oder falsch konfiguriert sein. Überprüfe die Konfiguration oder versuche einen manuellen Abruf.",
   },
   categories: {
     title: "Kategorien",

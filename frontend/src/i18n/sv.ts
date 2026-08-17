@@ -146,6 +146,8 @@ const sv = {
     sharedSearch: "Sök källor…",
     sharedNoMatch: "Inga källor matchar din sökning.",
     adoptSource: "Lägg till bland mina källor",
+    staleWarningLabel: "Inga nya artiklar",
+    staleWarningTitle: "Den här källan är aktiv men har inte hämtat några nya artiklar de senaste 7 dagarna — flödet kan vara trasigt, tomt eller felkonfigurerat. Kontrollera konfigurationen eller försök hämta manuellt.",
   },
   categories: {
     title: "Kategorier",

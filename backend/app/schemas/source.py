@@ -28,5 +28,10 @@ class SourceOut(SourceBase):
     last_fetched_at: datetime | None
     created_at: datetime
     item_count: int = 0
+    # True when this source is active, has existed for at least a week (so
+    # it's had a fair chance), and produced zero NewsItems in that week --
+    # a signal the feed is broken/empty rather than just quiet or new. See
+    # api/sources.py::_is_stale.
+    is_stale: bool = False
 
     model_config = {"from_attributes": True}

@@ -146,6 +146,8 @@ const pt = {
     sharedSearch: "Pesquisar fontes…",
     sharedNoMatch: "Nenhuma fonte corresponde à pesquisa.",
     adoptSource: "Adicionar às minhas fontes",
+    staleWarningLabel: "Sem artigos recentes",
+    staleWarningTitle: "Esta fonte está ativa, mas não obteve novos artigos nos últimos 7 dias — o seu feed pode estar avariado, vazio ou mal configurado. Verifique a configuração ou tente obter manualmente.",
   },
   categories: {
     title: "Categorias",

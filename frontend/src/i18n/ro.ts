@@ -146,6 +146,8 @@ const ro = {
     sharedSearch: "Căutați surse…",
     sharedNoMatch: "Nicio sursă nu corespunde căutării.",
     adoptSource: "Adaugă la sursele mele",
+    staleWarningLabel: "Niciun articol recent",
+    staleWarningTitle: "Această sursă este activă, dar nu a preluat niciun articol nou în ultimele 7 zile — fluxul ei ar putea fi defect, gol sau configurat greșit. Verificați configurația sau încercați o preluare manuală.",
   },
   categories: {
     title: "Categorii",

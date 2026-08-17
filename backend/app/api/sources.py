@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -12,11 +13,30 @@ from app.schemas.source import SourceCreate, SourceUpdate, SourceOut
 
 router = APIRouter()
 
+_STALE_LOOKBACK_DAYS = 7
+
+
+def _is_stale(source: Source, recent_count: int) -> bool:
+    """Active, at least a week old (so it's had a fair chance to produce
+    something), and zero NewsItems fetched in that week -- a real signal
+    the feed is broken or empty, not just a brand-new or quiet source."""
+    if not source.is_active:
+        return False
+    age = datetime.now(timezone.utc) - source.created_at
+    if age < timedelta(days=_STALE_LOOKBACK_DAYS):
+        return False
+    return recent_count == 0
+
 
 def _with_count(db: Session, source: Source) -> SourceOut:
     count = db.scalar(select(func.count()).where(NewsItem.source_id == source.id)) or 0
+    since = datetime.now(timezone.utc) - timedelta(days=_STALE_LOOKBACK_DAYS)
+    recent_count = db.scalar(
+        select(func.count()).where(NewsItem.source_id == source.id, NewsItem.fetched_at >= since)
+    ) or 0
     out = SourceOut.model_validate(source)
     out.item_count = count
+    out.is_stale = _is_stale(source, recent_count)
     return out
 
 
@@ -29,6 +49,7 @@ def list_sources(db: Session = Depends(get_db), current_user: User = Depends(get
     # Single GROUP BY instead of N+1 per-source COUNT queries
     ids = [s.id for s in sources]
     counts: dict = {}
+    recent_counts: dict = {}
     if ids:
         rows = db.execute(
             select(NewsItem.source_id, func.count().label("cnt"))
@@ -37,10 +58,19 @@ def list_sources(db: Session = Depends(get_db), current_user: User = Depends(get
         )
         counts = {row.source_id: row.cnt for row in rows}
 
+        since = datetime.now(timezone.utc) - timedelta(days=_STALE_LOOKBACK_DAYS)
+        recent_rows = db.execute(
+            select(NewsItem.source_id, func.count().label("cnt"))
+            .where(NewsItem.source_id.in_(ids), NewsItem.fetched_at >= since)
+            .group_by(NewsItem.source_id)
+        )
+        recent_counts = {row.source_id: row.cnt for row in recent_rows}
+
     result = []
     for s in sources:
         out = SourceOut.model_validate(s)
         out.item_count = counts.get(s.id, 0)
+        out.is_stale = _is_stale(s, recent_counts.get(s.id, 0))
         result.append(out)
     return result
 

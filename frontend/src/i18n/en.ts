@@ -146,6 +146,8 @@ const en = {
     sharedSearch: "Search sources…",
     sharedNoMatch: "No sources match your search.",
     adoptSource: "Add to my sources",
+    staleWarningLabel: "No recent articles",
+    staleWarningTitle: "This source is active but hasn't fetched any new articles in the past 7 days — its feed may be broken, empty, or misconfigured. Check its configuration or try fetching manually.",
   },
   categories: {
     title: "Categories",

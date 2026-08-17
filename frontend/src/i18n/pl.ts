@@ -147,6 +147,8 @@ const pl = {
     sharedSearch: "Szukaj źródeł…",
     sharedNoMatch: "Brak źródeł pasujących do wyszukiwania.",
     adoptSource: "Dodaj do moich źródeł",
+    staleWarningLabel: "Brak nowych artykułów",
+    staleWarningTitle: "To źródło jest aktywne, ale w ciągu ostatnich 7 dni nie pobrało żadnych nowych artykułów — jego kanał może być uszkodzony, pusty lub źle skonfigurowany. Sprawdź konfigurację lub spróbuj pobrać ręcznie.",
   },
   categories: {
     title: "Kategorie",

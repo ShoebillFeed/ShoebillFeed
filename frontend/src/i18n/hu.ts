@@ -146,6 +146,8 @@ const hu = {
     sharedSearch: "Források keresése…",
     sharedNoMatch: "Nincs a keresésnek megfelelő forrás.",
     adoptSource: "Hozzáadás saját forrásaimhoz",
+    staleWarningLabel: "Nincs friss cikk",
+    staleWarningTitle: "Ez a forrás aktív, de az elmúlt 7 napban nem érkezett tőle új cikk — lehet, hogy a hírcsatornája hibás, üres, vagy rosszul van beállítva. Ellenőrizd a beállításait, vagy próbáld meg manuálisan lekérni.",
   },
   categories: {
     title: "Kategóriák",

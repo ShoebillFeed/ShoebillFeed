@@ -146,6 +146,8 @@ const da = {
     sharedSearch: "Søg i kilder…",
     sharedNoMatch: "Ingen kilder matcher din søgning.",
     adoptSource: "Tilføj til mine kilder",
+    staleWarningLabel: "Ingen nye artikler",
+    staleWarningTitle: "Denne kilde er aktiv, men har ikke hentet nye artikler i de sidste 7 dage — dens feed kan være i stykker, tomt eller forkert konfigureret. Tjek dens konfiguration, eller prøv at hente manuelt.",
   },
   categories: {
     title: "Kategorier",

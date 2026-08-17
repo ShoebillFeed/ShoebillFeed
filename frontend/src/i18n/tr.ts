@@ -146,6 +146,8 @@ const tr = {
     sharedSearch: "Kaynak ara…",
     sharedNoMatch: "Aramanızla eşleşen kaynak yok.",
     adoptSource: "Kaynaklarıma ekle",
+    staleWarningLabel: "Yeni makale yok",
+    staleWarningTitle: "Bu kaynak etkin ancak son 7 gündür yeni makale getirmedi — beslemesi bozuk, boş veya yanlış yapılandırılmış olabilir. Yapılandırmasını kontrol edin veya manuel olarak getirmeyi deneyin.",
   },
   categories: {
     title: "Kategoriler",
