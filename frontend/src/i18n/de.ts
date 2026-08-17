@@ -406,7 +406,6 @@ const de = {
     topSources: "Top-Quellen",
     trendsTitle: "Themenabdeckung im Zeitverlauf",
     trendsDesc: "Verfolge Tag für Tag, wie oft dein Feed ein Schlüsselwort oder eine Gruppe von Schlüsselwörtern abdeckt. Füge bis zu 6 Themen zum Vergleich hinzu, optional gefiltert nach Kategorie oder Quelle.",
-    trendsChartTitle: "Abdeckungsverlauf",
     trendsChartDesc: "Tägliche Artikelanzahl pro Thema. Zählt sowohl einzelne Artikel als auch geclusterte Storys, sodass eine von mehreren Quellen aufgegriffene Story nur einmal gezählt wird.",
     trendsAddTopicHint: "Füge einem Thema mindestens ein Schlüsselwort hinzu, um seinen Verlauf zu sehen.",
     trendTopicColor: "Wähle eine Farbe für die Linie dieses Themas",

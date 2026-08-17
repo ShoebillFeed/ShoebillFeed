@@ -406,7 +406,6 @@ const fi = {
     topSources: "Suosituimmat lähteet",
     trendsTitle: "Aiheiden kattavuus ajan myötä",
     trendsDesc: "Seuraa, kuinka usein syötteesi käsittelee avainsanaa tai avainsanaryhmää, päivä päivältä. Lisää enintään 6 aihetta vertailtavaksi, valinnaisesti suodatettuna kategorian tai lähteen mukaan.",
-    trendsChartTitle: "Kattavuustrendi",
     trendsChartDesc: "Päivittäinen artikkelimäärä aiheittain. Laskee sekä yksittäiset artikkelit että klusteroidut tarinat, joten usean lähteen käsittelemä tarina lasketaan vain kerran.",
     trendsAddTopicHint: "Lisää aiheeseen vähintään yksi avainsana nähdäksesi sen trendin.",
     trendTopicColor: "Valitse väri tämän aiheen käyrälle",

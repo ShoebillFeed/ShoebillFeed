@@ -406,7 +406,6 @@ const nl = {
     topSources: "Topbronnen",
     trendsTitle: "Onderwerpdekking in de tijd",
     trendsDesc: "Volg hoe vaak je feed een trefwoord of groep trefwoorden behandelt, dag na dag. Voeg tot 6 onderwerpen toe om te vergelijken, optioneel gefilterd op categorie of bron.",
-    trendsChartTitle: "Dekkingstrend",
     trendsChartDesc: "Dagelijks aantal artikelen per onderwerp. Telt zowel losse artikelen als geclusterde verhalen, zodat een verhaal dat door meerdere bronnen wordt opgepikt maar één keer wordt geteld.",
     trendsAddTopicHint: "Voeg minstens één trefwoord toe aan een onderwerp om de trend te zien.",
     trendTopicColor: "Kies een kleur voor de lijn van dit onderwerp",

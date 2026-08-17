@@ -406,7 +406,6 @@ const es = {
     topSources: "Fuentes principales",
     trendsTitle: "Cobertura de temas a lo largo del tiempo",
     trendsDesc: "Sigue con qué frecuencia tu feed cubre una palabra clave o grupo de palabras clave, día a día. Añade hasta 6 temas para comparar, filtrando opcionalmente por categoría o fuente.",
-    trendsChartTitle: "Tendencia de cobertura",
     trendsChartDesc: "Recuento diario de artículos por tema. Cuenta tanto artículos individuales como historias agrupadas por igual, así que una historia cubierta por varias fuentes solo se cuenta una vez.",
     trendsAddTopicHint: "Añade al menos una palabra clave a un tema para ver su tendencia.",
     trendTopicColor: "Elige un color para la línea de este tema",

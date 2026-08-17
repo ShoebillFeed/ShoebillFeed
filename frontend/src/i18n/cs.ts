@@ -406,7 +406,6 @@ const cs = {
     topSources: "Nejčastější zdroje",
     trendsTitle: "Pokrytí témat v čase",
     trendsDesc: "Sledujte, jak často váš feed pokrývá klíčové slovo nebo skupinu klíčových slov, den po dni. Přidejte až 6 témat k porovnání, volitelně filtrovaných podle kategorie nebo zdroje.",
-    trendsChartTitle: "Trend pokrytí",
     trendsChartDesc: "Denní počet článků podle tématu. Počítá samostatné články i shlukované příběhy stejně, takže příběh zachycený více zdroji se počítá jen jednou.",
     trendsAddTopicHint: "Přidejte k tématu alespoň jedno klíčové slovo, abyste viděli jeho trend.",
     trendTopicColor: "Vyberte barvu pro linii tohoto tématu",

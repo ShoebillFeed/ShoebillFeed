@@ -406,7 +406,6 @@ const sv = {
     topSources: "Toppkällor",
     trendsTitle: "Ämnestäckning över tid",
     trendsDesc: "Följ hur ofta ditt flöde täcker ett nyckelord eller en grupp nyckelord, dag för dag. Lägg till upp till 6 ämnen att jämföra, filtrera valfritt efter kategori eller källa.",
-    trendsChartTitle: "Täckningstrend",
     trendsChartDesc: "Dagligt antal artiklar per ämne. Räknar både fristående artiklar och klustrade historier, så en historia som täcks av flera källor räknas bara en gång.",
     trendsAddTopicHint: "Lägg till minst ett nyckelord i ett ämne för att se dess trend.",
     trendTopicColor: "Välj en färg för det här ämnets linje",

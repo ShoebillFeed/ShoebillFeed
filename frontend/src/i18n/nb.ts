@@ -406,7 +406,6 @@ const nb = {
     topSources: "Toppkilder",
     trendsTitle: "Emnedekning over tid",
     trendsDesc: "Spor hvor ofte feeden din dekker et nøkkelord eller en gruppe nøkkelord, dag for dag. Legg til opptil 6 emner for å sammenligne, eventuelt filtrert etter kategori eller kilde.",
-    trendsChartTitle: "Dekningstrend",
     trendsChartDesc: "Daglig antall artikler per emne. Teller både frittstående artikler og klyngede historier likt, slik at en historie som plukkes opp av flere kilder bare telles én gang.",
     trendsAddTopicHint: "Legg til minst ett nøkkelord i et emne for å se trenden.",
     trendTopicColor: "Velg en farge for dette emnets linje",

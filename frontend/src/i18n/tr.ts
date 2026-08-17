@@ -406,7 +406,6 @@ const tr = {
     topSources: "En sık geçen kaynaklar",
     trendsTitle: "Zaman içinde konu kapsamı",
     trendsDesc: "Akışınızın bir anahtar kelimeyi veya anahtar kelime grubunu gün gün ne sıklıkla kapsadığını takip edin. Karşılaştırmak için, isteğe bağlı olarak kategoriye veya kaynağa göre filtrelenmiş en fazla 6 konu ekleyin.",
-    trendsChartTitle: "Kapsam trendi",
     trendsChartDesc: "Konu başına günlük makale sayısı. Tek başına makaleler ve kümelenmiş haberler aynı şekilde sayılır, böylece birden fazla kaynağın işlediği bir haber yalnızca bir kez sayılır.",
     trendsAddTopicHint: "Trendini görmek için bir konuya en az bir anahtar kelime ekleyin.",
     trendTopicColor: "Bu konunun çizgisi için bir renk seçin",

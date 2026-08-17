@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { BellOff, Check, AlertTriangle } from "lucide-react";
-import { Accordion } from "./Accordion";
+import { Accordion } from "../ui/Accordion";
 import { useTranslation } from "react-i18next";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { useUserTabs } from "../../hooks/useTabs";

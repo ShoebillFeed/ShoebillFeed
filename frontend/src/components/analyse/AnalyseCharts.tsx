@@ -11,6 +11,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { Check, Download, PauseCircle, Plus, RefreshCw, ThumbsUp, X } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { Accordion } from "../ui/Accordion";
 import {
   useActivityStats, useCategoryStats, useSourceStats,
   useWeightHistory, useSourceClusters,
@@ -83,14 +84,9 @@ function ChartCard({
   action?: ReactNode;
 }) {
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-      <div className="flex items-start justify-between gap-4 mb-1">
-        <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">{title}</h3>
-        {action}
-      </div>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">{description}</p>
+    <Accordion title={title} description={description} action={action} defaultOpen>
       <ChartErrorBoundary>{children}</ChartErrorBoundary>
-    </div>
+    </Accordion>
   );
 }
 
@@ -1596,13 +1592,12 @@ function KeywordMomentumPanel({ direction }: { direction: KeywordMomentumDirecti
     .slice(0, MOMENTUM_TOP_N);
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">{t(config.titleKey)}</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{t(config.descKey)}</p>
-        </div>
-        <div className="flex gap-1 shrink-0">
+    <Accordion
+      title={t(config.titleKey)}
+      description={t(config.descKey)}
+      defaultOpen
+      action={
+        <div className="flex gap-1">
           <button
             onClick={() => setPeriod("weekly")}
             className={`px-2.5 py-1 text-xs rounded transition-colors ${period === "weekly" ? "bg-indigo-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
@@ -1616,8 +1611,8 @@ function KeywordMomentumPanel({ direction }: { direction: KeywordMomentumDirecti
             {t("stats.risingMonthly")}
           </button>
         </div>
-      </div>
-
+      }
+    >
       <div className="flex flex-col gap-3">
         <TrendFilterPills
           title={t("stats.filterByCategory")}
@@ -1674,7 +1669,7 @@ function KeywordMomentumPanel({ direction }: { direction: KeywordMomentumDirecti
           })}
         </div>
       )}
-    </div>
+    </Accordion>
   );
 }
 
@@ -1755,15 +1750,12 @@ export function AnalyseTrendsTab() {
       <KeywordMomentumPanel direction="rising" />
       <KeywordMomentumPanel direction="falling" />
 
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col gap-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">{t("stats.trendsTitle")}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{t("stats.trendsDesc")}</p>
-          </div>
-          <TrendRangePicker value={days} onChange={setDays} />
-        </div>
-
+      <Accordion
+        title={t("stats.trendsTitle")}
+        description={t("stats.trendsDesc")}
+        defaultOpen
+        action={<TrendRangePicker value={days} onChange={setDays} />}
+      >
         <div className="flex flex-col gap-2">
           {topics.map((topic, i) => (
             <TopicRow
@@ -1819,48 +1811,52 @@ export function AnalyseTrendsTab() {
             onToggle={toggleSource}
           />
         </div>
-      </div>
 
-      <ChartCard
-        title={t("stats.trendsChartTitle")}
-        description={t("stats.trendsChartDesc")}
-        action={
-          trend.data && (
-            <button
-              type="button"
-              onClick={() =>
-                downloadCsv(
-                  keywordTrendToCsv(trend.data),
-                  `shoebill-keyword-trends-${new Date().toISOString().slice(0, 10)}.csv`
-                )
-              }
-              title={t("stats.exportTrendData")}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 transition-colors"
-            >
-              <Download size={12} />
-              {t("stats.exportTrendData")}
-            </button>
-          )
-        }
-      >
-        {requestTopics.length === 0 ? (
-          <div className="flex items-center justify-center h-40 text-sm text-gray-400 text-center px-4">
-            {t("stats.trendsAddTopicHint")}
+        {/* Chart section -- lives in the same accordion as its config above
+            rather than a separate card, since the two only make sense
+            together (the topics/filters/range above are exactly what this
+            chart renders). */}
+        <div className="flex flex-col gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{t("stats.trendsChartDesc")}</p>
+            {trend.data && (
+              <button
+                type="button"
+                onClick={() =>
+                  downloadCsv(
+                    keywordTrendToCsv(trend.data),
+                    `shoebill-keyword-trends-${new Date().toISOString().slice(0, 10)}.csv`
+                  )
+                }
+                title={t("stats.exportTrendData")}
+                className="shrink-0 flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 transition-colors"
+              >
+                <Download size={12} />
+                {t("stats.exportTrendData")}
+              </button>
+            )}
           </div>
-        ) : trend.isPending && !trend.data ? (
-          <Loading />
-        ) : trend.data && trend.data.every((r) => r.points.every((p) => p.count === 0)) ? (
-          <Empty />
-        ) : trend.data ? (
-          <KeywordTrendChart
-            results={trend.data}
-            colors={requestTopics.map((topic, i) => topicColor(topic, i))}
-            days={days}
-          />
-        ) : (
-          <Loading />
-        )}
-      </ChartCard>
+          <ChartErrorBoundary>
+            {requestTopics.length === 0 ? (
+              <div className="flex items-center justify-center h-40 text-sm text-gray-400 text-center px-4">
+                {t("stats.trendsAddTopicHint")}
+              </div>
+            ) : trend.isPending && !trend.data ? (
+              <Loading />
+            ) : trend.data && trend.data.every((r) => r.points.every((p) => p.count === 0)) ? (
+              <Empty />
+            ) : trend.data ? (
+              <KeywordTrendChart
+                results={trend.data}
+                colors={requestTopics.map((topic, i) => topicColor(topic, i))}
+                days={days}
+              />
+            ) : (
+              <Loading />
+            )}
+          </ChartErrorBoundary>
+        </div>
+      </Accordion>
     </div>
   );
 }

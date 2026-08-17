@@ -406,7 +406,6 @@ const hu = {
     topSources: "Legnépszerűbb források",
     trendsTitle: "Témalefedettség az idő múlásával",
     trendsDesc: "Kövesd nyomon, milyen gyakran foglalkozik a hírfolyamod egy kulcsszóval vagy kulcsszócsoporttal, napról napra. Adj hozzá legfeljebb 6 témát az összehasonlításhoz, opcionálisan kategória vagy forrás szerint szűrve.",
-    trendsChartTitle: "Lefedettségi trend",
     trendsChartDesc: "Napi cikkszám témánként. Az önálló cikkeket és a klaszterezett híreket egyaránt számolja, így egy több forrás által is felkapott hír csak egyszer számít.",
     trendsAddTopicHint: "Adj hozzá legalább egy kulcsszót a témához, hogy lásd a trendjét.",
     trendTopicColor: "Válassz színt ennek a témának a vonalához",

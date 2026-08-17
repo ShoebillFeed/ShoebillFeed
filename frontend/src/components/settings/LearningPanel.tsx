@@ -3,7 +3,7 @@ import { X, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLearningProfile, useDeleteKeyword } from "../../hooks/useLearning";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
-import { Accordion } from "./Accordion";
+import { Accordion } from "../ui/Accordion";
 import { cn } from "../../lib/utils";
 import type { CategoryProfile } from "../../api/learning";
 

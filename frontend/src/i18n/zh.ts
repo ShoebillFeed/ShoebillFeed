@@ -406,7 +406,6 @@ const zh = {
     topSources: "热门来源",
     trendsTitle: "话题报道量随时间变化",
     trendsDesc: "逐日追踪你的订阅源报道某个关键词或一组关键词的频率。最多可添加 6 个主题进行对比，并可按分类或来源筛选。",
-    trendsChartTitle: "报道趋势",
     trendsChartDesc: "每个主题的每日文章数量。独立文章与聚合故事均计入统计，因此被多个来源报道的同一故事只计一次。",
     trendsAddTopicHint: "为主题至少添加一个关键词以查看其趋势。",
     trendTopicColor: "为该主题的曲线选择颜色",

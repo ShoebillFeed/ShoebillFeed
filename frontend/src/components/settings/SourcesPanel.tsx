@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus, Trash2, Play, Pencil, RefreshCw, Download, Upload, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../ui/Toaster";
-import { Accordion } from "./Accordion";
+import { Accordion } from "../ui/Accordion";
 import { useSources, useDeleteSource, useFetchSource, useImportSources, useToggleSourceActive, useSharedSources, useAdoptSource } from "../../hooks/useSources";
 import { sourcesApi } from "../../api/sources";
 import SourceForm from "./SourceForm";

@@ -406,7 +406,6 @@ const en = {
     topSources: "Top sources",
     trendsTitle: "Topic coverage over time",
     trendsDesc: "Track how often your feed covers a keyword or group of keywords, day by day. Add up to 6 topics to compare, optionally filtered by category or source.",
-    trendsChartTitle: "Coverage trend",
     trendsChartDesc: "Daily article count per topic. Counts standalone articles and clustered stories alike, so a story picked up by multiple sources is only counted once.",
     trendsAddTopicHint: "Add at least one keyword to a topic to see its trend.",
     trendTopicColor: "Choose a color for this topic's line",

@@ -406,7 +406,6 @@ const da = {
     topSources: "Top-kilder",
     trendsTitle: "Emnedækning over tid",
     trendsDesc: "Følg hvor ofte dit feed dækker et nøgleord eller en gruppe af nøgleord, dag for dag. Tilføj op til 6 emner til sammenligning, valgfrit filtreret efter kategori eller kilde.",
-    trendsChartTitle: "Dækningstendens",
     trendsChartDesc: "Dagligt antal artikler pr. emne. Tæller både enkeltstående artikler og klyngede historier, så en historie dækket af flere kilder kun tælles én gang.",
     trendsAddTopicHint: "Tilføj mindst ét nøgleord til et emne for at se dets tendens.",
     trendTopicColor: "Vælg en farve til dette emnes linje",

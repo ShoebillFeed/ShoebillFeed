@@ -6,7 +6,7 @@ import { useCategories, useDeleteCategory, useResetWeights, useSetManualWeight, 
 import { categoriesApi } from "../../api/categories";
 import CategoryForm from "./CategoryForm";
 import TaxonomyBrowser from "./TaxonomyBrowser";
-import { Accordion } from "./Accordion";
+import { Accordion } from "../ui/Accordion";
 import type { Category } from "../../types/category";
 import type { TaxonomyNode } from "./iptcTaxonomy";
 import { findNode } from "./iptcTaxonomy";

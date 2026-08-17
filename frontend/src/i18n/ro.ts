@@ -406,7 +406,6 @@ const ro = {
     topSources: "Surse de top",
     trendsTitle: "Acoperirea subiectelor în timp",
     trendsDesc: "Urmăriți cât de des acoperă feedul dvs. un cuvânt cheie sau un grup de cuvinte cheie, zi de zi. Adăugați până la 6 subiecte pentru comparație, filtrate opțional după categorie sau sursă.",
-    trendsChartTitle: "Tendința de acoperire",
     trendsChartDesc: "Numărul zilnic de articole pe subiect. Contorizează atât articolele individuale, cât și știrile grupate, astfel încât o știre preluată de mai multe surse este numărată o singură dată.",
     trendsAddTopicHint: "Adăugați cel puțin un cuvânt cheie la un subiect pentru a-i vedea tendința.",
     trendTopicColor: "Alegeți o culoare pentru linia acestui subiect",

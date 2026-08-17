@@ -13,7 +13,7 @@ import {
   ExternalLink,
   Info,
 } from "lucide-react";
-import { Accordion } from "./Accordion";
+import { Accordion } from "../ui/Accordion";
 
 function TechDetails({ children }: { children: ReactNode }) {
   const { t } = useTranslation();

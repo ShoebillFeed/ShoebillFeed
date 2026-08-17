@@ -406,7 +406,6 @@ const fr = {
     topSources: "Sources principales",
     trendsTitle: "Évolution de la couverture par sujet",
     trendsDesc: "Suivez la fréquence à laquelle votre fil aborde un mot-clé ou un groupe de mots-clés, jour par jour. Ajoutez jusqu'à 6 sujets à comparer, filtrables par catégorie ou source.",
-    trendsChartTitle: "Tendance de couverture",
     trendsChartDesc: "Nombre quotidien d'articles par sujet. Compte aussi bien les articles isolés que les actualités groupées, de sorte qu'une actualité reprise par plusieurs sources n'est comptée qu'une seule fois.",
     trendsAddTopicHint: "Ajoutez au moins un mot-clé à un sujet pour voir sa tendance.",
     trendTopicColor: "Choisissez une couleur pour la courbe de ce sujet",

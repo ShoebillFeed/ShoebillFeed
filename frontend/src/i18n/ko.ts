@@ -406,7 +406,6 @@ const ko = {
     topSources: "주요 소스",
     trendsTitle: "시간에 따른 주제 보도량",
     trendsDesc: "피드가 키워드 또는 키워드 그룹을 얼마나 자주 다루는지 날마다 추적합니다. 최대 6개의 주제를 추가해 비교할 수 있으며, 카테고리나 소스로 필터링할 수도 있습니다.",
-    trendsChartTitle: "보도 추세",
     trendsChartDesc: "주제별 일일 기사 수입니다. 단독 기사와 클러스터로 묶인 스토리를 모두 집계하므로, 여러 소스가 다룬 이야기도 한 번만 계산됩니다.",
     trendsAddTopicHint: "추세를 보려면 주제에 키워드를 하나 이상 추가하세요.",
     trendTopicColor: "이 주제의 선 색상을 선택하세요",

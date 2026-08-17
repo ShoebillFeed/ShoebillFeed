@@ -409,7 +409,6 @@ const pl = {
     topSources: "Najpopularniejsze źródła",
     trendsTitle: "Zasięg tematu w czasie",
     trendsDesc: "Śledź, jak często Twój kanał porusza dane słowo kluczowe lub grupę słów kluczowych, dzień po dniu. Dodaj do 6 tematów do porównania, opcjonalnie filtrując według kategorii lub źródła.",
-    trendsChartTitle: "Trend zasięgu",
     trendsChartDesc: "Dzienna liczba artykułów dla każdego tematu. Uwzględnia zarówno pojedyncze artykuły, jak i pogrupowane historie, więc historia opisywana przez wiele źródeł liczy się tylko raz.",
     trendsAddTopicHint: "Dodaj co najmniej jedno słowo kluczowe do tematu, aby zobaczyć jego trend.",
     trendTopicColor: "Wybierz kolor dla linii tego tematu",
