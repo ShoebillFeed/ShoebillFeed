@@ -418,7 +418,7 @@ const it = {
     filterBySource: "Filtra per fonte",
     exportTrendData: "Esporta CSV",
     risingKeywordsTitle: "Parole chiave in ascesa",
-    risingKeywordsDesc: "Parole chiave il cui utilizzo sta accelerando — “Questa settimana” cattura i picchi improvvisi, “Questo mese” cattura una crescita lenta e costante che una vista settimanale è troppo breve per mostrare. NUOVO indica una parola chiave senza cronologia precedente a questo periodo.",
+    risingKeywordsDesc: "Parole chiave il cui utilizzo sta accelerando — “Questa settimana” cattura i picchi improvvisi, “Questo mese” cattura una crescita lenta e costante che una vista settimanale è troppo breve per mostrare. NUOVO indica una parola chiave senza cronologia precedente a questo periodo. Fai clic su + per iniziare a monitorare una parola chiave come argomento in Tendenze qui sotto.",
     risingWeekly: "Questa settimana",
     risingMonthly: "Questo mese",
     risingNewcomer: "NUOVO",

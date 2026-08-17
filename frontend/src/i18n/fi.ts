@@ -418,7 +418,7 @@ const fi = {
     filterBySource: "Suodata lähteen mukaan",
     exportTrendData: "Vie CSV",
     risingKeywordsTitle: "Nousevat avainsanat",
-    risingKeywordsDesc: "Avainsanoja, joiden käyttö on kiihtymässä — \"Tämä viikko\" tunnistaa äkilliset piikit, \"Tämä kuukausi\" hitaan, pitkäkestoisen kasvun, jota viikkonäkymä on liian lyhyt näyttämään. UUSI merkitsee avainsanaa, jolla ei ole historiaa ennen tätä jaksoa.",
+    risingKeywordsDesc: "Avainsanoja, joiden käyttö on kiihtymässä — \"Tämä viikko\" tunnistaa äkilliset piikit, \"Tämä kuukausi\" hitaan, pitkäkestoisen kasvun, jota viikkonäkymä on liian lyhyt näyttämään. UUSI merkitsee avainsanaa, jolla ei ole historiaa ennen tätä jaksoa. Napsauta +, jos haluat alkaa seurata avainsanaa aiheena alla olevissa Trendeissä.",
     risingWeekly: "Tämä viikko",
     risingMonthly: "Tämä kuukausi",
     risingNewcomer: "UUSI",

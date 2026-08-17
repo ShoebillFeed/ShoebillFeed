@@ -418,7 +418,7 @@ const nl = {
     filterBySource: "Filteren op bron",
     exportTrendData: "CSV exporteren",
     risingKeywordsTitle: "Opkomende trefwoorden",
-    risingKeywordsDesc: "Trefwoorden waarvan het gebruik toeneemt — “Deze week” vangt plotselinge pieken, “Deze maand” vangt langzame, aanhoudende groei die te kort is om in een week te zien. NIEUW markeert een trefwoord zonder geschiedenis vóór deze periode.",
+    risingKeywordsDesc: "Trefwoorden waarvan het gebruik toeneemt — “Deze week” vangt plotselinge pieken, “Deze maand” vangt langzame, aanhoudende groei die te kort is om in een week te zien. NIEUW markeert een trefwoord zonder geschiedenis vóór deze periode. Klik op + om een trefwoord als onderwerp te gaan volgen in Trends hieronder.",
     risingWeekly: "Deze week",
     risingMonthly: "Deze maand",
     risingNewcomer: "NIEUW",

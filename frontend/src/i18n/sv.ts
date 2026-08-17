@@ -418,7 +418,7 @@ const sv = {
     filterBySource: "Filtrera efter källa",
     exportTrendData: "Exportera CSV",
     risingKeywordsTitle: "Stigande nyckelord",
-    risingKeywordsDesc: "Nyckelord vars användning ökar snabbt — ”Den här veckan” fångar plötsliga toppar, ”Den här månaden” fångar långsam, varaktig tillväxt som en veckovy är för kort för att visa. NY markerar ett nyckelord utan historik innan den här perioden.",
+    risingKeywordsDesc: "Nyckelord vars användning ökar snabbt — ”Den här veckan” fångar plötsliga toppar, ”Den här månaden” fångar långsam, varaktig tillväxt som en veckovy är för kort för att visa. NY markerar ett nyckelord utan historik innan den här perioden. Klicka på + för att börja följa ett nyckelord som ett ämne i Trender nedan.",
     risingWeekly: "Den här veckan",
     risingMonthly: "Den här månaden",
     risingNewcomer: "NY",

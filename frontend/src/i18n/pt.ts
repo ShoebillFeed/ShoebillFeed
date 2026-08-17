@@ -418,7 +418,7 @@ const pt = {
     filterBySource: "Filtrar por fonte",
     exportTrendData: "Exportar CSV",
     risingKeywordsTitle: "Palavras-chave em ascensão",
-    risingKeywordsDesc: "Palavras-chave cujo uso está a acelerar — «Esta semana» apanha picos súbitos, «Este mês» apanha um crescimento lento e sustentado que uma vista semanal é demasiado curta para mostrar. NOVA assinala uma palavra-chave sem histórico antes deste período.",
+    risingKeywordsDesc: "Palavras-chave cujo uso está a acelerar — «Esta semana» apanha picos súbitos, «Este mês» apanha um crescimento lento e sustentado que uma vista semanal é demasiado curta para mostrar. NOVA assinala uma palavra-chave sem histórico antes deste período. Clique em + para começar a acompanhar uma palavra-chave como tópico em Tendências, abaixo.",
     risingWeekly: "Esta semana",
     risingMonthly: "Este mês",
     risingNewcomer: "NOVA",

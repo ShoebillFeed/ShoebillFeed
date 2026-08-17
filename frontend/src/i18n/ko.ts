@@ -418,7 +418,7 @@ const ko = {
     filterBySource: "소스로 필터",
     exportTrendData: "CSV 내보내기",
     risingKeywordsTitle: "상승 중인 키워드",
-    risingKeywordsDesc: "사용 빈도가 빠르게 늘고 있는 키워드입니다 -- \"이번 주\"는 급격한 증가를, \"이번 달\"은 주간 단위로는 보이지 않는 느리고 꾸준한 증가를 포착합니다. NEW는 이 기간 이전에 기록이 없던 키워드를 나타냅니다.",
+    risingKeywordsDesc: "사용 빈도가 빠르게 늘고 있는 키워드입니다 -- \"이번 주\"는 급격한 증가를, \"이번 달\"은 주간 단위로는 보이지 않는 느리고 꾸준한 증가를 포착합니다. NEW는 이 기간 이전에 기록이 없던 키워드를 나타냅니다. +를 클릭하면 아래 트렌드에서 해당 키워드를 주제로 추적할 수 있습니다.",
     risingWeekly: "이번 주",
     risingMonthly: "이번 달",
     risingNewcomer: "NEW",

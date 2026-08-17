@@ -418,7 +418,7 @@ const ro = {
     filterBySource: "Filtrați după sursă",
     exportTrendData: "Exportați CSV",
     risingKeywordsTitle: "Cuvinte cheie în creștere",
-    risingKeywordsDesc: "Cuvinte cheie a căror utilizare este în accelerare -- „Săptămâna aceasta” prinde creșteri bruște, „Luna aceasta” prinde o creștere lentă și susținută, prea scurtă pentru a fi vizibilă într-o vizualizare săptămânală. NOU marchează un cuvânt cheie fără istoric înainte de această perioadă.",
+    risingKeywordsDesc: "Cuvinte cheie a căror utilizare este în accelerare -- „Săptămâna aceasta” prinde creșteri bruște, „Luna aceasta” prinde o creștere lentă și susținută, prea scurtă pentru a fi vizibilă într-o vizualizare săptămânală. NOU marchează un cuvânt cheie fără istoric înainte de această perioadă. Faceți clic pe + pentru a începe să urmăriți un cuvânt cheie ca subiect în Tendințe, mai jos.",
     risingWeekly: "Săptămâna aceasta",
     risingMonthly: "Luna aceasta",
     risingNewcomer: "NOU",

@@ -418,7 +418,7 @@ const zh = {
     filterBySource: "按来源筛选",
     exportTrendData: "导出 CSV",
     risingKeywordsTitle: "上升关键词",
-    risingKeywordsDesc: "使用频率正在加速上升的关键词——“本周”捕捉突然的激增，“本月”捕捉周视图过短、无法体现的缓慢持续增长。NEW 表示该关键词在此周期之前没有历史记录。",
+    risingKeywordsDesc: "使用频率正在加速上升的关键词——“本周”捕捉突然的激增，“本月”捕捉周视图过短、无法体现的缓慢持续增长。NEW 表示该关键词在此周期之前没有历史记录。点击 + 即可在下方的趋势中将该关键词作为主题进行追踪。",
     risingWeekly: "本周",
     risingMonthly: "本月",
     risingNewcomer: "NEW",

@@ -418,7 +418,7 @@ const cs = {
     filterBySource: "Filtrovat podle zdroje",
     exportTrendData: "Exportovat CSV",
     risingKeywordsTitle: "Rostoucí klíčová slova",
-    risingKeywordsDesc: "Klíčová slova, jejichž používání zrychluje — „Tento týden“ zachytí náhlé nárůsty, „Tento měsíc“ zachytí pomalý, trvalý růst, který je na týdenní pohled příliš dlouhý. NOVÉ označuje klíčové slovo bez historie před tímto obdobím.",
+    risingKeywordsDesc: "Klíčová slova, jejichž používání zrychluje — „Tento týden“ zachytí náhlé nárůsty, „Tento měsíc“ zachytí pomalý, trvalý růst, který je na týdenní pohled příliš dlouhý. NOVÉ označuje klíčové slovo bez historie před tímto obdobím. Kliknutím na + začnete sledovat klíčové slovo jako téma v sekci Trendy níže.",
     risingWeekly: "Tento týden",
     risingMonthly: "Tento měsíc",
     risingNewcomer: "NOVÉ",

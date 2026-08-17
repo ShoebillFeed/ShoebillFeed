@@ -421,7 +421,7 @@ const pl = {
     filterBySource: "Filtruj według źródła",
     exportTrendData: "Eksportuj CSV",
     risingKeywordsTitle: "Rosnące słowa kluczowe",
-    risingKeywordsDesc: "Słowa kluczowe, których popularność rośnie najszybciej — „Ten tydzień” wychwytuje nagłe skoki, „Ten miesiąc” wychwytuje powolny, długotrwały wzrost, którego nie widać w ujęciu tygodniowym. Oznaczenie NOWE wskazuje słowo kluczowe bez wcześniejszej historii przed tym okresem.",
+    risingKeywordsDesc: "Słowa kluczowe, których popularność rośnie najszybciej — „Ten tydzień” wychwytuje nagłe skoki, „Ten miesiąc” wychwytuje powolny, długotrwały wzrost, którego nie widać w ujęciu tygodniowym. Oznaczenie NOWE wskazuje słowo kluczowe bez wcześniejszej historii przed tym okresem. Kliknij +, aby zacząć śledzić słowo kluczowe jako temat w sekcji Trendy poniżej.",
     risingWeekly: "Ten tydzień",
     risingMonthly: "Ten miesiąc",
     risingNewcomer: "NOWE",

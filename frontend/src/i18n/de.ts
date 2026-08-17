@@ -418,7 +418,7 @@ const de = {
     filterBySource: "Nach Quelle filtern",
     exportTrendData: "CSV exportieren",
     risingKeywordsTitle: "Aufsteigende Schlüsselwörter",
-    risingKeywordsDesc: "Schlüsselwörter, deren Nutzung zunimmt — „Diese Woche“ erfasst plötzliche Spitzen, „Diesen Monat“ erfasst langsames, anhaltendes Wachstum, das eine Wochenansicht nicht zeigen würde. NEU markiert ein Schlüsselwort ohne Historie vor diesem Zeitraum.",
+    risingKeywordsDesc: "Schlüsselwörter, deren Nutzung zunimmt — „Diese Woche“ erfasst plötzliche Spitzen, „Diesen Monat“ erfasst langsames, anhaltendes Wachstum, das eine Wochenansicht nicht zeigen würde. NEU markiert ein Schlüsselwort ohne Historie vor diesem Zeitraum. Klicke auf +, um ein Schlüsselwort als Thema in Trends weiter unten zu verfolgen.",
     risingWeekly: "Diese Woche",
     risingMonthly: "Diesen Monat",
     risingNewcomer: "NEU",

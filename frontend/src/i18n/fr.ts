@@ -418,7 +418,7 @@ const fr = {
     filterBySource: "Filtrer par source",
     exportTrendData: "Exporter en CSV",
     risingKeywordsTitle: "Mots-clés en hausse",
-    risingKeywordsDesc: "Mots-clés dont l'usage s'accélère — « Cette semaine » capte les pics soudains, « Ce mois-ci » capte les croissances lentes et durables qu'une vue hebdomadaire est trop courte pour révéler. NOUVEAU signale un mot-clé sans historique avant cette période.",
+    risingKeywordsDesc: "Mots-clés dont l'usage s'accélère — « Cette semaine » capte les pics soudains, « Ce mois-ci » capte les croissances lentes et durables qu'une vue hebdomadaire est trop courte pour révéler. NOUVEAU signale un mot-clé sans historique avant cette période. Cliquez sur + pour commencer à suivre un mot-clé comme sujet dans Tendances ci-dessous.",
     risingWeekly: "Cette semaine",
     risingMonthly: "Ce mois-ci",
     risingNewcomer: "NOUVEAU",

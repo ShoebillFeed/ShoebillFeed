@@ -418,7 +418,7 @@ const ja = {
     filterBySource: "ソースでフィルター",
     exportTrendData: "CSV をエクスポート",
     risingKeywordsTitle: "急上昇キーワード",
-    risingKeywordsDesc: "使用頻度が加速しているキーワードです — 「今週」は急激な急上昇を、「今月」は週単位の表示では見えない緩やかで持続的な成長を捉えます。NEW は、この期間より前に履歴がないキーワードを示します。",
+    risingKeywordsDesc: "使用頻度が加速しているキーワードです — 「今週」は急激な急上昇を、「今月」は週単位の表示では見えない緩やかで持続的な成長を捉えます。NEW は、この期間より前に履歴がないキーワードを示します。+ をクリックすると、そのキーワードを下のトレンドのトピックとして追跡できます。",
     risingWeekly: "今週",
     risingMonthly: "今月",
     risingNewcomer: "NEW",

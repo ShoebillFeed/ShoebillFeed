@@ -418,7 +418,7 @@ const en = {
     filterBySource: "Filter by source",
     exportTrendData: "Export CSV",
     risingKeywordsTitle: "Rising keywords",
-    risingKeywordsDesc: "Keywords whose usage is accelerating -- \"This week\" catches sudden spikes, \"This month\" catches slow, sustained growth a weekly view is too short to show. NEW marks a keyword with no history before this period.",
+    risingKeywordsDesc: "Keywords whose usage is accelerating -- \"This week\" catches sudden spikes, \"This month\" catches slow, sustained growth a weekly view is too short to show. NEW marks a keyword with no history before this period. Click + to start tracking a keyword as a topic in Trends below.",
     risingWeekly: "This week",
     risingMonthly: "This month",
     risingNewcomer: "NEW",

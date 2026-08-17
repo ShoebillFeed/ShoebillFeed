@@ -418,7 +418,7 @@ const es = {
     filterBySource: "Filtrar por fuente",
     exportTrendData: "Exportar CSV",
     risingKeywordsTitle: "Palabras clave en auge",
-    risingKeywordsDesc: "Palabras clave cuyo uso se está acelerando — «Esta semana» detecta picos repentinos, «Este mes» detecta un crecimiento lento y sostenido que una vista semanal es demasiado corta para mostrar. NUEVO marca una palabra clave sin historial antes de este período.",
+    risingKeywordsDesc: "Palabras clave cuyo uso se está acelerando — «Esta semana» detecta picos repentinos, «Este mes» detecta un crecimiento lento y sostenido que una vista semanal es demasiado corta para mostrar. NUEVO marca una palabra clave sin historial antes de este período. Haz clic en + para empezar a seguir una palabra clave como tema en Tendencias más abajo.",
     risingWeekly: "Esta semana",
     risingMonthly: "Este mes",
     risingNewcomer: "NUEVO",

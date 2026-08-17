@@ -418,7 +418,7 @@ const tr = {
     filterBySource: "Kaynağa göre filtrele",
     exportTrendData: "CSV olarak dışa aktar",
     risingKeywordsTitle: "Yükselen anahtar kelimeler",
-    risingKeywordsDesc: "Kullanımı hızlanan anahtar kelimeler — “Bu hafta” ani artışları, “Bu ay” ise haftalık görünümün yakalayamayacağı kadar yavaş ama sürekli büyümeyi yakalar. YENİ etiketi, bu dönemden önce geçmişi olmayan bir anahtar kelimeyi gösterir.",
+    risingKeywordsDesc: "Kullanımı hızlanan anahtar kelimeler — “Bu hafta” ani artışları, “Bu ay” ise haftalık görünümün yakalayamayacağı kadar yavaş ama sürekli büyümeyi yakalar. YENİ etiketi, bu dönemden önce geçmişi olmayan bir anahtar kelimeyi gösterir. Bir anahtar kelimeyi aşağıdaki Trendler bölümünde konu olarak takip etmeye başlamak için + simgesine tıklayın.",
     risingWeekly: "Bu hafta",
     risingMonthly: "Bu ay",
     risingNewcomer: "YENİ",

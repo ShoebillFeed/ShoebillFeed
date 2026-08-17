@@ -418,7 +418,7 @@ const nb = {
     filterBySource: "Filtrer etter kilde",
     exportTrendData: "Eksporter CSV",
     risingKeywordsTitle: "Stigende nøkkelord",
-    risingKeywordsDesc: "Nøkkelord med økende bruk — «Denne uken» fanger opp plutselige topper, «Denne måneden» fanger opp langsom, vedvarende vekst som en ukevisning er for kort til å vise. NY markerer et nøkkelord uten historikk før denne perioden.",
+    risingKeywordsDesc: "Nøkkelord med økende bruk — «Denne uken» fanger opp plutselige topper, «Denne måneden» fanger opp langsom, vedvarende vekst som en ukevisning er for kort til å vise. NY markerer et nøkkelord uten historikk før denne perioden. Klikk på + for å begynne å spore et nøkkelord som et emne i Trender nedenfor.",
     risingWeekly: "Denne uken",
     risingMonthly: "Denne måneden",
     risingNewcomer: "NY",

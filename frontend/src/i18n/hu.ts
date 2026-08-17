@@ -418,7 +418,7 @@ const hu = {
     filterBySource: "Szűrés forrás szerint",
     exportTrendData: "CSV exportálása",
     risingKeywordsTitle: "Felfutó kulcsszavak",
-    risingKeywordsDesc: "Kulcsszavak, amelyek használata gyorsulva növekszik -- a „Ezen a héten” a hirtelen kiugrásokat mutatja, a „Ebben a hónapban” pedig a lassú, tartós növekedést, amit egy heti nézet nem tudna megmutatni. Az ÚJ jelölés azt jelenti, hogy a kulcsszónak nincs korábbi előzménye ebben az időszakban.",
+    risingKeywordsDesc: "Kulcsszavak, amelyek használata gyorsulva növekszik -- a „Ezen a héten” a hirtelen kiugrásokat mutatja, a „Ebben a hónapban” pedig a lassú, tartós növekedést, amit egy heti nézet nem tudna megmutatni. Az ÚJ jelölés azt jelenti, hogy a kulcsszónak nincs korábbi előzménye ebben az időszakban. Kattints a + jelre, hogy egy kulcsszót témaként elkezdj követni az alábbi Trendek között.",
     risingWeekly: "Ezen a héten",
     risingMonthly: "Ebben a hónapban",
     risingNewcomer: "ÚJ",
