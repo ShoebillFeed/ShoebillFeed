@@ -1530,9 +1530,13 @@ function RisingKeywordsPanel() {
   const { t } = useTranslation();
   const [period, setPeriod] = useState<"weekly" | "monthly">("monthly");
   const [sourceIds, setSourceIds] = useState<string[]>([]);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const toggleSource = (id: string) =>
     setSourceIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  const { data, isLoading } = useRisingKeywords(sourceIds);
+  const toggleCategory = (id: string) =>
+    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const { data: categories = [] } = useCategories();
+  const { data, isLoading } = useRisingKeywords(sourceIds, categoryIds);
 
   const topics = useAnalyseTrendsStore((s) => s.topics);
   const setTopics = useAnalyseTrendsStore((s) => s.setTopics);
@@ -1579,7 +1583,16 @@ function RisingKeywordsPanel() {
         </div>
       </div>
 
-      <SourceFilterPills sourceIds={sourceIds} onToggle={toggleSource} />
+      <div className="flex flex-col gap-3">
+        <TrendFilterPills
+          title={t("stats.filterByCategory")}
+          items={categories.filter((c) => c.is_active)}
+          selectedIds={categoryIds}
+          onToggle={toggleCategory}
+          colorOf={(id) => categories.find((c) => c.id === id)?.color}
+        />
+        <SourceFilterPills sourceIds={sourceIds} onToggle={toggleSource} />
+      </div>
 
       {isLoading ? (
         <Loading />

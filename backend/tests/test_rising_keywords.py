@@ -1,6 +1,8 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
+from app.models.category import Category
+from app.models.news_cluster import NewsCluster
 from app.models.news_item import NewsItem
 from app.models.source import Source
 
@@ -12,7 +14,14 @@ def _make_source(db_session, user_id, name="Feed"):
     return source
 
 
-def _make_item(db_session, source, user_id, *, keywords, fetched_at):
+def _make_category(db_session, user_id, name="Tech", color="#6366f1"):
+    cat = Category(user_id=user_id, name=name, color=color, keywords=[])
+    db_session.add(cat)
+    db_session.flush()
+    return cat
+
+
+def _make_item(db_session, source, user_id, *, keywords, fetched_at, categories=None):
     unique = uuid.uuid4().hex
     item = NewsItem(
         source_id=source.id,
@@ -23,14 +32,33 @@ def _make_item(db_session, source, user_id, *, keywords, fetched_at):
         extracted_keywords=keywords,
         fetched_at=fetched_at,
     )
+    if categories:
+        item.categories = categories
     db_session.add(item)
     db_session.flush()
     return item
 
 
-def _make_n(db_session, source, user_id, n, *, keywords, fetched_at):
+def _make_n(db_session, source, user_id, n, *, keywords, fetched_at, categories=None):
     for _ in range(n):
-        _make_item(db_session, source, user_id, keywords=keywords, fetched_at=fetched_at)
+        _make_item(db_session, source, user_id, keywords=keywords, fetched_at=fetched_at, categories=categories)
+
+
+def _make_cluster(db_session, user_id, source, *, keywords, categories=None, created_at=None):
+    cluster = NewsCluster(user_id=user_id, title="Cluster", extracted_keywords=keywords)
+    if categories:
+        cluster.categories = categories
+    if created_at:
+        cluster.created_at = created_at
+    db_session.add(cluster)
+    db_session.flush()
+    for _ in range(2):
+        db_session.add(NewsItem(
+            source_id=source.id, user_id=user_id, cluster_id=cluster.id,
+            title="member", url=f"https://example.com/{uuid.uuid4().hex}", url_hash=f"hash-{uuid.uuid4().hex}",
+        ))
+    db_session.flush()
+    return cluster
 
 
 def _get(client, **params):
@@ -147,6 +175,38 @@ class TestRisingKeywords:
         body = resp.json()
         assert _find(body, "only a") is not None
         assert _find(body, "only b") is None
+
+    def test_filters_by_category(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        tech = _make_category(db_session, user.id, name="Tech")
+        world = _make_category(db_session, user.id, name="World")
+        now = datetime.now(timezone.utc)
+        _make_n(db_session, source, user.id, 5, keywords=["only tech"], fetched_at=now, categories=[tech])
+        _make_n(db_session, source, user.id, 5, keywords=["only world"], fetched_at=now, categories=[world])
+        db_session.commit()
+
+        resp = _get(auth_client, category_ids=[str(tech.id)])
+        body = resp.json()
+        assert _find(body, "only tech") is not None
+        assert _find(body, "only world") is None
+
+    def test_category_filter_also_applies_to_clusters(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        tech = _make_category(db_session, user.id, name="Tech")
+        world = _make_category(db_session, user.id, name="World")
+        now = datetime.now(timezone.utc)
+        for _ in range(5):
+            _make_cluster(db_session, user.id, source, keywords=["cluster tech term"], categories=[tech], created_at=now)
+        for _ in range(5):
+            _make_cluster(db_session, user.id, source, keywords=["cluster world term"], categories=[world], created_at=now)
+        db_session.commit()
+
+        resp = _get(auth_client, category_ids=[str(tech.id)])
+        body = resp.json()
+        assert _find(body, "cluster tech term") is not None
+        assert _find(body, "cluster world term") is None
 
     def test_does_not_count_another_users_items(self, client, db_session, make_user):
         from app.services.auth import create_token

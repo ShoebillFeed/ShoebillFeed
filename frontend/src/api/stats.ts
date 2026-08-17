@@ -185,10 +185,13 @@ export const statsApi = {
         paramsSerializer: { indexes: null },
       })
       .then((r) => r.data),
-  risingKeywords: (sourceIds: string[]) =>
+  risingKeywords: (sourceIds: string[], categoryIds: string[]) =>
     client
       .get<RisingKeywordResult[]>("/stats/rising-keywords", {
-        params: sourceIds.length ? { source_ids: sourceIds } : undefined,
+        params: {
+          ...(sourceIds.length ? { source_ids: sourceIds } : {}),
+          ...(categoryIds.length ? { category_ids: categoryIds } : {}),
+        },
         paramsSerializer: { indexes: null },
       })
       .then((r) => r.data),

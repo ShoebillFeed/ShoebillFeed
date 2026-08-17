@@ -68,9 +68,9 @@ export function useCategoryTrend(days: number, sourceIds: string[]) {
   });
 }
 
-export function useRisingKeywords(sourceIds: string[]) {
+export function useRisingKeywords(sourceIds: string[], categoryIds: string[]) {
   return useQuery({
-    queryKey: ["stats", "rising-keywords", sourceIds],
-    queryFn: () => statsApi.risingKeywords(sourceIds),
+    queryKey: ["stats", "rising-keywords", sourceIds, categoryIds],
+    queryFn: () => statsApi.risingKeywords(sourceIds, categoryIds),
   });
 }

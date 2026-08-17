@@ -860,6 +860,7 @@ def _merge_bucket_rows(rows, acc: dict[str, dict]):
 @router.get("/rising-keywords")
 def rising_keywords(
     source_ids: list[uuid.UUID] | None = Query(None),
+    category_ids: list[uuid.UUID] | None = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -888,6 +889,8 @@ def rising_keywords(
     both to filter one-off noise and because the monthly window is a
     superset of the weekly one, so it alone determines the full candidate
     set -- no separate query needed to establish "which keywords exist".
+    Optionally filtered by source_ids and/or category_ids, same as
+    keyword-trend/category-trend above.
     """
     now = datetime.now(timezone.utc)
     week_starts = _week_starts(_RISING_WEEKLY_BUCKETS, now)
@@ -926,6 +929,27 @@ def rising_keywords(
             .where(NewsItem.source_id.in_(source_ids))
         )
 
+    if category_ids:
+        # count(id.distinct()) already dedupes an item/cluster matching more
+        # than one filtered category, so this join can't inflate counts the
+        # way it would with a plain count(*).
+        item_weekly_q = (
+            item_weekly_q.join(news_item_categories, news_item_categories.c.news_item_id == NewsItem.id)
+            .where(news_item_categories.c.category_id.in_(category_ids))
+        )
+        item_monthly_q = (
+            item_monthly_q.join(news_item_categories, news_item_categories.c.news_item_id == NewsItem.id)
+            .where(news_item_categories.c.category_id.in_(category_ids))
+        )
+        cluster_weekly_q = (
+            cluster_weekly_q.join(news_cluster_categories, news_cluster_categories.c.news_cluster_id == NewsCluster.id)
+            .where(news_cluster_categories.c.category_id.in_(category_ids))
+        )
+        cluster_monthly_q = (
+            cluster_monthly_q.join(news_cluster_categories, news_cluster_categories.c.news_cluster_id == NewsCluster.id)
+            .where(news_cluster_categories.c.category_id.in_(category_ids))
+        )
+
     _merge_bucket_rows(db.execute(item_weekly_q).all(), weekly)
     _merge_bucket_rows(db.execute(cluster_weekly_q).all(), weekly)
     _merge_bucket_rows(db.execute(item_monthly_q).all(), monthly)
@@ -958,5 +982,3 @@ def rising_keywords(
 
     results.sort(key=lambda r: max(r["weekly_slope"], r["monthly_slope"]), reverse=True)
     return results[:_RISING_TOP_N]
-
-    return results
