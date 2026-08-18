@@ -655,7 +655,16 @@ def category_trend(
     a plain int here (not the int | None "all time" of keyword-trend) since
     a GET query string can't distinguish an explicit null from an omitted
     param the way a POST body can -- matches the other GET stat endpoints'
-    convention (activity/by-category/by-source) instead."""
+    convention (activity/by-category/by-source) instead.
+
+    Also returns `totals`: distinct-article counts per day across *all*
+    categories combined (same source filter, no category restriction at
+    all) -- lets the frontend show each category's share of that day's
+    total rather than a raw count. This can't be derived by summing the
+    per-category series client-side, since an article with two categories
+    would be double-counted in that sum but only counts once in `totals`;
+    for the same reason, per-category shares of `totals` aren't expected to
+    add up to 100% when categories overlap."""
     since = _since(days)
 
     categories = db.scalars(
@@ -770,7 +779,40 @@ def category_trend(
             "points": [{"date": d, "count": n} for d, n in sorted(uncat_counts.items())],
         })
 
-    return results
+    total_counts: dict[str, int] = {}
+
+    # cluster_id IS NULL -- a clustered item's story is represented by its
+    # NewsCluster row below, not by counting the member NewsItem rows too
+    # (those aren't separate "articles" for this purpose).
+    total_item_q = (
+        select(cast(NewsItem.fetched_at, Date).label("date"), func.count(NewsItem.id.distinct()).label("count"))
+        .where(
+            NewsItem.user_id == current_user.id,
+            NewsItem.fetched_at >= since,
+            NewsItem.cluster_id.is_(None),
+        )
+    )
+    if source_ids:
+        total_item_q = total_item_q.where(NewsItem.source_id.in_(source_ids))
+    for r in db.execute(total_item_q.group_by(cast(NewsItem.fetched_at, Date))).all():
+        total_counts[str(r.date)] = total_counts.get(str(r.date), 0) + r.count
+
+    total_cluster_q = (
+        select(cast(NewsCluster.created_at, Date).label("date"), func.count(NewsCluster.id.distinct()).label("count"))
+        .where(NewsCluster.user_id == current_user.id, NewsCluster.created_at >= since)
+    )
+    if source_ids:
+        total_cluster_q = (
+            total_cluster_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+            .where(NewsItem.source_id.in_(source_ids))
+        )
+    for r in db.execute(total_cluster_q.group_by(cast(NewsCluster.created_at, Date))).all():
+        total_counts[str(r.date)] = total_counts.get(str(r.date), 0) + r.count
+
+    return {
+        "categories": results,
+        "totals": [{"date": d, "count": n} for d, n in sorted(total_counts.items())],
+    }
 
 
 _MOMENTUM_WEEKLY_BUCKETS = 8

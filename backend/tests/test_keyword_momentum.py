@@ -238,7 +238,15 @@ class TestKeywordMomentumRising:
         user = auth_client.current_user
         source = _make_source(db_session, user.id)
         now = datetime.now(timezone.utc)
-        for months_ago, count in [(5, 6), (4, 5), (3, 4), (2, 3), (1, 2), (0, 1)]:
+        # Decline entirely in the older months, tapering to zero for the two
+        # most recent ones (which overlap the 8-week/56-day weekly window) --
+        # a nonzero point in the most recent week would otherwise give this
+        # keyword an artificial *positive* weekly slope (a fresh mention
+        # after a long gap looks like a spike to an 8-point OLS fit), which
+        # would make it eligible for "rising" via the max(weekly, monthly)
+        # inclusion rule even though the monthly trend is purely negative --
+        # not what this test means to exercise.
+        for months_ago, count in [(5, 6), (4, 5), (3, 4), (2, 3), (1, 0), (0, 0)]:
             _make_n(
                 db_session, source, user.id, count,
                 keywords=["fading fast"],

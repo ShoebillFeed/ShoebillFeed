@@ -155,8 +155,12 @@ to expand or collapse it:
 - **Activity** — items fetched/read/liked/disliked over time.
 - **Categories & Sources** — volume by category and by source, which
   pairs of sources most often cover the same story, and a category
-  coverage trend (one line per category, day by day, up to a year)
-  that can be filtered down to specific sources.
+  coverage trend (one line per category, day by day, up to a year,
+  shown as each category's share of that day's total articles rather
+  than a raw count, so a category that only grows because your whole
+  feed grew doesn't look the same as one actually gaining ground —
+  hover a point to see the underlying raw counts) that can be
+  filtered down to specific sources.
 - **Trends** — **Rising keywords** and **Falling keywords** panels at
   the top surface keywords whose usage is accelerating or declining,
   so you don't have to already know what to look for: "This week"

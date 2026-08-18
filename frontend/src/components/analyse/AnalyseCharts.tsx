@@ -614,22 +614,29 @@ function SourceFilterPills({
 }
 
 function CategoryTrendChart({ days, sourceIds }: { days: number; sourceIds: string[] }) {
+  const { t } = useTranslation();
   const gridColor = useGridColor();
   const { data, isLoading } = useCategoryTrend(days, sourceIds);
   if (isLoading) return <Loading />;
 
+  const categories = data?.categories ?? [];
   // Categories with zero coverage in this window/filter would otherwise
   // render as a flat line at 0 -- excluded so the legend only lists
-  // categories that actually had something happen.
-  const covered = (data ?? []).filter((r) => r.points.some((p) => p.count > 0));
+  // categories that actually had something happen. Filtered on the raw
+  // count, not the derived percentage, so this is unaffected by the % math
+  // below.
+  const covered = categories.filter((r) => r.points.some((p) => p.count > 0));
   if (covered.length === 0) return <Empty />;
 
+  const totalByDate = new Map((data?.totals ?? []).map((p) => [p.date, p.count]));
   const allDates = Array.from(new Set(covered.flatMap((r) => r.points.map((p) => p.date)))).sort();
   const chartData = allDates.map((date) => {
-    const row: Record<string, string | number> = { date: fmtDate(date, days) };
+    const total = totalByDate.get(date) ?? 0;
+    const row: Record<string, string | number> = { date: fmtDate(date, days), __total: total };
     for (const r of covered) {
-      const point = r.points.find((p) => p.date === date);
-      row[r.name] = point?.count ?? 0;
+      const count = r.points.find((p) => p.date === date)?.count ?? 0;
+      row[r.name] = total > 0 ? (count / total) * 100 : 0;
+      row[`${r.name}__raw`] = count;
     }
     return row;
   });
@@ -639,20 +646,37 @@ function CategoryTrendChart({ days, sourceIds }: { days: number; sourceIds: stri
       <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
         <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-        <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+        <YAxis
+          tick={{ fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(v: number) => `${v}%`}
+          width={36}
+        />
         <Tooltip
           cursor={{ stroke: "rgba(99,102,241,0.2)", strokeWidth: 1 }}
           wrapperStyle={WRAPPER_STYLE}
           content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null;
+            const total = (payload[0].payload as Record<string, number>).__total ?? 0;
             return (
               <TooltipBox label={label as string}>
                 {payload
                   .filter((p) => p.value !== undefined)
                   .sort((a, b) => (b.value as number) - (a.value as number))
-                  .map((p) => (
-                    <TooltipRow key={String(p.name)} color={p.color} name={`${p.name ?? ""}`} value={p.value as number} />
-                  ))}
+                  .map((p) => {
+                    const row = p.payload as Record<string, number>;
+                    const raw = row[`${p.name}__raw`] ?? 0;
+                    return (
+                      <TooltipRow
+                        key={String(p.name)}
+                        color={p.color}
+                        name={`${p.name ?? ""}`}
+                        value={`${(p.value as number).toFixed(1)}% (${t("stats.categoryTrendRawCount", { count: raw, total })})`}
+                      />
+                    );
+                  })}
+                <TooltipRow name={t("stats.categoryTrendTotalRow")} value={total} />
               </TooltipBox>
             );
           }}

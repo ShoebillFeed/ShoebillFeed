@@ -138,6 +138,15 @@ export interface CategoryTrendResult {
   points: CategoryTrendPoint[];
 }
 
+export interface CategoryTrendResponse {
+  categories: CategoryTrendResult[];
+  // Distinct-article count per day across *all* categories combined (same
+  // source filter, no category restriction) -- can't be derived by summing
+  // `categories[].points` client-side, since an article with two categories
+  // would double-count in that sum but only counts once here.
+  totals: CategoryTrendPoint[];
+}
+
 export type KeywordMomentumDirection = "rising" | "falling";
 
 export interface KeywordMomentumPoint {
@@ -188,7 +197,7 @@ export const statsApi = {
     client.post<KeywordTrendResult[]>("/stats/keyword-trend", payload).then((r) => r.data),
   categoryTrend: (days: number, sourceIds: string[]) =>
     client
-      .get<CategoryTrendResult[]>("/stats/category-trend", {
+      .get<CategoryTrendResponse>("/stats/category-trend", {
         params: { days, ...(sourceIds.length ? { source_ids: sourceIds } : {}) },
         paramsSerializer: { indexes: null },
       })

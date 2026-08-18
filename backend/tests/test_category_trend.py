@@ -74,7 +74,7 @@ class TestCategoryTrend:
         resp = _get(auth_client)
         assert resp.status_code == 200
         body = resp.json()
-        tech_result = next(r for r in body if r["name"] == "Tech")
+        tech_result = next(r for r in body["categories"] if r["name"] == "Tech")
         assert sum(p["count"] for p in tech_result["points"]) == 1
 
     def test_counts_a_matching_news_cluster_once_not_per_member(self, auth_client, db_session):
@@ -87,7 +87,7 @@ class TestCategoryTrend:
 
         resp = _get(auth_client)
         body = resp.json()
-        tech_result = next(r for r in body if r["name"] == "Tech")
+        tech_result = next(r for r in body["categories"] if r["name"] == "Tech")
         assert sum(p["count"] for p in tech_result["points"]) == 1
 
     def test_tracks_multiple_categories_independently(self, auth_client, db_session):
@@ -102,7 +102,7 @@ class TestCategoryTrend:
 
         resp = _get(auth_client)
         body = resp.json()
-        by_name = {r["name"]: sum(p["count"] for p in r["points"]) for r in body}
+        by_name = {r["name"]: sum(p["count"] for p in r["points"]) for r in body["categories"]}
         assert by_name["Tech"] == 2
         assert by_name["World"] == 1
 
@@ -117,7 +117,7 @@ class TestCategoryTrend:
 
         resp = _get(auth_client, source_ids=[str(source_a.id)])
         body = resp.json()
-        tech_result = next(r for r in body if r["name"] == "Tech")
+        tech_result = next(r for r in body["categories"] if r["name"] == "Tech")
         assert sum(p["count"] for p in tech_result["points"]) == 1
 
     def test_cluster_source_filter_matches_any_member_source(self, auth_client, db_session):
@@ -130,7 +130,7 @@ class TestCategoryTrend:
 
         resp = _get(auth_client, source_ids=[str(source_b.id)])
         body = resp.json()
-        tech_result = next(r for r in body if r["name"] == "Tech")
+        tech_result = next(r for r in body["categories"] if r["name"] == "Tech")
         assert sum(p["count"] for p in tech_result["points"]) == 1
 
     def test_excludes_items_outside_the_day_window(self, auth_client, db_session):
@@ -144,7 +144,7 @@ class TestCategoryTrend:
 
         resp = _get(auth_client, days=30)
         body = resp.json()
-        tech_result = next(r for r in body if r["name"] == "Tech")
+        tech_result = next(r for r in body["categories"] if r["name"] == "Tech")
         assert sum(p["count"] for p in tech_result["points"]) == 1
 
     def test_accepts_the_full_365_day_window(self, auth_client, db_session):
@@ -158,7 +158,7 @@ class TestCategoryTrend:
         resp = _get(auth_client, days=365)
         assert resp.status_code == 200
         body = resp.json()
-        tech_result = next(r for r in body if r["name"] == "Tech")
+        tech_result = next(r for r in body["categories"] if r["name"] == "Tech")
         assert sum(p["count"] for p in tech_result["points"]) == 1
 
     def test_includes_an_uncategorized_bucket(self, auth_client, db_session):
@@ -169,7 +169,7 @@ class TestCategoryTrend:
 
         resp = _get(auth_client)
         body = resp.json()
-        uncategorized = next((r for r in body if r["id"] == "uncategorized"), None)
+        uncategorized = next((r for r in body["categories"] if r["id"] == "uncategorized"), None)
         assert uncategorized is not None
         assert sum(p["count"] for p in uncategorized["points"]) == 1
 
@@ -180,7 +180,7 @@ class TestCategoryTrend:
 
         resp = _get(auth_client)
         body = resp.json()
-        assert all(r["name"] != "Retired" for r in body)
+        assert all(r["name"] != "Retired" for r in body["categories"])
 
     def test_does_not_count_another_users_items(self, client, db_session, make_user):
         from app.services.auth import create_token
@@ -194,8 +194,79 @@ class TestCategoryTrend:
 
         client.cookies.set("access_token", create_token(other.id, other.username))
         resp = _get(client)
-        assert resp.json() == []
+        body = resp.json()
+        assert body["categories"] == []
+        assert body["totals"] == []
 
     def test_rejects_a_day_window_beyond_the_hard_cap(self, auth_client):
         resp = _get(auth_client, days=99999)
         assert resp.status_code == 422
+
+
+class TestCategoryTrendTotals:
+    def test_totals_count_every_article_once_regardless_of_category(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        tech = _make_category(db_session, user.id, name="Tech")
+        world = _make_category(db_session, user.id, name="World")
+        _make_item(db_session, source, user.id, categories=[tech])
+        _make_item(db_session, source, user.id, categories=[world])
+        _make_item(db_session, source, user.id, categories=[])
+        db_session.commit()
+
+        resp = _get(auth_client)
+        body = resp.json()
+        assert sum(p["count"] for p in body["totals"]) == 3
+
+    def test_totals_count_a_multi_category_article_only_once(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        tech = _make_category(db_session, user.id, name="Tech")
+        world = _make_category(db_session, user.id, name="World")
+        # One article in two categories -- would double-count if totals were
+        # derived by summing the per-category series client-side.
+        _make_item(db_session, source, user.id, categories=[tech, world])
+        db_session.commit()
+
+        resp = _get(auth_client)
+        body = resp.json()
+        by_name = {r["name"]: sum(p["count"] for p in r["points"]) for r in body["categories"]}
+        assert by_name["Tech"] == 1
+        assert by_name["World"] == 1
+        assert sum(p["count"] for p in body["totals"]) == 1
+
+    def test_totals_count_a_cluster_once_not_per_member(self, auth_client, db_session):
+        user = auth_client.current_user
+        source_a = _make_source(db_session, user.id, name="A")
+        source_b = _make_source(db_session, user.id, name="B")
+        tech = _make_category(db_session, user.id, name="Tech")
+        _make_cluster(db_session, user.id, [source_a, source_b], categories=[tech])
+        db_session.commit()
+
+        resp = _get(auth_client)
+        body = resp.json()
+        assert sum(p["count"] for p in body["totals"]) == 1
+
+    def test_totals_respect_the_source_filter(self, auth_client, db_session):
+        user = auth_client.current_user
+        source_a = _make_source(db_session, user.id, name="A")
+        source_b = _make_source(db_session, user.id, name="B")
+        _make_item(db_session, source_a, user.id, categories=[])
+        _make_item(db_session, source_b, user.id, categories=[])
+        db_session.commit()
+
+        resp = _get(auth_client, source_ids=[str(source_a.id)])
+        body = resp.json()
+        assert sum(p["count"] for p in body["totals"]) == 1
+
+    def test_totals_respect_the_day_window(self, auth_client, db_session):
+        user = auth_client.current_user
+        source = _make_source(db_session, user.id)
+        now = datetime.now(timezone.utc)
+        _make_item(db_session, source, user.id, categories=[], fetched_at=now - timedelta(days=100))
+        _make_item(db_session, source, user.id, categories=[], fetched_at=now - timedelta(days=1))
+        db_session.commit()
+
+        resp = _get(auth_client, days=30)
+        body = resp.json()
+        assert sum(p["count"] for p in body["totals"]) == 1
