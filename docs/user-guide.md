@@ -113,6 +113,13 @@ configuration. Sources can be exported/imported as JSON, and you can copy
 another user's shared source configuration directly rather than
 re-entering it.
 
+An active source that hasn't fetched any new articles in the past 7
+days gets a **"No recent articles"** badge — a signal its feed may be
+broken, empty, or misconfigured (a brand-new source, or one with a
+few days of genuine quiet, won't be flagged). Hover the badge for
+details, and use the fetch-now button on that source to test it
+directly.
+
 ## Learning
 
 **Settings → Learning** shows every category's learned weight, manual
@@ -142,7 +149,8 @@ the subset of your feed you actually want interrupted for.
 ## Analytics
 
 **Analytics** (top-level nav, next to Podcasts) is a per-user activity
-view split into tabs:
+view split into tabs. Every card is collapsible — click its title bar
+to expand or collapse it:
 
 - **Activity** — items fetched/read/liked/disliked over time.
 - **Categories & Sources** — volume by category and by source, which
@@ -157,9 +165,10 @@ view split into tabs:
   few weeks) that a weekly view is too short to show. A **NEW** badge
   marks a rising keyword with no history before this period; a
   **QUIET** badge marks a falling keyword that's gone completely
-  silent after being active. Click the `+` next to any keyword to
-  start tracking it as a proper topic below. Below that: how coverage
-  of a keyword,
+  silent after being active. Both panels can be filtered by category
+  or source too, independently of each other and of the topic chart
+  below. Click the `+` next to any keyword to start tracking it as a
+  proper topic below. Below that: how coverage of a keyword,
   or a loose group of OR-matched keywords ("topic"), has evolved day
   by day. Add up to six
   topics to compare on one chart, each built from your own keywords or
