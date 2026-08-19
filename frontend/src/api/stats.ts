@@ -27,6 +27,19 @@ export interface ImpactTrendResponse {
   high_impact_threshold: number;
 }
 
+export type BacklogBucketKey = "under_1d" | "1_3d" | "3_7d" | "7_14d" | "14_30d" | "over_30d";
+
+export interface BacklogBucket {
+  key: BacklogBucketKey;
+  count: number;
+}
+
+export interface ReadLaterBacklog {
+  total: number;
+  buckets: BacklogBucket[];
+  oldest_days: number | null;
+}
+
 export interface CategoryCount {
   id: string;
   name: string;
@@ -221,6 +234,8 @@ export const statsApi = {
         paramsSerializer: { indexes: null },
       })
       .then((r) => r.data),
+  readLaterBacklog: () =>
+    client.get<ReadLaterBacklog>("/stats/read-later-backlog").then((r) => r.data),
   byCategory: (days: number) =>
     client.get<CategoryCount[]>("/stats/by-category", { params: { days } }).then((r) => r.data),
   bySource: (days: number) =>

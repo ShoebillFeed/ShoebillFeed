@@ -165,6 +165,65 @@ def impact_trend(
     }
 
 
+_BACKLOG_AGE_BUCKETS = [
+    ("under_1d", 0, 1),
+    ("1_3d", 1, 3),
+    ("3_7d", 3, 7),
+    ("7_14d", 7, 14),
+    ("14_30d", 14, 30),
+    ("over_30d", 30, None),
+]
+
+
+@router.get("/read-later-backlog")
+def read_later_backlog(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Current read-later backlog (saved, still unread), bucketed by age.
+    Unlike every other endpoint in this file, there's no day-window param
+    -- this is a snapshot of current state, not a time series. Age
+    buckets top out at 30 days to line up with cleanup_old_items'
+    retention sweep (tasks/fetch_tasks.py), which deletes non-relevant,
+    non-read-later items older than 30 days -- read_later is the one flag
+    that exempts an item from that sweep, so the "30d+" bucket answers
+    "how much of my backlog would already be gone if I hadn't saved it".
+    "Unread" specifically means read_later=True AND is_read=False: an
+    item can be read_later=True but already read (kept for reference),
+    which isn't backlog pressure the same way, so it's excluded here."""
+    now = datetime.now(timezone.utc)
+
+    item_ages = db.scalars(
+        select(NewsItem.fetched_at).where(
+            NewsItem.user_id == current_user.id,
+            NewsItem.read_later == True,  # noqa: E712
+            NewsItem.is_read == False,  # noqa: E712
+        )
+    ).all()
+    cluster_ages = db.scalars(
+        select(NewsCluster.created_at).where(
+            NewsCluster.user_id == current_user.id,
+            NewsCluster.read_later == True,  # noqa: E712
+            NewsCluster.is_read == False,  # noqa: E712
+        )
+    ).all()
+
+    ages_days = [(now - ts).total_seconds() / 86400 for ts in (*item_ages, *cluster_ages)]
+
+    bucket_counts = {key: 0 for key, _, _ in _BACKLOG_AGE_BUCKETS}
+    for age in ages_days:
+        for key, lo, hi in _BACKLOG_AGE_BUCKETS:
+            if age >= lo and (hi is None or age < hi):
+                bucket_counts[key] += 1
+                break
+
+    return {
+        "total": len(ages_days),
+        "buckets": [{"key": key, "count": bucket_counts[key]} for key, _, _ in _BACKLOG_AGE_BUCKETS],
+        "oldest_days": max(ages_days) if ages_days else None,
+    }
+
+
 @router.get("/by-category")
 def by_category(
     days: Annotated[int, Query(ge=1, le=365)] = 30,

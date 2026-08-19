@@ -14,7 +14,7 @@ import { Check, Download, PauseCircle, Plus, RefreshCw, ThumbsUp, X } from "luci
 import { cn } from "../../lib/utils";
 import { Accordion } from "../ui/Accordion";
 import {
-  useActivityStats, useImpactTrend, useCategoryStats, useSourceStats, useSourceSignalQuality,
+  useActivityStats, useImpactTrend, useReadLaterBacklog, useCategoryStats, useSourceStats, useSourceSignalQuality,
   useWeightHistory, useRelevanceCalibration, useSourceClusters,
   useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend, useCategoryTrend, useKeywordMomentum,
 } from "../../hooks/useStats";
@@ -26,7 +26,7 @@ import { useAnalyseTrendsStore } from "../../stores/analyseTrendsStore";
 import type { TrendTopicConfig } from "../../stores/analyseTrendsStore";
 import { statsApi } from "../../api/stats";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { KeywordClusterMapEntry, KeywordMomentumDirection, KeywordTrendResult, PodcastEpisodeStat } from "../../api/stats";
+import type { BacklogBucketKey, KeywordClusterMapEntry, KeywordMomentumDirection, KeywordTrendResult, PodcastEpisodeStat } from "../../api/stats";
 
 class ChartErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
   state = { crashed: false };
@@ -367,6 +367,74 @@ function ImpactTrendChart({ days, sourceIds }: { days: number; sourceIds: string
         />
       </ComposedChart>
     </ResponsiveContainer>
+  );
+}
+
+// ── Read-later backlog health ─────────────────────────────────────────────────
+
+const BACKLOG_BUCKET_KEYS: BacklogBucketKey[] = ["under_1d", "1_3d", "3_7d", "7_14d", "14_30d", "over_30d"];
+const BACKLOG_BUCKET_COLORS: Record<BacklogBucketKey, string> = {
+  under_1d: "#10b981",
+  "1_3d": "#84cc16",
+  "3_7d": "#f59e0b",
+  "7_14d": "#f97316",
+  "14_30d": "#ef4444",
+  over_30d: "#991b1b",
+};
+
+function ReadLaterBacklogChart() {
+  const { t } = useTranslation();
+  const gridColor = useGridColor();
+  const { data, isLoading } = useReadLaterBacklog();
+  if (isLoading) return <Loading />;
+  if (!data || data.total === 0) return <Empty />;
+
+  const byKey = new Map(data.buckets.map((b) => [b.key, b.count]));
+  const chartData = BACKLOG_BUCKET_KEYS.map((key) => ({
+    key,
+    label: t(`stats.backlogBucket_${key}`),
+    count: byKey.get(key) ?? 0,
+    color: BACKLOG_BUCKET_COLORS[key],
+  }));
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-baseline gap-4 text-sm">
+        <span className="text-gray-700 dark:text-gray-200">
+          <span className="font-semibold text-lg">{data.total}</span> {t("stats.backlogTotalLabel")}
+        </span>
+        {data.oldest_days !== null && (
+          <span className="text-gray-400 dark:text-gray-500">
+            {t("stats.backlogOldestLabel", { days: Math.floor(data.oldest_days) })}
+          </span>
+        )}
+      </div>
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 32, left: 8, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} horizontal={false} />
+          <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+          <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={90} />
+          <Tooltip
+            cursor={false}
+            wrapperStyle={WRAPPER_STYLE}
+            content={({ active, payload }) => {
+              if (!active || !payload?.[0]) return null;
+              const d = payload[0].payload as (typeof chartData)[number];
+              return (
+                <TooltipBox>
+                  <TooltipRow color={d.color} name={d.label} value={d.count} />
+                </TooltipBox>
+              );
+            }}
+          />
+          <Bar dataKey="count" name={t("stats.backlogTotalLabel")} radius={[0, 4, 4, 0]}>
+            {chartData.map((entry) => (
+              <Cell key={entry.key} fill={entry.color} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 
@@ -1357,6 +1425,10 @@ export function AnalyseActivityTab() {
             sourceIds={impactSourceIds}
           />
         </div>
+      </ChartCard>
+
+      <ChartCard title={t("stats.backlogTitle")} description={t("stats.backlogDesc")}>
+        <ReadLaterBacklogChart />
       </ChartCard>
     </div>
   );

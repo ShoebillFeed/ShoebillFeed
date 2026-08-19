@@ -16,6 +16,13 @@ export function useImpactTrend(days: number, sourceIds: string[]) {
   });
 }
 
+export function useReadLaterBacklog() {
+  return useQuery({
+    queryKey: ["stats", "read-later-backlog"],
+    queryFn: () => statsApi.readLaterBacklog(),
+  });
+}
+
 export function useCategoryStats(days: number) {
   return useQuery({
     queryKey: ["stats", "by-category", days],

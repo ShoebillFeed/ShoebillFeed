@@ -152,10 +152,14 @@ the subset of your feed you actually want interrupted for.
 view split into tabs. Every card is collapsible — click its title bar
 to expand or collapse it:
 
-- **Activity** — items fetched/read/liked/disliked over time, and an
+- **Activity** — items fetched/read/liked/disliked over time, an
   impact-score trend (daily average impact score plus a count of
   "high impact" stories, using the same threshold as your push
-  notifications) that can be filtered down to specific sources.
+  notifications) that can be filtered down to specific sources, and a
+  read-later backlog snapshot (how many saved-for-later articles are
+  still unread, bucketed by age — read-later is the one thing this
+  app never auto-deletes, so the 30+ day bucket shows what would
+  already be gone if you hadn't saved it).
 - **Categories & Sources** — volume by category and by source, source
   signal quality (what share of each source's articles you actually
   mark relevant vs. dislike, so a source that sends a lot but rarely
