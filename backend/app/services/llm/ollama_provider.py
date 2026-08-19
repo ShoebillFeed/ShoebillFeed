@@ -53,11 +53,22 @@ class OllamaProvider(LLMProvider):
         self.model_name = model
         self.default_timeout = float(timeout)
         self.client = httpx.Client(timeout=self.default_timeout)
+        # Set once a `think: true` request 400s -- some models (e.g. gemma3)
+        # don't support Ollama's think/no-think toggle at all, so every call
+        # that opts into it would otherwise fail once and pay a full extra
+        # round-trip on *every single request* for the life of the process,
+        # not just the first. get_llm_provider() is lru_cached per process
+        # (see llm/factory.py), so this instance -- and the flag -- lives
+        # for the whole worker's lifetime, same scope the cache assumes.
+        self._think_unsupported = False
 
     def _post(self, payload: dict, timeout: float | None = None) -> dict:
         kw = {"timeout": timeout} if timeout is not None else {}
+        if self._think_unsupported and payload.get("think"):
+            payload = {**payload, "think": False}
         resp = self.client.post(f"{self.base_url}/api/generate", json=payload, **kw)
         if resp.status_code == 400 and payload.get("think"):
+            self._think_unsupported = True
             payload = {**payload, "think": False}
             resp = self.client.post(f"{self.base_url}/api/generate", json=payload, **kw)
         resp.raise_for_status()
