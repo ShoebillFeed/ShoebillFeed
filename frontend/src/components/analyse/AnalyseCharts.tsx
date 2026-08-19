@@ -211,6 +211,20 @@ function useGridColor() {
 const CURSOR_STYLE = { fill: "rgba(99,102,241,0.06)" };
 const WRAPPER_STYLE = { background: "none", border: "none", boxShadow: "none", zIndex: 50 } as const;
 
+// A static 0-100% domain makes real-world rates (often single digits) render
+// as barely-visible slivers. Scales the axis to the data instead: 20%
+// headroom above the largest value, rounded up to a clean tick step, capped
+// at 100 since these are all percentages. Passed as the domain's max --
+// Recharts calls it with the computed data max across every series sharing
+// the axis.
+function percentAxisMax(dataMax: number): number {
+  if (!isFinite(dataMax) || dataMax <= 0) return 10;
+  const padded = dataMax * 1.2;
+  if (padded >= 100) return 100;
+  const step = padded <= 10 ? 1 : padded <= 20 ? 2 : padded <= 50 ? 5 : 10;
+  return Math.ceil(padded / step) * step;
+}
+
 // ── Reading activity ──────────────────────────────────────────────────────────
 
 const ACTIVITY_SERIES = [
@@ -593,7 +607,7 @@ function SourceSignalQualityChart({ days }: { days: number }) {
         <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} horizontal={false} />
         <XAxis
           type="number"
-          domain={[0, 100]}
+          domain={[0, percentAxisMax]}
           tick={{ fontSize: 11 }}
           tickLine={false}
           axisLine={false}
@@ -732,7 +746,7 @@ function RelevanceCalibrationChart({ days }: { days: number }) {
           label={{ value: t("stats.calibrationScoreAxis"), position: "insideBottom", offset: -2, fontSize: 11, fill: gridColor }}
         />
         <YAxis
-          domain={[0, 100]}
+          domain={[0, percentAxisMax]}
           tick={{ fontSize: 11 }}
           tickLine={false}
           axisLine={false}
