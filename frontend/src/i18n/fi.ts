@@ -394,7 +394,7 @@ const fi = {
     bySourceTitle: "Artikkelit lähteittäin",
     bySourceDesc: "Määrä lähteen mukaan. Vie hiiri palkin päälle nähdäksesi sen lähteen kategoriamäärittely.",
     signalQualityTitle: "Lähteen signaalin laatu",
-    signalQualityDesc: "Kuinka suuren osan kunkin lähteen artikkeleista todella merkitset relevanteiksi tai ei kiinnostaviksi – ei vain kuinka monta artikkelia se lähettää. Lähde, joka lähettää paljon mutta saa harvoin relevantti-merkinnän, saattaa kannattaa karsia.",
+    signalQualityDesc: "Kuinka suuren osan kunkin lähteen artikkeleista todella merkitset relevanteiksi tai ei kiinnostaviksi – ei vain kuinka monta artikkelia se lähettää. Lähde, joka lähettää paljon mutta saa harvoin relevantti-merkinnän, saattaa kannattaa karsia. Kun useampi lähde uutisoi samasta jutusta ja merkitset sen relevantiksi, tämä yksi päätös jaetaan tasan uutisoineiden lähteiden kesken, joten luvut voivat olla tässä murtolukuja (esim. 0,5) eivätkä aina kokonaislukuja.",
     signalRelevant: "Merkitty relevantiksi",
     signalDisliked: "Ei kiinnostava",
     signalRead: "Luettu",

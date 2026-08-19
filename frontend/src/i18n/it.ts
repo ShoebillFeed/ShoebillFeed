@@ -394,7 +394,7 @@ const it = {
     bySourceTitle: "Articoli per fonte",
     bySourceDesc: "Volume per fonte. Passa il cursore su una barra per vedere la ripartizione.",
     signalQualityTitle: "Qualità del segnale della fonte",
-    signalQualityDesc: "Quanta parte del volume di ciascuna fonte segni davvero come rilevante o come non interessante, non solo quanti articoli invia. Una fonte che invia molto ma raramente ottiene un segno di rilevanza potrebbe valere la pena di essere rimossa.",
+    signalQualityDesc: "Quanta parte del volume di ciascuna fonte segni davvero come rilevante o come non interessante, non solo quanti articoli invia. Una fonte che invia molto ma raramente ottiene un segno di rilevanza potrebbe valere la pena di essere rimossa. Quando una notizia è coperta da più fonti e la segni come rilevante, questa unica decisione viene ripartita in parti uguali tra le fonti che l'hanno riportata, quindi i conteggi qui possono essere frazionari (es. 0,5) invece che sempre interi.",
     signalRelevant: "Segnato rilevante",
     signalDisliked: "Non interessante",
     signalRead: "Letto",

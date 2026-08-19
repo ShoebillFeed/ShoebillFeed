@@ -394,7 +394,7 @@ const fr = {
     bySourceTitle: "Articles par source",
     bySourceDesc: "Volume par source. Survolez une barre pour voir la répartition.",
     signalQualityTitle: "Qualité du signal de la source",
-    signalQualityDesc: "La part du volume de chaque source que vous marquez réellement comme pertinente ou non intéressante, pas seulement le nombre d'articles envoyés. Une source qui envoie beaucoup mais obtient rarement une marque de pertinence mérite peut-être d'être retirée.",
+    signalQualityDesc: "La part du volume de chaque source que vous marquez réellement comme pertinente ou non intéressante, pas seulement le nombre d'articles envoyés. Une source qui envoie beaucoup mais obtient rarement une marque de pertinence mérite peut-être d'être retirée. Quand une actualité est couverte par plusieurs sources et que vous la marquez comme pertinente, cette décision unique est répartie également entre les sources qui l'ont couverte, donc les décomptes ici peuvent être fractionnaires (ex. 0,5) plutôt que toujours entiers.",
     signalRelevant: "Marqué pertinent",
     signalDisliked: "Non intéressant",
     signalRead: "Lu",

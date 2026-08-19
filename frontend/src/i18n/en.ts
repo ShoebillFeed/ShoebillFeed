@@ -394,7 +394,7 @@ const en = {
     bySourceTitle: "Articles by source",
     bySourceDesc: "Volume per source. Hover a bar to see the category breakdown for that source.",
     signalQualityTitle: "Source signal quality",
-    signalQualityDesc: "How much of each source's volume you actually mark relevant vs. dislike, not just how many articles it sends -- a source that sends a lot but rarely earns a relevant mark may be worth pruning.",
+    signalQualityDesc: "How much of each source's volume you actually mark relevant vs. dislike, not just how many articles it sends -- a source that sends a lot but rarely earns a relevant mark may be worth pruning. When a story is covered by several sources and you mark it relevant, that one decision is split evenly across the sources that reported it, so counts here can be fractional (e.g. 0.5) rather than always whole numbers.",
     signalRelevant: "Marked relevant",
     signalDisliked: "Disliked",
     signalRead: "Read",

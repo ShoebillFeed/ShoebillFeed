@@ -394,7 +394,7 @@ const nl = {
     bySourceTitle: "Artikelen per bron",
     bySourceDesc: "Volume per bron. Beweeg over een balk om de categorieverdeling te zien.",
     signalQualityTitle: "Signaalkwaliteit van de bron",
-    signalQualityDesc: "Hoeveel van het volume van elke bron je daadwerkelijk als relevant markeert of als niet interessant afwijst, niet alleen hoeveel artikelen ze verstuurt. Een bron die veel verstuurt maar zelden een relevant-markering krijgt, is misschien het overwegen waard om te verwijderen.",
+    signalQualityDesc: "Hoeveel van het volume van elke bron je daadwerkelijk als relevant markeert of als niet interessant afwijst, niet alleen hoeveel artikelen ze verstuurt. Een bron die veel verstuurt maar zelden een relevant-markering krijgt, is misschien het overwegen waard om te verwijderen. Wanneer een verhaal door meerdere bronnen wordt gedekt en je markeert het als relevant, wordt die ene beslissing gelijk verdeeld over de bronnen die erover berichtten, dus de aantallen hier kunnen fracties zijn (bijv. 0,5) in plaats van altijd hele getallen.",
     signalRelevant: "Als relevant gemarkeerd",
     signalDisliked: "Niet interessant",
     signalRead: "Gelezen",

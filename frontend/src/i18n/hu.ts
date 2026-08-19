@@ -394,7 +394,7 @@ const hu = {
     bySourceTitle: "Cikkek forrás szerint",
     bySourceDesc: "Mennyiség forrásonként. Vigye az egeret egy sáv fölé, hogy megtekintse az adott forrás kategóriaeloszlását.",
     signalQualityTitle: "Forrás jelminősége",
-    signalQualityDesc: "Az egyes forrásokból érkező cikkek mekkora részét jelölöd ténylegesen relevánsnak vagy érdektelennek – nem csak azt, hány cikket küld. Egy forrás, amely sokat küld, de ritkán kap releváns jelölést, érdemes lehet elhagyni.",
+    signalQualityDesc: "Az egyes forrásokból érkező cikkek mekkora részét jelölöd ténylegesen relevánsnak vagy érdektelennek – nem csak azt, hány cikket küld. Egy forrás, amely sokat küld, de ritkán kap releváns jelölést, érdemes lehet elhagyni. Ha egy hírt több forrás is közöl, és relevánsnak jelölöd, ez az egy döntés egyenlően oszlik meg a hírt közlő források között, így az itteni számok törtszámok is lehetnek (pl. 0,5), nem mindig egész számok.",
     signalRelevant: "Relevánsnak jelölve",
     signalDisliked: "Érdektelen",
     signalRead: "Olvasva",

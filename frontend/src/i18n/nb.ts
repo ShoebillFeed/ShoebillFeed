@@ -394,7 +394,7 @@ const nb = {
     bySourceTitle: "Artikler per kilde",
     bySourceDesc: "Volum per kilde. Hold musepekeren over en stolpe for å se kategorifordelingen for den kilden.",
     signalQualityTitle: "Kildens signalkvalitet",
-    signalQualityDesc: "Hvor stor andel av hver kildes volum du faktisk markerer som relevant eller ikke interessant – ikke bare hvor mange artikler den sender. En kilde som sender mye, men sjelden får en relevant-merking, kan være verdt å vurdere å fjerne.",
+    signalQualityDesc: "Hvor stor andel av hver kildes volum du faktisk markerer som relevant eller ikke interessant – ikke bare hvor mange artikler den sender. En kilde som sender mye, men sjelden får en relevant-merking, kan være verdt å vurdere å fjerne. Når en sak dekkes av flere kilder og du merker den som relevant, blir denne ene avgjørelsen fordelt likt mellom kildene som omtalte den, så tallene her kan være brøktall (f.eks. 0,5) i stedet for alltid hele tall.",
     signalRelevant: "Merket relevant",
     signalDisliked: "Ikke interessant",
     signalRead: "Lest",

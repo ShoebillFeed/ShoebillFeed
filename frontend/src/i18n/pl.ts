@@ -395,7 +395,7 @@ const pl = {
     bySourceTitle: "Artykuły według źródła",
     bySourceDesc: "Wolumen według źródła. Najedź na słupek, aby zobaczyć podział.",
     signalQualityTitle: "Jakość sygnału źródła",
-    signalQualityDesc: "Jaka część artykułów z danego źródła jest faktycznie oznaczana jako trafna lub jako nieinteresująca, a nie tylko liczba wysyłanych artykułów. Źródło, które wysyła dużo, ale rzadko zdobywa oznaczenie trafności, może warto rozważyć usunięcie.",
+    signalQualityDesc: "Jaka część artykułów z danego źródła jest faktycznie oznaczana jako trafna lub jako nieinteresująca, a nie tylko liczba wysyłanych artykułów. Źródło, które wysyła dużo, ale rzadko zdobywa oznaczenie trafności, może warto rozważyć usunięcie. Gdy dana historia jest relacjonowana przez kilka źródeł i oznaczysz ją jako trafną, ta jedna decyzja jest dzielona równo między źródła, które o niej informowały, więc liczby tutaj mogą być ułamkowe (np. 0,5), a nie zawsze całkowite.",
     signalRelevant: "Oznaczone jako trafne",
     signalDisliked: "Nieinteresujące",
     signalRead: "Przeczytane",

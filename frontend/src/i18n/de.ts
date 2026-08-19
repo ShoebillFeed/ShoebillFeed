@@ -394,7 +394,7 @@ const de = {
     bySourceTitle: "Artikel nach Quelle",
     bySourceDesc: "Volumen pro Quelle. Fahre über einen Balken, um die Kategorieverteilung zu sehen.",
     signalQualityTitle: "Signalqualität der Quelle",
-    signalQualityDesc: "Wie viel vom Volumen jeder Quelle du tatsächlich als relevant markierst oder als nicht interessant ablehnst – nicht nur, wie viele Artikel sie liefert. Eine Quelle, die viel sendet, aber selten als relevant markiert wird, ist eventuell einen Blick wert, ob sie noch gebraucht wird.",
+    signalQualityDesc: "Wie viel vom Volumen jeder Quelle du tatsächlich als relevant markierst oder als nicht interessant ablehnst – nicht nur, wie viele Artikel sie liefert. Eine Quelle, die viel sendet, aber selten als relevant markiert wird, ist eventuell einen Blick wert, ob sie noch gebraucht wird. Wird eine Geschichte von mehreren Quellen abgedeckt und du markierst sie als relevant, wird diese eine Entscheidung gleichmäßig auf die berichtenden Quellen aufgeteilt – die Zahlen hier können daher Brüche sein (z. B. 0,5) statt immer ganze Zahlen.",
     signalRelevant: "Als relevant markiert",
     signalDisliked: "Nicht interessant",
     signalRead: "Gelesen",

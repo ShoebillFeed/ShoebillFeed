@@ -394,7 +394,7 @@ const cs = {
     bySourceTitle: "Články podle zdroje",
     bySourceDesc: "Objem na zdroj. Najeďte myší na sloupec, abyste viděli rozdělení kategorií pro daný zdroj.",
     signalQualityTitle: "Kvalita signálu zdroje",
-    signalQualityDesc: "Jak velkou část objemu daného zdroje skutečně označíte jako relevantní, nebo naopak jako nezajímavou – ne jen kolik článků posílá. Zdroj, který posílá hodně článků, ale jen zřídka získá relevantní hodnocení, možná stojí za zvážení odebrání.",
+    signalQualityDesc: "Jak velkou část objemu daného zdroje skutečně označíte jako relevantní, nebo naopak jako nezajímavou – ne jen kolik článků posílá. Zdroj, který posílá hodně článků, ale jen zřídka získá relevantní hodnocení, možná stojí za zvážení odebrání. Když příběh pokrývá více zdrojů a vy jej označíte jako relevantní, toto jedno rozhodnutí se rovnoměrně rozdělí mezi zdroje, které o něm informovaly, takže počty zde mohou být zlomkové (např. 0,5), nikoli vždy celé.",
     signalRelevant: "Označeno jako relevantní",
     signalDisliked: "Nezajímavé",
     signalRead: "Přečteno",

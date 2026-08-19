@@ -394,7 +394,7 @@ const tr = {
     bySourceTitle: "Kaynağa göre makaleler",
     bySourceDesc: "Kaynak başına hacim. Kategori dağılımını görmek için bir çubuğun üzerine gelin.",
     signalQualityTitle: "Kaynak sinyal kalitesi",
-    signalQualityDesc: "Her kaynağın gönderdiği makalelerin ne kadarını gerçekten alakalı veya ilgisiz olarak işaretlediğiniz — sadece kaç makale gönderdiği değil. Çok gönderen ama nadiren alakalı işareti alan bir kaynağı kaldırmayı düşünmeye değer olabilir.",
+    signalQualityDesc: "Her kaynağın gönderdiği makalelerin ne kadarını gerçekten alakalı veya ilgisiz olarak işaretlediğiniz — sadece kaç makale gönderdiği değil. Çok gönderen ama nadiren alakalı işareti alan bir kaynağı kaldırmayı düşünmeye değer olabilir. Bir haberi birden fazla kaynak duyurduğunda ve siz onu alakalı olarak işaretlediğinizde, bu tek karar haberi veren kaynaklar arasında eşit olarak paylaştırılır; bu yüzden buradaki sayılar her zaman tam sayı değil, kesirli (ör. 0,5) olabilir.",
     signalRelevant: "Alakalı işaretlendi",
     signalDisliked: "İlgisiz",
     signalRead: "Okundu",

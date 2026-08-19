@@ -394,7 +394,7 @@ const sv = {
     bySourceTitle: "Artiklar per källa",
     bySourceDesc: "Volym per källa. Håll muspekaren över en stapel för att se kategorifördelningen för den källan.",
     signalQualityTitle: "Källans signalkvalitet",
-    signalQualityDesc: "Hur stor del av varje källas volym du faktiskt markerar som relevant eller som ointressant, inte bara hur många artiklar den skickar. En källa som skickar mycket men sällan får en relevant-markering kan vara värd att ta bort.",
+    signalQualityDesc: "Hur stor del av varje källas volym du faktiskt markerar som relevant eller som ointressant, inte bara hur många artiklar den skickar. En källa som skickar mycket men sällan får en relevant-markering kan vara värd att ta bort. När en nyhet täcks av flera källor och du markerar den som relevant delas det ena beslutet jämnt mellan de källor som rapporterade om den, så antalen här kan vara bråktal (t.ex. 0,5) i stället för alltid hela tal.",
     signalRelevant: "Markerad relevant",
     signalDisliked: "Ointressant",
     signalRead: "Läst",

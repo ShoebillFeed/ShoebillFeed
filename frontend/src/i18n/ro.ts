@@ -394,7 +394,7 @@ const ro = {
     bySourceTitle: "Articole pe sursă",
     bySourceDesc: "Volum pe sursă. Treceți cu mouse-ul peste o bară pentru a vedea distribuția.",
     signalQualityTitle: "Calitatea semnalului sursei",
-    signalQualityDesc: "Ce parte din volumul fiecărei surse marcați efectiv ca relevantă sau ca neinteresantă, nu doar câte articole trimite. O sursă care trimite mult, dar obține rar o marcare de relevanță, ar putea merita eliminată.",
+    signalQualityDesc: "Ce parte din volumul fiecărei surse marcați efectiv ca relevantă sau ca neinteresantă, nu doar câte articole trimite. O sursă care trimite mult, dar obține rar o marcare de relevanță, ar putea merita eliminată. Când o știre este acoperită de mai multe surse și o marcați ca relevantă, această decizie unică este împărțită în mod egal între sursele care au relatat-o, astfel încât numărătorile de aici pot fi fracționare (de ex. 0,5), nu mereu numere întregi.",
     signalRelevant: "Marcat relevant",
     signalDisliked: "Neinteresant",
     signalRead: "Citit",

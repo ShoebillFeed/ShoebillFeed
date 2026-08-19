@@ -394,7 +394,7 @@ const es = {
     bySourceTitle: "Artículos por fuente",
     bySourceDesc: "Volumen por fuente. Pasa el cursor por una barra para ver el desglose.",
     signalQualityTitle: "Calidad de señal de la fuente",
-    signalQualityDesc: "Qué parte del volumen de cada fuente realmente marcas como relevante o como no interesante, no solo cuántos artículos envía. Una fuente que envía mucho pero rara vez recibe una marca de relevante puede valer la pena reconsiderar.",
+    signalQualityDesc: "Qué parte del volumen de cada fuente realmente marcas como relevante o como no interesante, no solo cuántos artículos envía. Una fuente que envía mucho pero rara vez recibe una marca de relevante puede valer la pena reconsiderar. Cuando una noticia la cubren varias fuentes y la marcas como relevante, esa única decisión se reparte por igual entre las fuentes que la publicaron, así que los recuentos aquí pueden ser fraccionarios (p. ej. 0,5) en lugar de siempre enteros.",
     signalRelevant: "Marcado como relevante",
     signalDisliked: "No interesante",
     signalRead: "Leído",
