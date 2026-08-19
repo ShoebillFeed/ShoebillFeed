@@ -2007,7 +2007,7 @@ function Sparkline({ points, color }: { points: number[]; color: string }) {
 function KeywordMomentumPanel({ direction }: { direction: KeywordMomentumDirection }) {
   const { t } = useTranslation();
   const config = MOMENTUM_CONFIG[direction];
-  const [period, setPeriod] = useState<"weekly" | "monthly">("monthly");
+  const [period, setPeriod] = useState<"weekly" | "monthly">("weekly");
   const [sourceIds, setSourceIds] = useState<string[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const toggleSource = (id: string) =>
