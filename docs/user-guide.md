@@ -201,7 +201,9 @@ to expand or collapse it:
   is worth trusting), and the keyword cluster map (see
   {doc}`learning-and-scoring`).
 - **Podcast** — categories, keywords, and sources covered in each
-  generated episode of a selected show.
+  generated episode of a selected show, plus a pacing chart showing
+  actual episode length against the show's configured target and the
+  story count per episode.
 
 Recording can be paused at any time from the toggle at the top of the
 page; pausing stops new history from being recorded without deleting

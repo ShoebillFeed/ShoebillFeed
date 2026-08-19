@@ -665,6 +665,56 @@ def source_clusters(
     return result
 
 
+@router.get("/podcast-episode-trend")
+def podcast_episode_trend(
+    show_id: uuid.UUID = Query(...),
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Per-episode actual length vs. the show's configured target, plus
+    story count, over a show's recent episode history -- "is the show
+    actually landing near its target length, and how has story count
+    moved" -- distinct from podcast-episodes below, which breaks down
+    per-episode *topic* content rather than pacing. Same show-ownership
+    check, "only ready episodes" filter (pending/failed episodes have no
+    duration_seconds/news_item_ids yet -- see
+    tasks/podcast_tasks.py::_run_generation), and oldest-to-newest
+    reversal for left-to-right charting as podcast-episodes uses.
+    target_minutes is the show's *current* target_length_minutes, a
+    single reference value rather than a per-episode historical one --
+    PodcastEpisode doesn't record what target was configured at
+    generation time, so an episode generated before the show's target was
+    last edited is compared against today's target, not the one that
+    actually applied when it was made."""
+    show = db.scalar(
+        select(PodcastShow).where(PodcastShow.id == show_id, PodcastShow.user_id == current_user.id)
+    )
+    if not show:
+        raise HTTPException(status_code=404, detail="Podcast show not found")
+
+    episodes = db.scalars(
+        select(PodcastEpisode)
+        .where(PodcastEpisode.show_id == show_id, PodcastEpisode.status == "ready")
+        .order_by(PodcastEpisode.created_at.desc())
+        .limit(limit)
+    ).all()
+    episodes = list(reversed(episodes))
+
+    return {
+        "target_minutes": show.target_length_minutes,
+        "episodes": [
+            {
+                "id": str(ep.id),
+                "generated_at": (ep.generated_at or ep.created_at).isoformat(),
+                "actual_minutes": round((ep.duration_seconds or 0) / 60, 1),
+                "story_count": len(ep.news_item_ids) + len(ep.news_cluster_ids),
+            }
+            for ep in episodes
+        ],
+    }
+
+
 _TOP_N_PER_EPISODE = 8
 
 

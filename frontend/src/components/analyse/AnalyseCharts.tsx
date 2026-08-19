@@ -7,7 +7,7 @@ import {
   BarChart, Bar,
   LineChart, Line,
   ComposedChart,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ReferenceLine,
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { Check, Download, PauseCircle, Plus, RefreshCw, ThumbsUp, X } from "lucide-react";
@@ -16,7 +16,7 @@ import { Accordion } from "../ui/Accordion";
 import {
   useActivityStats, useImpactTrend, useReadLaterBacklog, useCategoryStats, useSourceStats, useSourceSignalQuality,
   useWeightHistory, useRelevanceCalibration, useSourceClusters,
-  useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend, useCategoryTrend, useKeywordMomentum,
+  useKeywordClusterMap, usePodcastEpisodeStats, usePodcastEpisodeTrend, useKeywordTrend, useCategoryTrend, useKeywordMomentum,
 } from "../../hooks/useStats";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { usePodcastShows } from "../../hooks/usePodcasts";
@@ -1338,28 +1338,112 @@ function PodcastEpisodesEmpty() {
   );
 }
 
+function PodcastEpisodeTrendChart({ showId }: { showId: string }) {
+  const { t } = useTranslation();
+  const gridColor = useGridColor();
+  const { data, isLoading } = usePodcastEpisodeTrend(showId);
+  if (isLoading) return <Loading />;
+  if (!data?.episodes.length) return <Empty />;
+
+  const points = data.episodes.map((ep, i) => ({
+    ...ep,
+    label: t("stats.podcastEpisodeLabel", { n: i + 1 }),
+  }));
+
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <ComposedChart data={points} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
+        <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+        <YAxis
+          yAxisId="left"
+          tick={{ fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          width={28}
+          label={{ value: t("stats.podcastMinutesAxis"), angle: -90, position: "insideLeft", fontSize: 11, fill: gridColor }}
+        />
+        <YAxis
+          yAxisId="right"
+          orientation="right"
+          tick={{ fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          allowDecimals={false}
+          width={28}
+        />
+        <ReferenceLine
+          yAxisId="left"
+          y={data.target_minutes}
+          stroke="#9ca3af"
+          strokeDasharray="4 4"
+          label={{ value: t("stats.podcastTargetLabel", { minutes: data.target_minutes }), fontSize: 10, fill: "#9ca3af", position: "insideTopRight" }}
+        />
+        <Tooltip
+          cursor={CURSOR_STYLE}
+          wrapperStyle={WRAPPER_STYLE}
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null;
+            const d = payload[0].payload as (typeof points)[number];
+            return (
+              <TooltipBox label={label as string}>
+                <TooltipRow color="#6366f1" name={t("stats.podcastActualLabel")} value={`${d.actual_minutes} min`} />
+                <TooltipRow color="#f59e0b" name={t("stats.podcastStoryCountLabel")} value={d.story_count} />
+              </TooltipBox>
+            );
+          }}
+        />
+        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+        <Bar yAxisId="left" dataKey="actual_minutes" name={t("stats.podcastActualLabel")} fill="#6366f1" radius={[3, 3, 0, 0]} />
+        <Line
+          yAxisId="right"
+          type="monotone"
+          dataKey="story_count"
+          name={t("stats.podcastStoryCountLabel")}
+          stroke="#f59e0b"
+          strokeWidth={2}
+          dot={{ r: 3 }}
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
 function PodcastEpisodesSection() {
   const { t } = useTranslation();
   const { data: shows = [] } = usePodcastShows();
   const [selectedShowId, setSelectedShowId] = useState<string | null>(null);
   const effectiveShowId = selectedShowId ?? shows[0]?.id ?? null;
+  const showPicker = shows.length > 0 && (
+    <ShowPicker shows={shows} value={effectiveShowId} onChange={setSelectedShowId} />
+  );
 
   return (
-    <ChartCard
-      title={t("stats.podcastEpisodesTitle")}
-      description={t("stats.podcastEpisodesDesc")}
-      action={
-        shows.length > 0 && (
-          <ShowPicker shows={shows} value={effectiveShowId} onChange={setSelectedShowId} />
-        )
-      }
-    >
-      {shows.length === 0 ? (
-        <PodcastEpisodesEmpty />
-      ) : (
-        <PodcastEpisodesChart key={effectiveShowId} showId={effectiveShowId as string} />
-      )}
-    </ChartCard>
+    <div className="flex flex-col gap-6">
+      <ChartCard
+        title={t("stats.podcastEpisodesTitle")}
+        description={t("stats.podcastEpisodesDesc")}
+        action={showPicker}
+      >
+        {shows.length === 0 ? (
+          <PodcastEpisodesEmpty />
+        ) : (
+          <PodcastEpisodesChart key={effectiveShowId} showId={effectiveShowId as string} />
+        )}
+      </ChartCard>
+
+      <ChartCard
+        title={t("stats.podcastTrendTitle")}
+        description={t("stats.podcastTrendDesc")}
+        action={showPicker}
+      >
+        {shows.length === 0 ? (
+          <PodcastEpisodesEmpty />
+        ) : (
+          <PodcastEpisodeTrendChart key={effectiveShowId} showId={effectiveShowId as string} />
+        )}
+      </ChartCard>
+    </div>
   );
 }
 

@@ -153,6 +153,21 @@ export interface PodcastEpisodeStat {
   top_sources: PodcastEpisodeSourceCount[];
 }
 
+export interface PodcastEpisodeTrendPoint {
+  id: string;
+  generated_at: string;
+  actual_minutes: number;
+  story_count: number;
+}
+
+export interface PodcastEpisodeTrend {
+  // The show's *current* target_length_minutes -- a single reference
+  // value, not a per-episode historical one (PodcastEpisode doesn't
+  // record what target applied at generation time).
+  target_minutes: number;
+  episodes: PodcastEpisodeTrendPoint[];
+}
+
 export interface KeywordTrendTopicRequest {
   label: string;
   keywords: string[];
@@ -259,6 +274,10 @@ export const statsApi = {
   podcastEpisodes: (showId: string, limit = 20) =>
     client
       .get<PodcastEpisodeStat[]>("/stats/podcast-episodes", { params: { show_id: showId, limit } })
+      .then((r) => r.data),
+  podcastEpisodeTrend: (showId: string, limit = 20) =>
+    client
+      .get<PodcastEpisodeTrend>("/stats/podcast-episode-trend", { params: { show_id: showId, limit } })
       .then((r) => r.data),
   keywordTrend: (payload: KeywordTrendRequest) =>
     client.post<KeywordTrendResult[]>("/stats/keyword-trend", payload).then((r) => r.data),

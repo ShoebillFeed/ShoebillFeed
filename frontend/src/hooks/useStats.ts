@@ -80,6 +80,14 @@ export function usePodcastEpisodeStats(showId: string | null) {
   });
 }
 
+export function usePodcastEpisodeTrend(showId: string | null) {
+  return useQuery({
+    queryKey: ["stats", "podcast-episode-trend", showId],
+    queryFn: () => statsApi.podcastEpisodeTrend(showId as string),
+    enabled: !!showId,
+  });
+}
+
 // A POST driven by user-configured topics/filters, not a simple GET keyed by
 // static params -- a mutation (triggered from an effect) fits better than a
 // query key that would have to encode the full topic list.
