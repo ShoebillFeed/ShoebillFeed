@@ -365,12 +365,33 @@ def source_signal_quality(
 ):
     """Per-source relevant/disliked/read rates -- "which of my sources are
     actually worth keeping", distinct from by-source above which only
-    measures raw volume. NewsItem-only: NewsCluster has no source_id of its
-    own (a cluster merges items from potentially several sources), so a
-    per-source breakdown only makes sense at the item level -- the same
-    scoping by-source already uses. Sorted by total desc, same as
-    by-source, so the busiest sources lead; the frontend is free to re-sort
-    by rate."""
+    measures raw volume. `total` counts every NewsItem from a source in the
+    window, whether standalone or a cluster member.
+
+    `disliked` can only ever come from standalone items: NewsCluster has no
+    is_disliked concept at all (see api/clusters.py::dislike_cluster, which
+    only ever sets is_read/is_relevant), so a clustered item's dislike has
+    nowhere to be attributed -- a real, unfixable-without-a-schema-change
+    gap, not an oversight.
+
+    `relevant`/`read` are trickier. Marking a *cluster* relevant/read only
+    ever touches NewsCluster.is_relevant/is_read (clusters.py) -- the member
+    NewsItem rows' own flags are never set, and there's no per-member-item
+    UI action that could set them either (a cluster card only exposes one
+    relevance/read toggle for the whole story). Counting each item's own
+    flag would silently exclude every clustered story from the numerator
+    while `total` still counts it, deflating the rate for sources whose
+    stories are frequently multi-source clusters. But crediting the *full*
+    cluster verdict to every member source would over-count the other way --
+    one upvote on a 5-source cluster would look like 5 independent
+    endorsements. Splits the credit instead: each cluster's relevant/read
+    verdict contributes 1/N to each of its N *distinct* member sources, so
+    one user action always sums to exactly 1.0 of credit across however many
+    sources actually covered that story -- fair for both a single-source
+    scoop and a widely-syndicated story.
+
+    Sorted by total desc, same as by-source, so the busiest sources lead;
+    the frontend is free to re-sort by rate."""
     since = _since(days)
 
     rows = db.execute(
@@ -389,17 +410,66 @@ def source_signal_quality(
         .order_by(func.count(NewsItem.id).desc())
     ).all()
 
-    return [
-        {
+    # Standalone items' own is_relevant/is_read already SUMmed in full above
+    # -- any clustered item mixed into that same SUM contributes 0, since its
+    # own flags are never set (see docstring), so this is equivalent to
+    # having filtered to standalone-only.
+    source_map = {
+        str(r.id): {
             "id": str(r.id),
             "name": r.name,
             "source_type": r.source_type,
             "total": r.total,
-            "relevant": int(r.relevant or 0),
+            "relevant": float(r.relevant or 0),
             "disliked": int(r.disliked or 0),
-            "read": int(r.read or 0),
+            "read": float(r.read or 0),
         }
         for r in rows
+    }
+    source_order = [str(r.id) for r in rows]
+
+    # Distinct (cluster, source) pairs touched in this window, plus each
+    # cluster's own verdict -- the basis for the 1/N credit split above.
+    pair_rows = db.execute(
+        select(
+            NewsItem.cluster_id,
+            NewsItem.source_id,
+            NewsCluster.is_relevant,
+            NewsCluster.is_read,
+        )
+        .join(NewsCluster, NewsCluster.id == NewsItem.cluster_id)
+        .where(
+            NewsItem.user_id == current_user.id,
+            NewsItem.cluster_id.isnot(None),
+            NewsItem.fetched_at >= since,
+        )
+        .distinct()
+    ).all()
+
+    sources_by_cluster: dict[str, set[str]] = {}
+    cluster_flags: dict[str, tuple[bool, bool]] = {}
+    for r in pair_rows:
+        cid = str(r.cluster_id)
+        sources_by_cluster.setdefault(cid, set()).add(str(r.source_id))
+        cluster_flags[cid] = (bool(r.is_relevant), bool(r.is_read))
+
+    for cid, source_ids in sources_by_cluster.items():
+        is_relevant, is_read = cluster_flags[cid]
+        if not (is_relevant or is_read):
+            continue
+        share = 1.0 / len(source_ids)
+        for sid in source_ids:
+            entry = source_map.get(sid)
+            if not entry:
+                continue
+            if is_relevant:
+                entry["relevant"] += share
+            if is_read:
+                entry["read"] += share
+
+    return [
+        {**source_map[sid], "relevant": round(source_map[sid]["relevant"], 2), "read": round(source_map[sid]["read"], 2)}
+        for sid in source_order
     ]
 
 

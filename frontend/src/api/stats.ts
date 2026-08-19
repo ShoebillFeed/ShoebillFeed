@@ -67,6 +67,10 @@ export interface SourceSignalQuality {
   name: string;
   source_type: string;
   total: number;
+  // relevant/read can be fractional: a clustered story's verdict splits
+  // 1/N across its N distinct member sources rather than crediting each
+  // one in full (see the backend's docstring). disliked is always a whole
+  // number -- clusters have no dislike concept to attribute at all.
   relevant: number;
   disliked: number;
   read: number;

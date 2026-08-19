@@ -203,6 +203,16 @@ function fmtDate(iso: string, days: number) {
   }
 }
 
+// Source signal quality's relevant/read counts can be fractional -- a
+// cluster's verdict splits 1/N across its N distinct member sources (see
+// the backend's source-signal-quality docstring), e.g. 0.25 for a
+// four-source story. Rounds to 2 decimals (matching the backend's own
+// rounding) and trims a trailing ".00"/".50" -> "0"/".5" via the
+// parseFloat round-trip, rather than always showing a fixed decimal count.
+function fmtCredit(n: number): string {
+  return parseFloat(n.toFixed(2)).toString();
+}
+
 function useGridColor() {
   const theme = usePreferencesStore((s) => s.theme);
   return theme === "dark" ? "#374151" : "#e5e7eb";
@@ -639,14 +649,14 @@ function SourceSignalQualityChart({ days }: { days: number }) {
                 <TooltipRow
                   color="#10b981"
                   name={t("stats.signalRelevant")}
-                  value={`${d.relevant_rate.toFixed(0)}% (${t("stats.categoryTrendRawCount", { count: d.relevant, total: d.total })})`}
+                  value={`${d.relevant_rate.toFixed(0)}% (${t("stats.categoryTrendRawCount", { count: fmtCredit(d.relevant), total: d.total })})`}
                 />
                 <TooltipRow
                   color="#ef4444"
                   name={t("stats.signalDisliked")}
                   value={`${d.dislike_rate.toFixed(0)}% (${t("stats.categoryTrendRawCount", { count: d.disliked, total: d.total })})`}
                 />
-                <TooltipRow name={t("stats.signalRead")} value={`${d.read} / ${d.total}`} />
+                <TooltipRow name={t("stats.signalRead")} value={`${fmtCredit(d.read)} / ${d.total}`} />
               </TooltipBox>
             );
           }}
