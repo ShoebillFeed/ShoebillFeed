@@ -608,6 +608,7 @@ function SourceSignalQualityChart({ days }: { days: number }) {
         <XAxis
           type="number"
           domain={[0, percentAxisMax]}
+          allowDecimals={false}
           tick={{ fontSize: 11 }}
           tickLine={false}
           axisLine={false}
@@ -736,7 +737,7 @@ function RelevanceCalibrationChart({ days }: { days: number }) {
 
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+      <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
         <XAxis
           dataKey="score"
@@ -747,11 +748,12 @@ function RelevanceCalibrationChart({ days }: { days: number }) {
         />
         <YAxis
           domain={[0, percentAxisMax]}
+          allowDecimals={false}
           tick={{ fontSize: 11 }}
           tickLine={false}
           axisLine={false}
           tickFormatter={(v: number) => `${v}%`}
-          width={36}
+          width={44}
         />
         <Tooltip
           cursor={CURSOR_STYLE}
