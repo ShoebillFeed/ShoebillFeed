@@ -15,6 +15,7 @@ from app.models.keyword_cluster import KeywordCluster
 from app.models.news_item import news_item_categories
 from app.models.news_cluster import news_cluster_categories
 from app.models.user import User
+from app.models.user_settings import UserSettings
 
 router = APIRouter()
 
@@ -71,6 +72,97 @@ def activity(
         }
         for r in rows
     ]
+
+
+@router.get("/impact-trend")
+def impact_trend(
+    days: Annotated[int, Query(ge=1, le=365)] = 30,
+    source_ids: list[uuid.UUID] | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Daily average impact_score plus a count of "high impact" stories
+    that day, optionally filtered by source -- "has the intensity of what
+    I'm reading gone up or down". High-impact reuses the user's own
+    UserSettings.push_min_relevance (same threshold that gates push
+    notifications, see services/push_service.py) rather than a hardcoded
+    constant, so the chart stays consistent with what actually pinged the
+    user that day. Counts both standalone NewsItems (cluster_id IS NULL)
+    and NewsClusters once each, same dedup pattern as category-trend's
+    totals; the daily average is impact_sum / count across both, not an
+    average-of-averages, so a day with one big cluster and nine standalone
+    items weighs the cluster the same as one item, matching how "a story"
+    is counted everywhere else in this file."""
+    since = _since(days)
+
+    settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
+    threshold = settings.push_min_relevance if settings else 7  # UserSettings.push_min_relevance's own default
+
+    daily: dict[str, dict[str, int]] = {}
+
+    def _accumulate(rows):
+        for r in rows:
+            d = str(r.date)
+            entry = daily.setdefault(d, {"count": 0, "impact_sum": 0, "high_impact": 0})
+            entry["count"] += r.count
+            entry["impact_sum"] += r.impact_sum
+            entry["high_impact"] += r.high_impact
+
+    item_q = (
+        select(
+            cast(NewsItem.fetched_at, Date).label("date"),
+            func.count().label("count"),
+            func.sum(NewsItem.impact_score).label("impact_sum"),
+            func.sum(cast(NewsItem.impact_score >= threshold, Integer)).label("high_impact"),
+        )
+        .where(
+            NewsItem.user_id == current_user.id,
+            NewsItem.fetched_at >= since,
+            NewsItem.impact_score.isnot(None),
+            NewsItem.cluster_id.is_(None),
+        )
+    )
+    if source_ids:
+        item_q = item_q.where(NewsItem.source_id.in_(source_ids))
+    _accumulate(db.execute(item_q.group_by(cast(NewsItem.fetched_at, Date))).all())
+
+    cluster_q = (
+        select(
+            cast(NewsCluster.created_at, Date).label("date"),
+            func.count().label("count"),
+            func.sum(NewsCluster.impact_score).label("impact_sum"),
+            func.sum(cast(NewsCluster.impact_score >= threshold, Integer)).label("high_impact"),
+        )
+        .where(
+            NewsCluster.user_id == current_user.id,
+            NewsCluster.created_at >= since,
+            NewsCluster.impact_score.isnot(None),
+        )
+    )
+    if source_ids:
+        # Filter by cluster-id membership rather than joining NewsItem
+        # directly -- a cluster with more than one member from a matching
+        # source would otherwise produce one joined row per matching
+        # member, double-counting that cluster's count/impact_sum/
+        # high_impact in the sums below.
+        matching_cluster_ids = select(NewsItem.cluster_id.distinct()).where(
+            NewsItem.cluster_id.isnot(None), NewsItem.source_id.in_(source_ids)
+        )
+        cluster_q = cluster_q.where(NewsCluster.id.in_(matching_cluster_ids))
+    _accumulate(db.execute(cluster_q.group_by(cast(NewsCluster.created_at, Date))).all())
+
+    return {
+        "points": [
+            {
+                "date": d,
+                "count": v["count"],
+                "avg_impact": (v["impact_sum"] / v["count"]) if v["count"] > 0 else None,
+                "high_impact_count": v["high_impact"],
+            }
+            for d, v in sorted(daily.items())
+        ],
+        "high_impact_threshold": threshold,
+    }
 
 
 @router.get("/by-category")

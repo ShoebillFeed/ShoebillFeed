@@ -9,6 +9,24 @@ export interface ActivityPoint {
   disliked: number;
 }
 
+export interface ImpactTrendPoint {
+  date: string;
+  count: number;
+  // null only when count is 0, which can't happen for a returned point
+  // (points with no data aren't included at all) -- typed nullable to
+  // mirror the backend response shape exactly.
+  avg_impact: number | null;
+  high_impact_count: number;
+}
+
+export interface ImpactTrendResponse {
+  points: ImpactTrendPoint[];
+  // The user's UserSettings.push_min_relevance -- same threshold that
+  // gates push notifications, reused here so "high impact" means the same
+  // thing in this chart as it does in a push alert.
+  high_impact_threshold: number;
+}
+
 export interface CategoryCount {
   id: string;
   name: string;
@@ -196,6 +214,13 @@ export interface KeywordMomentumResult {
 export const statsApi = {
   activity: (days: number) =>
     client.get<ActivityPoint[]>("/stats/activity", { params: { days } }).then((r) => r.data),
+  impactTrend: (days: number, sourceIds: string[]) =>
+    client
+      .get<ImpactTrendResponse>("/stats/impact-trend", {
+        params: { days, ...(sourceIds.length ? { source_ids: sourceIds } : {}) },
+        paramsSerializer: { indexes: null },
+      })
+      .then((r) => r.data),
   byCategory: (days: number) =>
     client.get<CategoryCount[]>("/stats/by-category", { params: { days } }).then((r) => r.data),
   bySource: (days: number) =>

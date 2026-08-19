@@ -6,6 +6,7 @@ import {
   AreaChart, Area,
   BarChart, Bar,
   LineChart, Line,
+  ComposedChart,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
 } from "recharts";
 import { format, parseISO } from "date-fns";
@@ -13,7 +14,7 @@ import { Check, Download, PauseCircle, Plus, RefreshCw, ThumbsUp, X } from "luci
 import { cn } from "../../lib/utils";
 import { Accordion } from "../ui/Accordion";
 import {
-  useActivityStats, useCategoryStats, useSourceStats, useSourceSignalQuality,
+  useActivityStats, useImpactTrend, useCategoryStats, useSourceStats, useSourceSignalQuality,
   useWeightHistory, useRelevanceCalibration, useSourceClusters,
   useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend, useCategoryTrend, useKeywordMomentum,
 } from "../../hooks/useStats";
@@ -290,6 +291,81 @@ function ActivityChart({ days }: { days: number }) {
           />
         ))}
       </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ── Impact score trend ────────────────────────────────────────────────────────
+
+function ImpactTrendChart({ days, sourceIds }: { days: number; sourceIds: string[] }) {
+  const { t } = useTranslation();
+  const gridColor = useGridColor();
+  const { data, isLoading } = useImpactTrend(days, sourceIds);
+  if (isLoading) return <Loading />;
+  if (!data?.points.length) return <Empty />;
+
+  const points = data.points.map((p) => ({ ...p, date: fmtDate(p.date, days) }));
+
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <ComposedChart data={points} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
+        <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+        <YAxis
+          yAxisId="left"
+          domain={[0, 10]}
+          tick={{ fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          width={28}
+        />
+        <YAxis
+          yAxisId="right"
+          orientation="right"
+          tick={{ fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          allowDecimals={false}
+          width={28}
+        />
+        <Tooltip
+          cursor={CURSOR_STYLE}
+          wrapperStyle={WRAPPER_STYLE}
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null;
+            const d = payload[0].payload as (typeof points)[number];
+            return (
+              <TooltipBox label={label as string}>
+                <TooltipRow color="#6366f1" name={t("stats.impactAvgLabel")} value={(d.avg_impact ?? 0).toFixed(1)} />
+                <TooltipRow
+                  color="#f59e0b"
+                  name={t("stats.impactHighLabel", { threshold: data.high_impact_threshold })}
+                  value={d.high_impact_count}
+                />
+              </TooltipBox>
+            );
+          }}
+        />
+        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+        <Area
+          yAxisId="left"
+          type="monotone"
+          dataKey="avg_impact"
+          name={t("stats.impactAvgLabel")}
+          stroke="#6366f1"
+          fill="#6366f1"
+          fillOpacity={0.15}
+          strokeWidth={2}
+          dot={false}
+        />
+        <Bar
+          yAxisId="right"
+          dataKey="high_impact_count"
+          name={t("stats.impactHighLabel", { threshold: data.high_impact_threshold })}
+          fill="#f59e0b"
+          radius={[3, 3, 0, 0]}
+        />
+      </ComposedChart>
     </ResponsiveContainer>
   );
 }
@@ -1253,14 +1329,36 @@ export function StatsRecordingToggle() {
 export function AnalyseActivityTab() {
   const { t } = useTranslation();
   const [activityDays, setActivityDays] = useState(30);
+  const [impactDays, setImpactDays] = useState(30);
+  const [impactSourceIds, setImpactSourceIds] = useState<string[]>([]);
+  const toggleImpactSource = (id: string) =>
+    setImpactSourceIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
   return (
-    <ChartCard
-      title={t("stats.activityTitle")}
-      description={t("stats.activityDesc")}
-      action={<RangePicker value={activityDays} onChange={setActivityDays} />}
-    >
-      <ActivityChart key={activityDays} days={activityDays} />
-    </ChartCard>
+    <div className="flex flex-col gap-6">
+      <ChartCard
+        title={t("stats.activityTitle")}
+        description={t("stats.activityDesc")}
+        action={<RangePicker value={activityDays} onChange={setActivityDays} />}
+      >
+        <ActivityChart key={activityDays} days={activityDays} />
+      </ChartCard>
+
+      <ChartCard
+        title={t("stats.impactTrendTitle")}
+        description={t("stats.impactTrendDesc")}
+        action={<RangePicker value={impactDays} onChange={setImpactDays} />}
+      >
+        <div className="flex flex-col gap-4">
+          <SourceFilterPills sourceIds={impactSourceIds} onToggle={toggleImpactSource} />
+          <ImpactTrendChart
+            key={`${impactDays}-${impactSourceIds.join(",")}`}
+            days={impactDays}
+            sourceIds={impactSourceIds}
+          />
+        </div>
+      </ChartCard>
+    </div>
   );
 }
 

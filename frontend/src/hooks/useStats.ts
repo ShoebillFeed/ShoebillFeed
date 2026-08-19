@@ -9,6 +9,13 @@ export function useActivityStats(days: number) {
   });
 }
 
+export function useImpactTrend(days: number, sourceIds: string[]) {
+  return useQuery({
+    queryKey: ["stats", "impact-trend", days, sourceIds],
+    queryFn: () => statsApi.impactTrend(days, sourceIds),
+  });
+}
+
 export function useCategoryStats(days: number) {
   return useQuery({
     queryKey: ["stats", "by-category", days],

@@ -152,7 +152,10 @@ the subset of your feed you actually want interrupted for.
 view split into tabs. Every card is collapsible — click its title bar
 to expand or collapse it:
 
-- **Activity** — items fetched/read/liked/disliked over time.
+- **Activity** — items fetched/read/liked/disliked over time, and an
+  impact-score trend (daily average impact score plus a count of
+  "high impact" stories, using the same threshold as your push
+  notifications) that can be filtered down to specific sources.
 - **Categories & Sources** — volume by category and by source, source
   signal quality (what share of each source's articles you actually
   mark relevant vs. dislike, so a source that sends a lot but rarely
