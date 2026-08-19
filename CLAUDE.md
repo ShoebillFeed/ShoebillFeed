@@ -142,7 +142,7 @@ A fourth, independently-built/deployed project (like `frontend/`/`backend`/`mcp_
   - `feed_ranking.py` — `build_feed()`, the Relevant/Impact/Newest ranking; shared by the feed API and podcast item selection
   - `deduplication.py` — SHA256 of canonicalized URL (tracking/session/cache-busting params stripped, sorted, fragment dropped) for `url_hash`; separate `content_hash` (first 2000 chars) catches same content re-published under a different URL
   - `push_service.py` — Web Push (VAPID) notifications for high-relevance items/clusters
-  - `scraper_assist.py` — helper for the generic `ScraperFetcher`
+  - `scraper_assist.py` — helper for the generic `ScraperFetcher`. `fetchers/scraper.py::parse_scraper_items()` resolves each item's link from the title element itself (its own `href`, or an `<a>` nested inside it) before falling back to the configured `link_selector` — not the other way around. A listing item container commonly has more than one `<a>` (vote arrows, avatars, "read more" icons) appearing before the title anchor in the DOM; picking the first anchor matching a generic `link_selector` (its default is plain `"a"`) can silently grab one of those instead of the article link. Confirmed against real `news.ycombinator.com` markup, where the item `<tr>`'s first anchor is the upvote arrow.
   - `normalization.py` — keyword normalization shared by clustering/scoring
   - `podcast_script.py`, `podcast_scheduling.py`, `range_streaming.py`, `tts/` — see "Podcast pipeline" above
 - **`tasks/`** — `celery_app.py` defines the Celery app + full beat schedule; `fetch_tasks.py`, `process_tasks.py`, `podcast_tasks.py` hold the task implementations described above; four queues: `fetch`, `process`, `podcast`, `default`
