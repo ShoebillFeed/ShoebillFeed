@@ -23,6 +23,13 @@ export function useSourceStats(days: number) {
   });
 }
 
+export function useSourceSignalQuality(days: number) {
+  return useQuery({
+    queryKey: ["stats", "source-signal-quality", days],
+    queryFn: () => statsApi.sourceSignalQuality(days),
+  });
+}
+
 export function useWeightHistory(days: number) {
   return useQuery({
     queryKey: ["stats", "weight-history", days],

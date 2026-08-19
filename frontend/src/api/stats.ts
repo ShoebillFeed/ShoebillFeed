@@ -31,6 +31,16 @@ export interface SourceCount {
   categories: SourceCategoryCount[];
 }
 
+export interface SourceSignalQuality {
+  id: string;
+  name: string;
+  source_type: string;
+  total: number;
+  relevant: number;
+  disliked: number;
+  read: number;
+}
+
 export interface WeightSnapshot {
   date: string;
   weight: number;
@@ -181,6 +191,10 @@ export const statsApi = {
     client.get<CategoryCount[]>("/stats/by-category", { params: { days } }).then((r) => r.data),
   bySource: (days: number) =>
     client.get<SourceCount[]>("/stats/by-source", { params: { days } }).then((r) => r.data),
+  sourceSignalQuality: (days: number) =>
+    client
+      .get<SourceSignalQuality[]>("/stats/source-signal-quality", { params: { days } })
+      .then((r) => r.data),
   weightHistory: (days: number) =>
     client.get<CategoryWeightHistory[]>("/stats/weight-history", { params: { days } }).then((r) => r.data),
   sourceClusters: (days: number) =>

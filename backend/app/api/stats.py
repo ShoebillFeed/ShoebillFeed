@@ -206,6 +206,52 @@ def by_source(
     return [source_map[sid] for sid in source_order]
 
 
+@router.get("/source-signal-quality")
+def source_signal_quality(
+    days: Annotated[int, Query(ge=1, le=365)] = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Per-source relevant/disliked/read rates -- "which of my sources are
+    actually worth keeping", distinct from by-source above which only
+    measures raw volume. NewsItem-only: NewsCluster has no source_id of its
+    own (a cluster merges items from potentially several sources), so a
+    per-source breakdown only makes sense at the item level -- the same
+    scoping by-source already uses. Sorted by total desc, same as
+    by-source, so the busiest sources lead; the frontend is free to re-sort
+    by rate."""
+    since = _since(days)
+
+    rows = db.execute(
+        select(
+            Source.id,
+            Source.name,
+            Source.source_type,
+            func.count(NewsItem.id).label("total"),
+            func.sum(cast(NewsItem.is_relevant, Integer)).label("relevant"),
+            func.sum(cast(NewsItem.is_disliked, Integer)).label("disliked"),
+            func.sum(cast(NewsItem.is_read, Integer)).label("read"),
+        )
+        .join(NewsItem, NewsItem.source_id == Source.id)
+        .where(Source.user_id == current_user.id, NewsItem.fetched_at >= since)
+        .group_by(Source.id, Source.name, Source.source_type)
+        .order_by(func.count(NewsItem.id).desc())
+    ).all()
+
+    return [
+        {
+            "id": str(r.id),
+            "name": r.name,
+            "source_type": r.source_type,
+            "total": r.total,
+            "relevant": int(r.relevant or 0),
+            "disliked": int(r.disliked or 0),
+            "read": int(r.read or 0),
+        }
+        for r in rows
+    ]
+
+
 @router.get("/keyword-cluster-map")
 def keyword_cluster_map(
     db: Session = Depends(get_db),

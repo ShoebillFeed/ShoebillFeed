@@ -13,7 +13,7 @@ import { Check, Download, PauseCircle, Plus, RefreshCw, ThumbsUp, X } from "luci
 import { cn } from "../../lib/utils";
 import { Accordion } from "../ui/Accordion";
 import {
-  useActivityStats, useCategoryStats, useSourceStats,
+  useActivityStats, useCategoryStats, useSourceStats, useSourceSignalQuality,
   useWeightHistory, useSourceClusters,
   useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend, useCategoryTrend, useKeywordMomentum,
 } from "../../hooks/useStats";
@@ -418,6 +418,83 @@ function BySourceChart({ days }: { days: number }) {
             radius={i === allCategories.length - 1 ? [0, 4, 4, 0] : [0, 0, 0, 0]}
           />
         ))}
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ── Source signal quality ─────────────────────────────────────────────────────
+
+function SourceSignalQualityChart({ days }: { days: number }) {
+  const { t } = useTranslation();
+  const gridColor = useGridColor();
+  const { data, isLoading } = useSourceSignalQuality(days);
+  if (isLoading) return <Loading />;
+  if (!data?.length) return <Empty />;
+
+  const chartData = data.map((s) => ({
+    name: s.name,
+    source_type: s.source_type,
+    total: s.total,
+    relevant: s.relevant,
+    disliked: s.disliked,
+    read: s.read,
+    relevant_rate: s.total > 0 ? (s.relevant / s.total) * 100 : 0,
+    dislike_rate: s.total > 0 ? (s.disliked / s.total) * 100 : 0,
+  }));
+
+  return (
+    <ResponsiveContainer width="100%" height={Math.max(160, chartData.length * 36 + 40)}>
+      <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} horizontal={false} />
+        <XAxis
+          type="number"
+          domain={[0, 100]}
+          tick={{ fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(v: number) => `${v}%`}
+        />
+        <YAxis
+          type="category"
+          dataKey="name"
+          tick={{ fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          width={160}
+          tickFormatter={(name: string) => {
+            const entry = chartData.find((d) => d.name === name);
+            const type = entry ? (SOURCE_TYPE_LABEL[entry.source_type] ?? entry.source_type) : "";
+            return type ? `${name} (${type})` : name;
+          }}
+        />
+        <Tooltip
+          cursor={false}
+          wrapperStyle={WRAPPER_STYLE}
+          content={({ active, payload }) => {
+            if (!active || !payload?.[0]) return null;
+            const d = payload[0].payload as (typeof chartData)[number];
+            return (
+              <TooltipBox>
+                <div className="font-semibold text-gray-800 dark:text-gray-100 mb-1.5">{d.name}</div>
+                <TooltipRow
+                  color="#10b981"
+                  name={t("stats.signalRelevant")}
+                  value={`${d.relevant_rate.toFixed(0)}% (${t("stats.categoryTrendRawCount", { count: d.relevant, total: d.total })})`}
+                />
+                <TooltipRow
+                  color="#ef4444"
+                  name={t("stats.signalDisliked")}
+                  value={`${d.dislike_rate.toFixed(0)}% (${t("stats.categoryTrendRawCount", { count: d.disliked, total: d.total })})`}
+                />
+                <TooltipRow name={t("stats.signalRead")} value={`${d.read} / ${d.total}`} />
+              </TooltipBox>
+            );
+          }}
+        />
+        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+        <Bar dataKey="relevant_rate" name={t("stats.signalRelevant")} fill="#10b981" radius={[0, 4, 4, 0]} />
+        <Bar dataKey="dislike_rate" name={t("stats.signalDisliked")} fill="#ef4444" radius={[0, 4, 4, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -1130,6 +1207,7 @@ export function AnalyseCategoriesTab() {
   const { t } = useTranslation();
   const [categoryDays, setCategoryDays] = useState(30);
   const [sourceDays, setSourceDays] = useState(30);
+  const [signalDays, setSignalDays] = useState(30);
   const [clusterDays, setClusterDays] = useState(30);
   const [categoryTrendDays, setCategoryTrendDays] = useState(30);
   const [categoryTrendSourceIds, setCategoryTrendSourceIds] = useState<string[]>([]);
@@ -1155,6 +1233,14 @@ export function AnalyseCategoriesTab() {
           <BySourceChart key={sourceDays} days={sourceDays} />
         </ChartCard>
       </div>
+
+      <ChartCard
+        title={t("stats.signalQualityTitle")}
+        description={t("stats.signalQualityDesc")}
+        action={<RangePicker value={signalDays} onChange={setSignalDays} />}
+      >
+        <SourceSignalQualityChart key={signalDays} days={signalDays} />
+      </ChartCard>
 
       <ChartCard
         title={t("stats.sourceClusterTitle")}
