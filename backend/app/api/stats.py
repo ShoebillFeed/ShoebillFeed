@@ -374,6 +374,76 @@ def weight_history(
     return result
 
 
+@router.get("/relevance-calibration")
+def relevance_calibration(
+    days: Annotated[int, Query(ge=1, le=365)] = 90,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """For each LLM-predicted relevance_score (1-10), what fraction of
+    those articles you actually marked relevant -- "does the score predict
+    what I actually care about", a trust/calibration check on the scoring
+    pipeline rather than a content-facing chart. Counts both standalone
+    NewsItems (cluster_id IS NULL) and NewsClusters once each, same
+    dedup-across-cluster-members pattern as category-trend's totals.
+    Defaults to a 90-day window (longer than most other GET stat endpoints'
+    30d default) since a meaningful calibration curve needs more samples
+    per bucket than a single month typically provides; still a plain
+    capped int for the same GET-query-string reasons as category-trend.
+    Always returns all 10 buckets, zero-filled, so the chart's x-axis is
+    stable even for buckets with no data yet."""
+    since = _since(days)
+
+    counts: dict[int, dict[str, int]] = {s: {"total": 0, "relevant": 0} for s in range(1, 11)}
+
+    item_rows = db.execute(
+        select(
+            NewsItem.relevance_score,
+            func.count().label("total"),
+            func.sum(cast(NewsItem.is_relevant, Integer)).label("relevant"),
+        )
+        .where(
+            NewsItem.user_id == current_user.id,
+            NewsItem.fetched_at >= since,
+            NewsItem.relevance_score.isnot(None),
+            NewsItem.cluster_id.is_(None),
+        )
+        .group_by(NewsItem.relevance_score)
+    ).all()
+    for r in item_rows:
+        if r.relevance_score in counts:
+            counts[r.relevance_score]["total"] += r.total
+            counts[r.relevance_score]["relevant"] += int(r.relevant or 0)
+
+    cluster_rows = db.execute(
+        select(
+            NewsCluster.relevance_score,
+            func.count().label("total"),
+            func.sum(cast(NewsCluster.is_relevant, Integer)).label("relevant"),
+        )
+        .where(
+            NewsCluster.user_id == current_user.id,
+            NewsCluster.created_at >= since,
+            NewsCluster.relevance_score.isnot(None),
+        )
+        .group_by(NewsCluster.relevance_score)
+    ).all()
+    for r in cluster_rows:
+        if r.relevance_score in counts:
+            counts[r.relevance_score]["total"] += r.total
+            counts[r.relevance_score]["relevant"] += int(r.relevant or 0)
+
+    return [
+        {
+            "score": score,
+            "count": c["total"],
+            "relevant_count": c["relevant"],
+            "relevant_rate": (c["relevant"] / c["total"]) if c["total"] > 0 else None,
+        }
+        for score, c in sorted(counts.items())
+    ]
+
+
 @router.get("/source-clusters")
 def source_clusters(
     days: Annotated[int, Query(ge=1, le=365)] = 30,

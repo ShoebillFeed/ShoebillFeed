@@ -41,6 +41,15 @@ export interface SourceSignalQuality {
   read: number;
 }
 
+export interface RelevanceCalibrationBucket {
+  score: number;
+  count: number;
+  relevant_count: number;
+  // null when count is 0 -- no data yet for this score, distinct from a
+  // real 0% rate.
+  relevant_rate: number | null;
+}
+
 export interface WeightSnapshot {
   date: string;
   weight: number;
@@ -197,6 +206,10 @@ export const statsApi = {
       .then((r) => r.data),
   weightHistory: (days: number) =>
     client.get<CategoryWeightHistory[]>("/stats/weight-history", { params: { days } }).then((r) => r.data),
+  relevanceCalibration: (days: number) =>
+    client
+      .get<RelevanceCalibrationBucket[]>("/stats/relevance-calibration", { params: { days } })
+      .then((r) => r.data),
   sourceClusters: (days: number) =>
     client.get<SourceClusterPair[]>("/stats/source-clusters", { params: { days } }).then((r) => r.data),
   keywordClusterMap: () =>

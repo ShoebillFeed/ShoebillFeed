@@ -188,8 +188,11 @@ to expand or collapse it:
   column per topic, one row per date). Your topics and filters are
   remembered in the browser, so they're still there next time you
   open this tab.
-- **Learning** — category weight history and the keyword cluster map
-  (see {doc}`learning-and-scoring`).
+- **Learning** — category weight history, a relevance-score calibration
+  chart (for each score the AI assigns, what share of those articles
+  you actually marked relevant — a sanity check on whether the score
+  is worth trusting), and the keyword cluster map (see
+  {doc}`learning-and-scoring`).
 - **Podcast** — categories, keywords, and sources covered in each
   generated episode of a selected show.
 

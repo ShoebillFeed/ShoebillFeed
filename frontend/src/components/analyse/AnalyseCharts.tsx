@@ -14,7 +14,7 @@ import { cn } from "../../lib/utils";
 import { Accordion } from "../ui/Accordion";
 import {
   useActivityStats, useCategoryStats, useSourceStats, useSourceSignalQuality,
-  useWeightHistory, useSourceClusters,
+  useWeightHistory, useRelevanceCalibration, useSourceClusters,
   useKeywordClusterMap, usePodcastEpisodeStats, useKeywordTrend, useCategoryTrend, useKeywordMomentum,
 } from "../../hooks/useStats";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
@@ -556,6 +556,67 @@ function WeightHistoryChart({ days }: { days: number }) {
           <Line key={cat.id} type="monotone" dataKey={cat.name} stroke={cat.color} strokeWidth={2} dot={false} connectNulls />
         ))}
       </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ── Relevance-score calibration ───────────────────────────────────────────────
+
+function RelevanceCalibrationChart({ days }: { days: number }) {
+  const { t } = useTranslation();
+  const gridColor = useGridColor();
+  const { data, isLoading } = useRelevanceCalibration(days);
+  if (isLoading) return <Loading />;
+  if (!data || data.every((b) => b.count === 0)) return <Empty />;
+
+  const chartData = data.map((b) => ({
+    score: String(b.score),
+    percent: b.relevant_rate === null ? undefined : b.relevant_rate * 100,
+    count: b.count,
+    relevant_count: b.relevant_count,
+  }));
+
+  return (
+    <ResponsiveContainer width="100%" height={240}>
+      <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
+        <XAxis
+          dataKey="score"
+          tick={{ fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          label={{ value: t("stats.calibrationScoreAxis"), position: "insideBottom", offset: -2, fontSize: 11, fill: gridColor }}
+        />
+        <YAxis
+          domain={[0, 100]}
+          tick={{ fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(v: number) => `${v}%`}
+          width={36}
+        />
+        <Tooltip
+          cursor={CURSOR_STYLE}
+          wrapperStyle={WRAPPER_STYLE}
+          content={({ active, payload }) => {
+            if (!active || !payload?.[0]) return null;
+            const d = payload[0].payload as (typeof chartData)[number];
+            return (
+              <TooltipBox label={t("stats.calibrationScoreLabel", { score: d.score })}>
+                {d.count > 0 ? (
+                  <TooltipRow
+                    name={t("stats.signalRelevant")}
+                    value={`${((d.percent as number) ?? 0).toFixed(0)}% (${t("stats.categoryTrendRawCount", { count: d.relevant_count, total: d.count })})`}
+                  />
+                ) : (
+                  <div className="text-gray-400">{t("stats.noData")}</div>
+                )}
+              </TooltipBox>
+            );
+          }}
+        />
+        <Bar dataKey="percent" name={t("stats.signalRelevant")} fill="#6366f1" radius={[4, 4, 0, 0]} />
+      </BarChart>
     </ResponsiveContainer>
   );
 }
@@ -1271,6 +1332,7 @@ export function AnalyseCategoriesTab() {
 export function AnalyseLearningTab() {
   const { t } = useTranslation();
   const [weightDays, setWeightDays] = useState(60);
+  const [calibrationDays, setCalibrationDays] = useState(90);
   const qc = useQueryClient();
   const refreshClusters = useMutation({
     mutationFn: () => statsApi.refreshClusters(),
@@ -1289,6 +1351,14 @@ export function AnalyseLearningTab() {
         action={<RangePicker value={weightDays} onChange={setWeightDays} />}
       >
         <WeightHistoryChart key={weightDays} days={weightDays} />
+      </ChartCard>
+
+      <ChartCard
+        title={t("stats.calibrationTitle")}
+        description={t("stats.calibrationDesc")}
+        action={<RangePicker value={calibrationDays} onChange={setCalibrationDays} />}
+      >
+        <RelevanceCalibrationChart key={calibrationDays} days={calibrationDays} />
       </ChartCard>
 
       <ChartCard

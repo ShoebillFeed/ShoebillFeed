@@ -37,6 +37,13 @@ export function useWeightHistory(days: number) {
   });
 }
 
+export function useRelevanceCalibration(days: number) {
+  return useQuery({
+    queryKey: ["stats", "relevance-calibration", days],
+    queryFn: () => statsApi.relevanceCalibration(days),
+  });
+}
+
 export function useSourceClusters(days: number) {
   return useQuery({
     queryKey: ["stats", "source-clusters", days],
