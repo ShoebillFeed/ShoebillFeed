@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronRight, Wand2 } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, Wand2 } from "lucide-react";
 import { isAxiosError } from "axios";
 import type { Source, SourceCreate, SourceType } from "../../types/source";
 import { useCreateSource, useUpdateSource } from "../../hooks/useSources";
@@ -345,6 +345,14 @@ function ConfigFields({
   return null;
 }
 
+function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
 function ScraperConfigFields({
   config,
   onChange,
@@ -457,7 +465,17 @@ function ScraperConfigFields({
           <ul className="flex flex-col gap-2">
             {preview.slice(0, 5).map((item, i) => (
               <li key={i} className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{item.title}</span>
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 truncate"
+                  title={item.url}
+                >
+                  <span className="truncate">{item.title}</span>
+                  <ExternalLink size={11} className="shrink-0 text-gray-400" />
+                </a>
+                <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{hostnameOf(item.url)}</span>
                 {item.content && (
                   <span className="text-xs text-gray-400 dark:text-gray-500 line-clamp-2">{item.content}</span>
                 )}

@@ -4,12 +4,13 @@ import { render, screen } from "../../test/render";
 import AboutPanel from "./AboutPanel";
 
 describe("AboutPanel", () => {
-  it("renders the four section headers", () => {
+  it("renders the five section headers", () => {
     render(<AboutPanel />);
     expect(screen.getByText("What is Shoebill Feed?")).toBeInTheDocument();
     expect(screen.getByText("How it works")).toBeInTheDocument();
     expect(screen.getByText("Symbols in your feed")).toBeInTheDocument();
     expect(screen.getByText("Podcasts")).toBeInTheDocument();
+    expect(screen.getByText("Analytics")).toBeInTheDocument();
   });
 
   it("shows the symbol legend once expanded, with real icon labels", async () => {

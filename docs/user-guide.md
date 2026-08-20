@@ -113,6 +113,13 @@ configuration. Sources can be exported/imported as JSON, and you can copy
 another user's shared source configuration directly rather than
 re-entering it.
 
+An active source that hasn't fetched any new articles in the past 7
+days gets a **"No recent articles"** badge — a signal its feed may be
+broken, empty, or misconfigured (a brand-new source, or one with a
+few days of genuine quiet, won't be flagged). Hover the badge for
+details, and use the fetch-now button on that source to test it
+directly.
+
 ## Learning
 
 **Settings → Learning** shows every category's learned weight, manual
@@ -139,10 +146,71 @@ setup this requires) can be scoped to a relevance threshold, specific
 categories, and/or a specific custom tab, so you're only notified about
 the subset of your feed you actually want interrupted for.
 
-## Stats
+## Analytics
 
-A per-user activity view: items fetched/read/starred over time, and a
-breakdown of your reading activity by category.
+**Analytics** (top-level nav, next to Podcasts) is a per-user activity
+view split into tabs. Every card is collapsible — click its title bar
+to expand or collapse it:
+
+- **Activity** — items fetched/read/liked/disliked over time, an
+  impact-score trend (daily average impact score plus a count of
+  "high impact" stories, using the same threshold as your push
+  notifications) that can be filtered down to specific sources, and a
+  read-later backlog snapshot (how many saved-for-later articles are
+  still unread, bucketed by age — read-later is the one thing this
+  app never auto-deletes, so the 30+ day bucket shows what would
+  already be gone if you hadn't saved it).
+- **Categories & Sources** — volume by category and by source, source
+  signal quality (what share of each source's articles you actually
+  mark relevant vs. dislike, so a source that sends a lot but rarely
+  earns a relevant mark stands out as worth pruning — when a story is
+  covered by several sources and you mark it relevant, that one
+  decision is split evenly across the sources that reported it, so
+  counts here can be fractional, e.g. 0.5, rather than always whole
+  numbers), which pairs of sources most often cover the same story,
+  and a category coverage trend (one line per category, day by day,
+  up to a year, shown as each category's share of that day's total
+  articles rather than a raw count, so a category that only grows
+  because your whole feed grew doesn't look the same as one actually
+  gaining ground — hover a point to see the underlying raw counts)
+  that can be filtered down to specific sources.
+- **Trends** — **Rising keywords** and **Falling keywords** panels at
+  the top surface keywords whose usage is accelerating or declining,
+  so you don't have to already know what to look for: "This week"
+  catches sudden spikes or drop-offs, "This month" catches a slow,
+  sustained move (e.g. a topic gaining or losing one mention every
+  few weeks) that a weekly view is too short to show. A **NEW** badge
+  marks a rising keyword with no history before this period; a
+  **QUIET** badge marks a falling keyword that's gone completely
+  silent after being active. Both panels can be filtered by category
+  or source too, independently of each other and of the topic chart
+  below. Click the `+` next to any keyword to start tracking it as a
+  proper topic below. Below that: how coverage of a keyword,
+  or a loose group of OR-matched keywords ("topic"), has evolved day
+  by day. Add up to six
+  topics to compare on one chart, each built from your own keywords or
+  imported from an existing keyword cluster (see
+  {doc}`learning-and-scoring`), and optionally filter by category or
+  source. A topic built from a keyword cluster shows that cluster's
+  real historical coverage, not just a snapshot going forward. The
+  time range goes from 7 days up to a year, or "All" for your entire
+  history. "Export CSV" downloads the chart's underlying counts (one
+  column per topic, one row per date). Your topics and filters are
+  remembered in the browser, so they're still there next time you
+  open this tab.
+- **Learning** — category weight history, a relevance-score calibration
+  chart (for each score the AI assigns, what share of those articles
+  you actually marked relevant — a sanity check on whether the score
+  is worth trusting), and the keyword cluster map (see
+  {doc}`learning-and-scoring`).
+- **Podcast** — categories, keywords, and sources covered in each
+  generated episode of a selected show, plus a pacing chart showing
+  actual episode length against the show's configured target and the
+  story count per episode.
+
+Recording can be paused at any time from the toggle at the top of the
+page; pausing stops new history from being recorded without deleting
+what's already there.
 
 ## Admin: Users
 

@@ -45,6 +45,12 @@ export default defineConfig({
       },
       workbox: {
         importScripts: ["/push-sw.js"],
+        // Default 2 MiB precache cap -- the main bundle eagerly imports all
+        // 20+ i18n locale files (no per-language code-splitting), so fully
+        // populating every language's translations pushed it past that.
+        // Raised with headroom rather than tuned to the exact current size,
+        // so routine future key additions don't re-trip this.
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
           {
             // Auth state must always reflect the live session/cookie — never serve

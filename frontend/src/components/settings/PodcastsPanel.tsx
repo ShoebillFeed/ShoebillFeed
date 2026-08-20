@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash2, Pencil, Play, RefreshCw, Rss, Copy, Check } from "lucide-react";
-import { Accordion } from "./Accordion";
+import { Accordion } from "../ui/Accordion";
 import { useToast } from "../ui/Toaster";
 import {
   usePodcastShows,

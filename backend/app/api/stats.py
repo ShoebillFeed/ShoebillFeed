@@ -1,9 +1,10 @@
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from datetime import date, datetime, timedelta, timezone
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import Integer, select, func, cast, Date
+from pydantic import BaseModel, Field
+from sqlalchemy import Integer, select, func, cast, Date, exists, true
 from sqlalchemy.orm import Session, selectinload, joinedload, load_only
 
 from app.api.deps import get_db, get_current_user
@@ -12,7 +13,9 @@ from app.models.category_keyword_weight import CategoryKeywordWeight
 from app.models.category_weight_snapshot import CategoryWeightSnapshot
 from app.models.keyword_cluster import KeywordCluster
 from app.models.news_item import news_item_categories
+from app.models.news_cluster import news_cluster_categories
 from app.models.user import User
+from app.models.user_settings import UserSettings
 
 router = APIRouter()
 
@@ -69,6 +72,156 @@ def activity(
         }
         for r in rows
     ]
+
+
+@router.get("/impact-trend")
+def impact_trend(
+    days: Annotated[int, Query(ge=1, le=365)] = 30,
+    source_ids: list[uuid.UUID] | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Daily average impact_score plus a count of "high impact" stories
+    that day, optionally filtered by source -- "has the intensity of what
+    I'm reading gone up or down". High-impact reuses the user's own
+    UserSettings.push_min_relevance (same threshold that gates push
+    notifications, see services/push_service.py) rather than a hardcoded
+    constant, so the chart stays consistent with what actually pinged the
+    user that day. Counts both standalone NewsItems (cluster_id IS NULL)
+    and NewsClusters once each, same dedup pattern as category-trend's
+    totals; the daily average is impact_sum / count across both, not an
+    average-of-averages, so a day with one big cluster and nine standalone
+    items weighs the cluster the same as one item, matching how "a story"
+    is counted everywhere else in this file."""
+    since = _since(days)
+
+    settings = db.scalar(select(UserSettings).where(UserSettings.user_id == current_user.id))
+    threshold = settings.push_min_relevance if settings else 7  # UserSettings.push_min_relevance's own default
+
+    daily: dict[str, dict[str, int]] = {}
+
+    def _accumulate(rows):
+        for r in rows:
+            d = str(r.date)
+            entry = daily.setdefault(d, {"count": 0, "impact_sum": 0, "high_impact": 0})
+            entry["count"] += r.count
+            entry["impact_sum"] += r.impact_sum
+            entry["high_impact"] += r.high_impact
+
+    item_q = (
+        select(
+            cast(NewsItem.fetched_at, Date).label("date"),
+            func.count().label("count"),
+            func.sum(NewsItem.impact_score).label("impact_sum"),
+            func.sum(cast(NewsItem.impact_score >= threshold, Integer)).label("high_impact"),
+        )
+        .where(
+            NewsItem.user_id == current_user.id,
+            NewsItem.fetched_at >= since,
+            NewsItem.impact_score.isnot(None),
+            NewsItem.cluster_id.is_(None),
+        )
+    )
+    if source_ids:
+        item_q = item_q.where(NewsItem.source_id.in_(source_ids))
+    _accumulate(db.execute(item_q.group_by(cast(NewsItem.fetched_at, Date))).all())
+
+    cluster_q = (
+        select(
+            cast(NewsCluster.created_at, Date).label("date"),
+            func.count().label("count"),
+            func.sum(NewsCluster.impact_score).label("impact_sum"),
+            func.sum(cast(NewsCluster.impact_score >= threshold, Integer)).label("high_impact"),
+        )
+        .where(
+            NewsCluster.user_id == current_user.id,
+            NewsCluster.created_at >= since,
+            NewsCluster.impact_score.isnot(None),
+        )
+    )
+    if source_ids:
+        # Filter by cluster-id membership rather than joining NewsItem
+        # directly -- a cluster with more than one member from a matching
+        # source would otherwise produce one joined row per matching
+        # member, double-counting that cluster's count/impact_sum/
+        # high_impact in the sums below.
+        matching_cluster_ids = select(NewsItem.cluster_id.distinct()).where(
+            NewsItem.cluster_id.isnot(None), NewsItem.source_id.in_(source_ids)
+        )
+        cluster_q = cluster_q.where(NewsCluster.id.in_(matching_cluster_ids))
+    _accumulate(db.execute(cluster_q.group_by(cast(NewsCluster.created_at, Date))).all())
+
+    return {
+        "points": [
+            {
+                "date": d,
+                "count": v["count"],
+                "avg_impact": (v["impact_sum"] / v["count"]) if v["count"] > 0 else None,
+                "high_impact_count": v["high_impact"],
+            }
+            for d, v in sorted(daily.items())
+        ],
+        "high_impact_threshold": threshold,
+    }
+
+
+_BACKLOG_AGE_BUCKETS = [
+    ("under_1d", 0, 1),
+    ("1_3d", 1, 3),
+    ("3_7d", 3, 7),
+    ("7_14d", 7, 14),
+    ("14_30d", 14, 30),
+    ("over_30d", 30, None),
+]
+
+
+@router.get("/read-later-backlog")
+def read_later_backlog(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Current read-later backlog (saved, still unread), bucketed by age.
+    Unlike every other endpoint in this file, there's no day-window param
+    -- this is a snapshot of current state, not a time series. Age
+    buckets top out at 30 days to line up with cleanup_old_items'
+    retention sweep (tasks/fetch_tasks.py), which deletes non-relevant,
+    non-read-later items older than 30 days -- read_later is the one flag
+    that exempts an item from that sweep, so the "30d+" bucket answers
+    "how much of my backlog would already be gone if I hadn't saved it".
+    "Unread" specifically means read_later=True AND is_read=False: an
+    item can be read_later=True but already read (kept for reference),
+    which isn't backlog pressure the same way, so it's excluded here."""
+    now = datetime.now(timezone.utc)
+
+    item_ages = db.scalars(
+        select(NewsItem.fetched_at).where(
+            NewsItem.user_id == current_user.id,
+            NewsItem.read_later == True,  # noqa: E712
+            NewsItem.is_read == False,  # noqa: E712
+        )
+    ).all()
+    cluster_ages = db.scalars(
+        select(NewsCluster.created_at).where(
+            NewsCluster.user_id == current_user.id,
+            NewsCluster.read_later == True,  # noqa: E712
+            NewsCluster.is_read == False,  # noqa: E712
+        )
+    ).all()
+
+    ages_days = [(now - ts).total_seconds() / 86400 for ts in (*item_ages, *cluster_ages)]
+
+    bucket_counts = {key: 0 for key, _, _ in _BACKLOG_AGE_BUCKETS}
+    for age in ages_days:
+        for key, lo, hi in _BACKLOG_AGE_BUCKETS:
+            if age >= lo and (hi is None or age < hi):
+                bucket_counts[key] += 1
+                break
+
+    return {
+        "total": len(ages_days),
+        "buckets": [{"key": key, "count": bucket_counts[key]} for key, _, _ in _BACKLOG_AGE_BUCKETS],
+        "oldest_days": max(ages_days) if ages_days else None,
+    }
 
 
 @router.get("/by-category")
@@ -204,6 +357,122 @@ def by_source(
     return [source_map[sid] for sid in source_order]
 
 
+@router.get("/source-signal-quality")
+def source_signal_quality(
+    days: Annotated[int, Query(ge=1, le=365)] = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Per-source relevant/disliked/read rates -- "which of my sources are
+    actually worth keeping", distinct from by-source above which only
+    measures raw volume. `total` counts every NewsItem from a source in the
+    window, whether standalone or a cluster member.
+
+    `disliked` can only ever come from standalone items: NewsCluster has no
+    is_disliked concept at all (see api/clusters.py::dislike_cluster, which
+    only ever sets is_read/is_relevant), so a clustered item's dislike has
+    nowhere to be attributed -- a real, unfixable-without-a-schema-change
+    gap, not an oversight.
+
+    `relevant`/`read` are trickier. Marking a *cluster* relevant/read only
+    ever touches NewsCluster.is_relevant/is_read (clusters.py) -- the member
+    NewsItem rows' own flags are never set, and there's no per-member-item
+    UI action that could set them either (a cluster card only exposes one
+    relevance/read toggle for the whole story). Counting each item's own
+    flag would silently exclude every clustered story from the numerator
+    while `total` still counts it, deflating the rate for sources whose
+    stories are frequently multi-source clusters. But crediting the *full*
+    cluster verdict to every member source would over-count the other way --
+    one upvote on a 5-source cluster would look like 5 independent
+    endorsements. Splits the credit instead: each cluster's relevant/read
+    verdict contributes 1/N to each of its N *distinct* member sources, so
+    one user action always sums to exactly 1.0 of credit across however many
+    sources actually covered that story -- fair for both a single-source
+    scoop and a widely-syndicated story.
+
+    Sorted by total desc, same as by-source, so the busiest sources lead;
+    the frontend is free to re-sort by rate."""
+    since = _since(days)
+
+    rows = db.execute(
+        select(
+            Source.id,
+            Source.name,
+            Source.source_type,
+            func.count(NewsItem.id).label("total"),
+            func.sum(cast(NewsItem.is_relevant, Integer)).label("relevant"),
+            func.sum(cast(NewsItem.is_disliked, Integer)).label("disliked"),
+            func.sum(cast(NewsItem.is_read, Integer)).label("read"),
+        )
+        .join(NewsItem, NewsItem.source_id == Source.id)
+        .where(Source.user_id == current_user.id, NewsItem.fetched_at >= since)
+        .group_by(Source.id, Source.name, Source.source_type)
+        .order_by(func.count(NewsItem.id).desc())
+    ).all()
+
+    # Standalone items' own is_relevant/is_read already SUMmed in full above
+    # -- any clustered item mixed into that same SUM contributes 0, since its
+    # own flags are never set (see docstring), so this is equivalent to
+    # having filtered to standalone-only.
+    source_map = {
+        str(r.id): {
+            "id": str(r.id),
+            "name": r.name,
+            "source_type": r.source_type,
+            "total": r.total,
+            "relevant": float(r.relevant or 0),
+            "disliked": int(r.disliked or 0),
+            "read": float(r.read or 0),
+        }
+        for r in rows
+    }
+    source_order = [str(r.id) for r in rows]
+
+    # Distinct (cluster, source) pairs touched in this window, plus each
+    # cluster's own verdict -- the basis for the 1/N credit split above.
+    pair_rows = db.execute(
+        select(
+            NewsItem.cluster_id,
+            NewsItem.source_id,
+            NewsCluster.is_relevant,
+            NewsCluster.is_read,
+        )
+        .join(NewsCluster, NewsCluster.id == NewsItem.cluster_id)
+        .where(
+            NewsItem.user_id == current_user.id,
+            NewsItem.cluster_id.isnot(None),
+            NewsItem.fetched_at >= since,
+        )
+        .distinct()
+    ).all()
+
+    sources_by_cluster: dict[str, set[str]] = {}
+    cluster_flags: dict[str, tuple[bool, bool]] = {}
+    for r in pair_rows:
+        cid = str(r.cluster_id)
+        sources_by_cluster.setdefault(cid, set()).add(str(r.source_id))
+        cluster_flags[cid] = (bool(r.is_relevant), bool(r.is_read))
+
+    for cid, source_ids in sources_by_cluster.items():
+        is_relevant, is_read = cluster_flags[cid]
+        if not (is_relevant or is_read):
+            continue
+        share = 1.0 / len(source_ids)
+        for sid in source_ids:
+            entry = source_map.get(sid)
+            if not entry:
+                continue
+            if is_relevant:
+                entry["relevant"] += share
+            if is_read:
+                entry["read"] += share
+
+    return [
+        {**source_map[sid], "relevant": round(source_map[sid]["relevant"], 2), "read": round(source_map[sid]["read"], 2)}
+        for sid in source_order
+    ]
+
+
 @router.get("/keyword-cluster-map")
 def keyword_cluster_map(
     db: Session = Depends(get_db),
@@ -326,6 +595,76 @@ def weight_history(
     return result
 
 
+@router.get("/relevance-calibration")
+def relevance_calibration(
+    days: Annotated[int, Query(ge=1, le=365)] = 90,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """For each LLM-predicted relevance_score (1-10), what fraction of
+    those articles you actually marked relevant -- "does the score predict
+    what I actually care about", a trust/calibration check on the scoring
+    pipeline rather than a content-facing chart. Counts both standalone
+    NewsItems (cluster_id IS NULL) and NewsClusters once each, same
+    dedup-across-cluster-members pattern as category-trend's totals.
+    Defaults to a 90-day window (longer than most other GET stat endpoints'
+    30d default) since a meaningful calibration curve needs more samples
+    per bucket than a single month typically provides; still a plain
+    capped int for the same GET-query-string reasons as category-trend.
+    Always returns all 10 buckets, zero-filled, so the chart's x-axis is
+    stable even for buckets with no data yet."""
+    since = _since(days)
+
+    counts: dict[int, dict[str, int]] = {s: {"total": 0, "relevant": 0} for s in range(1, 11)}
+
+    item_rows = db.execute(
+        select(
+            NewsItem.relevance_score,
+            func.count().label("total"),
+            func.sum(cast(NewsItem.is_relevant, Integer)).label("relevant"),
+        )
+        .where(
+            NewsItem.user_id == current_user.id,
+            NewsItem.fetched_at >= since,
+            NewsItem.relevance_score.isnot(None),
+            NewsItem.cluster_id.is_(None),
+        )
+        .group_by(NewsItem.relevance_score)
+    ).all()
+    for r in item_rows:
+        if r.relevance_score in counts:
+            counts[r.relevance_score]["total"] += r.total
+            counts[r.relevance_score]["relevant"] += int(r.relevant or 0)
+
+    cluster_rows = db.execute(
+        select(
+            NewsCluster.relevance_score,
+            func.count().label("total"),
+            func.sum(cast(NewsCluster.is_relevant, Integer)).label("relevant"),
+        )
+        .where(
+            NewsCluster.user_id == current_user.id,
+            NewsCluster.created_at >= since,
+            NewsCluster.relevance_score.isnot(None),
+        )
+        .group_by(NewsCluster.relevance_score)
+    ).all()
+    for r in cluster_rows:
+        if r.relevance_score in counts:
+            counts[r.relevance_score]["total"] += r.total
+            counts[r.relevance_score]["relevant"] += int(r.relevant or 0)
+
+    return [
+        {
+            "score": score,
+            "count": c["total"],
+            "relevant_count": c["relevant"],
+            "relevant_rate": (c["relevant"] / c["total"]) if c["total"] > 0 else None,
+        }
+        for score, c in sorted(counts.items())
+    ]
+
+
 @router.get("/source-clusters")
 def source_clusters(
     days: Annotated[int, Query(ge=1, le=365)] = 30,
@@ -394,6 +733,56 @@ def source_clusters(
         })
 
     return result
+
+
+@router.get("/podcast-episode-trend")
+def podcast_episode_trend(
+    show_id: uuid.UUID = Query(...),
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Per-episode actual length vs. the show's configured target, plus
+    story count, over a show's recent episode history -- "is the show
+    actually landing near its target length, and how has story count
+    moved" -- distinct from podcast-episodes below, which breaks down
+    per-episode *topic* content rather than pacing. Same show-ownership
+    check, "only ready episodes" filter (pending/failed episodes have no
+    duration_seconds/news_item_ids yet -- see
+    tasks/podcast_tasks.py::_run_generation), and oldest-to-newest
+    reversal for left-to-right charting as podcast-episodes uses.
+    target_minutes is the show's *current* target_length_minutes, a
+    single reference value rather than a per-episode historical one --
+    PodcastEpisode doesn't record what target was configured at
+    generation time, so an episode generated before the show's target was
+    last edited is compared against today's target, not the one that
+    actually applied when it was made."""
+    show = db.scalar(
+        select(PodcastShow).where(PodcastShow.id == show_id, PodcastShow.user_id == current_user.id)
+    )
+    if not show:
+        raise HTTPException(status_code=404, detail="Podcast show not found")
+
+    episodes = db.scalars(
+        select(PodcastEpisode)
+        .where(PodcastEpisode.show_id == show_id, PodcastEpisode.status == "ready")
+        .order_by(PodcastEpisode.created_at.desc())
+        .limit(limit)
+    ).all()
+    episodes = list(reversed(episodes))
+
+    return {
+        "target_minutes": show.target_length_minutes,
+        "episodes": [
+            {
+                "id": str(ep.id),
+                "generated_at": (ep.generated_at or ep.created_at).isoformat(),
+                "actual_minutes": round((ep.duration_seconds or 0) / 60, 1),
+                "story_count": len(ep.news_item_ids) + len(ep.news_cluster_ids),
+            }
+            for ep in episodes
+        ],
+    }
 
 
 _TOP_N_PER_EPISODE = 8
@@ -524,3 +913,517 @@ def podcast_episode_stats(
         })
 
     return result
+
+
+class KeywordTrendTopic(BaseModel):
+    label: str = Field(..., max_length=100)
+    # OR-matched: an article counts for this topic if it has ANY of these
+    # keywords. Lets a "topic" be a single keyword or a loose group (e.g.
+    # pre-filled from an existing KeywordCluster's keyword list).
+    keywords: list[str] = Field(..., min_length=1, max_length=25)
+
+
+class KeywordTrendRequest(BaseModel):
+    topics: list[KeywordTrendTopic] = Field(..., min_length=1, max_length=6)
+    category_ids: list[uuid.UUID] = Field(default_factory=list)
+    source_ids: list[uuid.UUID] = Field(default_factory=list)
+    # None means "all time" -- no lower bound on the query at all, rather
+    # than a large-but-finite day count, so a user's very first article is
+    # never silently excluded by whatever cap we pick.
+    days: int | None = Field(default=90, ge=1, le=3650)
+
+
+def _keyword_overlap_exists(keyword_column, lowered_keywords: list[str]):
+    """EXISTS(...) predicate: true if any element of `keyword_column` (a
+    Postgres text[] column) case-insensitively matches one of
+    `lowered_keywords`. Deliberately not the array `&&` overlap operator --
+    that needs both sides in the same case, and extracted_keywords is stored
+    as whatever case the LLM produced, not normalized -- so this compares
+    case-insensitively via unnest() instead. That means no GIN index gets
+    used here (a plain GIN index only helps `&&`); acceptable for a
+    self-hosted single/few-user instance's article volume, but revisit with
+    an expression index on lower(unnest(...)) if this ever gets slow.
+    """
+    # render_derived() forces the "AS anon_1(kw)" column-alias list onto the
+    # FROM-clause function call -- without it, Postgres has no name to bind
+    # kw.c.kw to and errors with "column anon_1.kw does not exist".
+    kw = func.unnest(keyword_column).table_valued("kw").render_derived()
+    return exists(select(1).select_from(kw).where(func.lower(kw.c.kw).in_(lowered_keywords)))
+
+
+@router.post("/keyword-trend")
+def keyword_trend(
+    payload: KeywordTrendRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Daily article counts per topic (a topic = one or more OR-matched
+    keywords), optionally filtered to specific categories/sources -- "how
+    has coverage of X evolved over time". Counts both standalone NewsItems
+    and NewsClusters (each story counted once, not once per cluster member),
+    unlike by-category/by-source above which only look at NewsItem. days=None
+    means all time -- no lower-bound filter at all."""
+    since = _since(payload.days) if payload.days is not None else None
+
+    results = []
+    for topic in payload.topics:
+        lowered = sorted({k.strip().lower() for k in topic.keywords if k.strip()})
+        if not lowered:
+            results.append({"label": topic.label, "points": []})
+            continue
+
+        item_q = (
+            select(cast(NewsItem.fetched_at, Date).label("date"), func.count(NewsItem.id.distinct()).label("count"))
+            .where(
+                NewsItem.user_id == current_user.id,
+                *([NewsItem.fetched_at >= since] if since is not None else []),
+                _keyword_overlap_exists(NewsItem.extracted_keywords, lowered),
+            )
+        )
+        if payload.source_ids:
+            item_q = item_q.where(NewsItem.source_id.in_(payload.source_ids))
+        if payload.category_ids:
+            item_q = (
+                item_q.join(news_item_categories, news_item_categories.c.news_item_id == NewsItem.id)
+                .where(news_item_categories.c.category_id.in_(payload.category_ids))
+            )
+        item_rows = db.execute(item_q.group_by(cast(NewsItem.fetched_at, Date))).all()
+
+        cluster_q = (
+            select(cast(NewsCluster.created_at, Date).label("date"), func.count(NewsCluster.id.distinct()).label("count"))
+            .where(
+                NewsCluster.user_id == current_user.id,
+                *([NewsCluster.created_at >= since] if since is not None else []),
+                _keyword_overlap_exists(NewsCluster.extracted_keywords, lowered),
+            )
+        )
+        if payload.source_ids:
+            cluster_q = (
+                cluster_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+                .where(NewsItem.source_id.in_(payload.source_ids))
+            )
+        if payload.category_ids:
+            cluster_q = (
+                cluster_q.join(news_cluster_categories, news_cluster_categories.c.news_cluster_id == NewsCluster.id)
+                .where(news_cluster_categories.c.category_id.in_(payload.category_ids))
+            )
+        cluster_rows = db.execute(cluster_q.group_by(cast(NewsCluster.created_at, Date))).all()
+
+        counts: dict[str, int] = {}
+        for r in item_rows:
+            counts[str(r.date)] = counts.get(str(r.date), 0) + r.count
+        for r in cluster_rows:
+            counts[str(r.date)] = counts.get(str(r.date), 0) + r.count
+
+        results.append({
+            "label": topic.label,
+            "points": [{"date": d, "count": c} for d, c in sorted(counts.items())],
+        })
+
+    return results
+
+
+@router.get("/category-trend")
+def category_trend(
+    days: Annotated[int, Query(ge=1, le=365)] = 30,
+    source_ids: list[uuid.UUID] | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Daily article counts per category, optionally filtered by source --
+    "how has coverage of each category evolved over time". Two grouped
+    queries (one per category+date, for items and clusters) rather than one
+    query pair per category -- unlike keyword-trend's max-6-topics loop,
+    category count can be much higher, so this stays at a fixed query count
+    regardless of how many categories a user has. Counts both standalone
+    NewsItems and NewsClusters (each story counted once, not once per
+    cluster member) plus an "uncategorized" bucket, matching by-category's
+    shape above but time-bucketed instead of a single-window total. days is
+    a plain int here (not the int | None "all time" of keyword-trend) since
+    a GET query string can't distinguish an explicit null from an omitted
+    param the way a POST body can -- matches the other GET stat endpoints'
+    convention (activity/by-category/by-source) instead.
+
+    Also returns `totals`: distinct-article counts per day across *all*
+    categories combined (same source filter, no category restriction at
+    all) -- lets the frontend show each category's share of that day's
+    total rather than a raw count. This can't be derived by summing the
+    per-category series client-side, since an article with two categories
+    would be double-counted in that sum but only counts once in `totals`;
+    for the same reason, per-category shares of `totals` aren't expected to
+    add up to 100% when categories overlap."""
+    since = _since(days)
+
+    categories = db.scalars(
+        select(Category)
+        .where(Category.user_id == current_user.id, Category.is_active == True)
+        .order_by(Category.name)
+    ).all()
+
+    cat_ids = [c.id for c in categories]
+    counts: dict[str, dict[str, int]] = {str(c.id): {} for c in categories}
+
+    def _accumulate(rows, key_attr):
+        for r in rows:
+            key = str(getattr(r, key_attr))
+            if key in counts:
+                counts[key][str(r.date)] = counts[key].get(str(r.date), 0) + r.count
+
+    if cat_ids:
+        item_q = (
+            select(
+                news_item_categories.c.category_id,
+                cast(NewsItem.fetched_at, Date).label("date"),
+                func.count(NewsItem.id.distinct()).label("count"),
+            )
+            .join(NewsItem, NewsItem.id == news_item_categories.c.news_item_id)
+            .where(
+                NewsItem.user_id == current_user.id,
+                news_item_categories.c.category_id.in_(cat_ids),
+                NewsItem.fetched_at >= since,
+            )
+        )
+        if source_ids:
+            item_q = item_q.where(NewsItem.source_id.in_(source_ids))
+        item_rows = db.execute(
+            item_q.group_by(news_item_categories.c.category_id, cast(NewsItem.fetched_at, Date))
+        ).all()
+        _accumulate(item_rows, "category_id")
+
+        cluster_q = (
+            select(
+                news_cluster_categories.c.category_id,
+                cast(NewsCluster.created_at, Date).label("date"),
+                func.count(NewsCluster.id.distinct()).label("count"),
+            )
+            .join(NewsCluster, NewsCluster.id == news_cluster_categories.c.news_cluster_id)
+            .where(
+                NewsCluster.user_id == current_user.id,
+                news_cluster_categories.c.category_id.in_(cat_ids),
+                NewsCluster.created_at >= since,
+            )
+        )
+        if source_ids:
+            cluster_q = (
+                cluster_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+                .where(NewsItem.source_id.in_(source_ids))
+            )
+        cluster_rows = db.execute(
+            cluster_q.group_by(news_cluster_categories.c.category_id, cast(NewsCluster.created_at, Date))
+        ).all()
+        _accumulate(cluster_rows, "category_id")
+
+    results = [
+        {
+            "id": str(c.id),
+            "name": c.name,
+            "color": c.color,
+            "points": [{"date": d, "count": n} for d, n in sorted(counts[str(c.id)].items())],
+        }
+        for c in categories
+    ]
+
+    uncat_counts: dict[str, int] = {}
+
+    uncat_item_q = (
+        select(cast(NewsItem.fetched_at, Date).label("date"), func.count(NewsItem.id.distinct()).label("count"))
+        .where(
+            NewsItem.user_id == current_user.id,
+            ~select(news_item_categories.c.news_item_id)
+            .where(news_item_categories.c.news_item_id == NewsItem.id)
+            .exists(),
+            NewsItem.fetched_at >= since,
+        )
+    )
+    if source_ids:
+        uncat_item_q = uncat_item_q.where(NewsItem.source_id.in_(source_ids))
+    for r in db.execute(uncat_item_q.group_by(cast(NewsItem.fetched_at, Date))).all():
+        uncat_counts[str(r.date)] = uncat_counts.get(str(r.date), 0) + r.count
+
+    uncat_cluster_q = (
+        select(cast(NewsCluster.created_at, Date).label("date"), func.count(NewsCluster.id.distinct()).label("count"))
+        .where(
+            NewsCluster.user_id == current_user.id,
+            ~select(news_cluster_categories.c.news_cluster_id)
+            .where(news_cluster_categories.c.news_cluster_id == NewsCluster.id)
+            .exists(),
+            NewsCluster.created_at >= since,
+        )
+    )
+    if source_ids:
+        uncat_cluster_q = (
+            uncat_cluster_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+            .where(NewsItem.source_id.in_(source_ids))
+        )
+    for r in db.execute(uncat_cluster_q.group_by(cast(NewsCluster.created_at, Date))).all():
+        uncat_counts[str(r.date)] = uncat_counts.get(str(r.date), 0) + r.count
+
+    if uncat_counts:
+        results.append({
+            "id": "uncategorized",
+            "name": "Uncategorized",
+            "color": "#9ca3af",
+            "points": [{"date": d, "count": n} for d, n in sorted(uncat_counts.items())],
+        })
+
+    total_counts: dict[str, int] = {}
+
+    # cluster_id IS NULL -- a clustered item's story is represented by its
+    # NewsCluster row below, not by counting the member NewsItem rows too
+    # (those aren't separate "articles" for this purpose).
+    total_item_q = (
+        select(cast(NewsItem.fetched_at, Date).label("date"), func.count(NewsItem.id.distinct()).label("count"))
+        .where(
+            NewsItem.user_id == current_user.id,
+            NewsItem.fetched_at >= since,
+            NewsItem.cluster_id.is_(None),
+        )
+    )
+    if source_ids:
+        total_item_q = total_item_q.where(NewsItem.source_id.in_(source_ids))
+    for r in db.execute(total_item_q.group_by(cast(NewsItem.fetched_at, Date))).all():
+        total_counts[str(r.date)] = total_counts.get(str(r.date), 0) + r.count
+
+    total_cluster_q = (
+        select(cast(NewsCluster.created_at, Date).label("date"), func.count(NewsCluster.id.distinct()).label("count"))
+        .where(NewsCluster.user_id == current_user.id, NewsCluster.created_at >= since)
+    )
+    if source_ids:
+        total_cluster_q = (
+            total_cluster_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+            .where(NewsItem.source_id.in_(source_ids))
+        )
+    for r in db.execute(total_cluster_q.group_by(cast(NewsCluster.created_at, Date))).all():
+        total_counts[str(r.date)] = total_counts.get(str(r.date), 0) + r.count
+
+    return {
+        "categories": results,
+        "totals": [{"date": d, "count": n} for d, n in sorted(total_counts.items())],
+    }
+
+
+_MOMENTUM_WEEKLY_BUCKETS = 8
+_MOMENTUM_MONTHLY_BUCKETS = 6
+_MOMENTUM_MIN_TOTAL_MENTIONS = 5
+_MOMENTUM_MIN_RECENT_FOR_NEWCOMER = 2
+_MOMENTUM_TOP_N = 30
+_MOMENTUM_SLOPE_EPSILON = 0.5
+
+
+def _slope(values: list[float]) -> float:
+    """Ordinary-least-squares slope of `values` against x = 0..n-1 (oldest
+    to newest, one point per bucket). 0 for fewer than 2 points -- can't
+    fit a line."""
+    n = len(values)
+    if n < 2:
+        return 0.0
+    x_mean = (n - 1) / 2
+    y_mean = sum(values) / n
+    num = sum((i - x_mean) * (v - y_mean) for i, v in enumerate(values))
+    den = sum((i - x_mean) ** 2 for i in range(n))
+    return num / den if den else 0.0
+
+
+def _relative_slope(values: list[float]) -> float:
+    """Slope as a fraction of the series' own mean, so a high-volume
+    keyword growing by a few extra mentions doesn't outrank a low-volume
+    one that's tripled in size -- ranking is about rate of change, not
+    absolute volume. +epsilon in the denominator keeps near-zero-mean
+    keywords from producing wild ratios off a single mention."""
+    mean = sum(values) / len(values) if values else 0.0
+    return _slope(values) / (mean + _MOMENTUM_SLOPE_EPSILON)
+
+
+def _week_starts(n: int, now: datetime) -> list[date]:
+    """The last n ISO week starts (Mondays), oldest first -- matches
+    Postgres's date_trunc('week', ...), which also returns the Monday."""
+    monday = (now - timedelta(days=now.weekday())).date()
+    return [monday - timedelta(weeks=i) for i in range(n - 1, -1, -1)]
+
+
+def _month_starts(n: int, now: datetime) -> list[date]:
+    """The last n calendar month starts, oldest first."""
+    starts = []
+    for i in range(n - 1, -1, -1):
+        total_months = (now.year * 12 + (now.month - 1)) - i
+        y, m = divmod(total_months, 12)
+        starts.append(datetime(y, m + 1, 1).date())
+    return starts
+
+
+def _keyword_bucket_query(keyword_column, date_column, id_column, unit: str, since: datetime):
+    """Case-insensitive keyword counts grouped by (keyword, date_trunc(unit,
+    ...)) -- same unnest()+render_derived() technique as
+    _keyword_overlap_exists above, but joined (not an EXISTS subquery) since
+    this needs to select the exploded keyword and group by it directly.
+    SQLAlchemy renders the join as LATERAL automatically because `kw`
+    correlates to the outer table (Postgres also auto-laterals plain
+    function calls in FROM/JOIN even without the keyword, but the explicit
+    LATERAL SQLAlchemy emits here is harmless and clearer)."""
+    kw = func.unnest(keyword_column).table_valued("kw").render_derived()
+    # Built once and reused (not called again for GROUP BY) -- two separate
+    # func.date_trunc(unit, ...) calls compile to two distinct bind
+    # parameters even with an identical `unit` value, which Postgres then
+    # can't verify are the same expression for grouping purposes.
+    keyword_expr = func.lower(kw.c.kw)
+    bucket_expr = func.date_trunc(unit, date_column)
+    return (
+        select(
+            keyword_expr.label("keyword"),
+            bucket_expr.label("bucket"),
+            func.count(id_column.distinct()).label("count"),
+        )
+        .join(kw, true())
+        .where(date_column >= since)
+        .group_by(keyword_expr, bucket_expr)
+    )
+
+
+def _merge_bucket_rows(rows, acc: dict[str, dict]):
+    for r in rows:
+        bucket_date = r.bucket.date()
+        day_counts = acc.setdefault(r.keyword, {})
+        day_counts[bucket_date] = day_counts.get(bucket_date, 0) + r.count
+
+
+@router.get("/keyword-momentum")
+def keyword_momentum(
+    direction: Literal["rising", "falling"] = Query("rising"),
+    source_ids: list[uuid.UUID] | None = Query(None),
+    category_ids: list[uuid.UUID] | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Surfaces keywords whose usage is *accelerating* or *decelerating* --
+    "which topics are gaining or losing relevance" -- rather than
+    keyword-trend's "how has coverage of a keyword I already picked
+    evolved". Two growth signals per keyword, both derived from the same
+    case-insensitive unnest() aggregation keyword-trend/category-trend
+    already use:
+      - weekly_slope: relative OLS slope of the last 8 weekly-bucket counts
+        -- catches sudden short-term spikes/drop-offs.
+      - monthly_slope: same, but over the last 6 monthly buckets -- catches
+        slow, sustained movement a weekly window is too short to see (e.g. a
+        research topic that gains or loses one paper every few weeks, which
+        barely moves week over week but is unmistakable month over month).
+    Both are *relative* slopes (see _relative_slope) so ranking is about
+    rate of change, not absolute volume. `direction` controls both which
+    sign of slope survives the filter and the sort order (steepest movement
+    first, in whichever direction) -- everything above this point in the
+    function is identical between the two directions, only the final
+    filter/sort and the newcomer/dormant flag below it differ.
+    "Newcomer"/"dormant" are a third, distinct signal, one or the other
+    depending on `direction`: newcomer = zero mentions in every monthly
+    bucket except the most recent one (which must clear
+    _MOMENTUM_MIN_RECENT_FOR_NEWCOMER, so two mentions in one day don't
+    qualify); dormant = the mirror image, nonzero mentions in some earlier
+    bucket but zero in the most recent one, i.e. a keyword that's gone
+    completely quiet. Kept separate from the slope ranking -- a keyword
+    with only a couple of total mentions doesn't have enough data points
+    for a meaningful slope, but is still worth flagging.
+    Candidates are bounded to keywords with at least
+    _MOMENTUM_MIN_TOTAL_MENTIONS total mentions across the 6-month lookback,
+    both to filter one-off noise and because the monthly window is a
+    superset of the weekly one, so it alone determines the full candidate
+    set -- no separate query needed to establish "which keywords exist".
+    Optionally filtered by source_ids and/or category_ids, same as
+    keyword-trend/category-trend above.
+    """
+    now = datetime.now(timezone.utc)
+    week_starts = _week_starts(_MOMENTUM_WEEKLY_BUCKETS, now)
+    month_starts = _month_starts(_MOMENTUM_MONTHLY_BUCKETS, now)
+    since = datetime.combine(month_starts[0], datetime.min.time(), tzinfo=timezone.utc)
+
+    weekly: dict[str, dict] = {}
+    monthly: dict[str, dict] = {}
+
+    item_weekly_q = (
+        _keyword_bucket_query(NewsItem.extracted_keywords, NewsItem.fetched_at, NewsItem.id, "week", since)
+        .where(NewsItem.user_id == current_user.id)
+    )
+    item_monthly_q = (
+        _keyword_bucket_query(NewsItem.extracted_keywords, NewsItem.fetched_at, NewsItem.id, "month", since)
+        .where(NewsItem.user_id == current_user.id)
+    )
+    cluster_weekly_q = (
+        _keyword_bucket_query(NewsCluster.extracted_keywords, NewsCluster.created_at, NewsCluster.id, "week", since)
+        .where(NewsCluster.user_id == current_user.id)
+    )
+    cluster_monthly_q = (
+        _keyword_bucket_query(NewsCluster.extracted_keywords, NewsCluster.created_at, NewsCluster.id, "month", since)
+        .where(NewsCluster.user_id == current_user.id)
+    )
+
+    if source_ids:
+        item_weekly_q = item_weekly_q.where(NewsItem.source_id.in_(source_ids))
+        item_monthly_q = item_monthly_q.where(NewsItem.source_id.in_(source_ids))
+        cluster_weekly_q = (
+            cluster_weekly_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+            .where(NewsItem.source_id.in_(source_ids))
+        )
+        cluster_monthly_q = (
+            cluster_monthly_q.join(NewsItem, NewsItem.cluster_id == NewsCluster.id)
+            .where(NewsItem.source_id.in_(source_ids))
+        )
+
+    if category_ids:
+        # count(id.distinct()) already dedupes an item/cluster matching more
+        # than one filtered category, so this join can't inflate counts the
+        # way it would with a plain count(*).
+        item_weekly_q = (
+            item_weekly_q.join(news_item_categories, news_item_categories.c.news_item_id == NewsItem.id)
+            .where(news_item_categories.c.category_id.in_(category_ids))
+        )
+        item_monthly_q = (
+            item_monthly_q.join(news_item_categories, news_item_categories.c.news_item_id == NewsItem.id)
+            .where(news_item_categories.c.category_id.in_(category_ids))
+        )
+        cluster_weekly_q = (
+            cluster_weekly_q.join(news_cluster_categories, news_cluster_categories.c.news_cluster_id == NewsCluster.id)
+            .where(news_cluster_categories.c.category_id.in_(category_ids))
+        )
+        cluster_monthly_q = (
+            cluster_monthly_q.join(news_cluster_categories, news_cluster_categories.c.news_cluster_id == NewsCluster.id)
+            .where(news_cluster_categories.c.category_id.in_(category_ids))
+        )
+
+    _merge_bucket_rows(db.execute(item_weekly_q).all(), weekly)
+    _merge_bucket_rows(db.execute(cluster_weekly_q).all(), weekly)
+    _merge_bucket_rows(db.execute(item_monthly_q).all(), monthly)
+    _merge_bucket_rows(db.execute(cluster_monthly_q).all(), monthly)
+
+    results = []
+    for kw_text, month_counts in monthly.items():
+        monthly_series = [month_counts.get(d, 0) for d in month_starts]
+        total_mentions = sum(monthly_series)
+        if total_mentions < _MOMENTUM_MIN_TOTAL_MENTIONS:
+            continue
+
+        week_counts = weekly.get(kw_text, {})
+        weekly_series = [week_counts.get(d, 0) for d in week_starts]
+
+        is_newcomer = (
+            monthly_series[-1] >= _MOMENTUM_MIN_RECENT_FOR_NEWCOMER
+            and all(v == 0 for v in monthly_series[:-1])
+        )
+        is_dormant = monthly_series[-1] == 0 and any(v > 0 for v in monthly_series[:-1])
+
+        results.append({
+            "keyword": kw_text,
+            "total_mentions": total_mentions,
+            "is_newcomer": is_newcomer,
+            "is_dormant": is_dormant,
+            "weekly_slope": round(_relative_slope(weekly_series), 4),
+            "monthly_slope": round(_relative_slope(monthly_series), 4),
+            "weekly_points": [{"date": str(d), "count": c} for d, c in zip(week_starts, weekly_series)],
+            "monthly_points": [{"date": str(d), "count": c} for d, c in zip(month_starts, monthly_series)],
+        })
+
+    if direction == "rising":
+        results = [r for r in results if max(r["weekly_slope"], r["monthly_slope"]) > 0]
+        results.sort(key=lambda r: max(r["weekly_slope"], r["monthly_slope"]), reverse=True)
+    else:
+        results = [r for r in results if min(r["weekly_slope"], r["monthly_slope"]) < 0]
+        results.sort(key=lambda r: min(r["weekly_slope"], r["monthly_slope"]))
+
+    return results[:_MOMENTUM_TOP_N]

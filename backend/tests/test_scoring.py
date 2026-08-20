@@ -1,4 +1,5 @@
 import math
+import uuid
 
 from app.models.category import Category
 from app.models.category_weight import CategoryWeight
@@ -23,12 +24,19 @@ def _make_source(db_session, user_id):
 
 
 def _make_relevant_item(db_session, source, user_id, category, is_relevant=True):
+    # uuid4, not id(object()) -- the latter is a memory address, which
+    # CPython's allocator can and does reuse for a short-lived object
+    # immediately after the previous one is freed, occasionally producing
+    # the exact same "unique" suffix twice within the same user and
+    # tripping the (user_id, url_hash) unique constraint at flush() time.
+    # Confirmed as a real, intermittent (not every run) failure in CI.
+    unique = uuid.uuid4().hex
     item = NewsItem(
         source_id=source.id,
         user_id=user_id,
         title="An article",
-        url=f"https://example.com/{id(object())}",
-        url_hash=f"hash-{id(object())}",
+        url=f"https://example.com/{unique}",
+        url_hash=f"hash-{unique}",
         is_relevant=is_relevant,
     )
     item.categories = [category]

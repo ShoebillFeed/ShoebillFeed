@@ -145,11 +145,28 @@ def parse_scraper_items(
             if not title:
                 continue
 
-            # Prefer explicit link selector; fall back to title element if it is an <a>
-            link_el = element.select_one(link_selector)
-            href = (link_el.get("href") or "").strip() if link_el else ""
-            if not href and title_el.name == "a":
+            # Prefer a link on (or inside) the title element itself -- the
+            # title is what users expect to be clickable, and it's what
+            # "clickable title" means in practice. Only fall back to the
+            # generic link_selector when the title has no link of its own
+            # (e.g. a plain-text heading with a separate "read more" anchor
+            # elsewhere in the item). The old order did this backwards:
+            # link_selector's default "a" matches the *first* anchor
+            # anywhere in the item container, which on real-world markup
+            # (e.g. news.ycombinator.com's upvote-arrow <a> preceding the
+            # titleline's own <a> in the same <tr>) can silently win over a
+            # correctly-targeted title_selector and point the item at
+            # something like a vote action URL instead of the article.
+            href = ""
+            if title_el.name == "a":
                 href = (title_el.get("href") or "").strip()
+            else:
+                inner_link = title_el.find("a")
+                if inner_link:
+                    href = (inner_link.get("href") or "").strip()
+            if not href:
+                link_el = element.select_one(link_selector)
+                href = (link_el.get("href") or "").strip() if link_el else ""
             if not href:
                 continue
 

@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+import httpx
+
 from app.services.llm.ollama_provider import OllamaProvider, _num_ctx_for, _timeout_for
 
 
@@ -69,6 +71,63 @@ class TestOllamaProviderIncludesNumCtx:
         large_ctx = mock_post.call_args.args[0]["options"]["num_ctx"]
 
         assert large_ctx > small_ctx
+
+
+class TestOllamaProviderThinkFallback:
+    """Regression coverage: once a `think: true` request 400s (some models,
+    e.g. gemma3, don't support the think/no-think toggle at all -- confirmed
+    against a real deployment's logs), every subsequent call must skip
+    sending `think` altogether instead of paying a wasted extra round-trip
+    on *every single future request* too, not just the first."""
+
+    def _provider(self):
+        return OllamaProvider(base_url="http://ollama.test", model="gemma3:12b")
+
+    def _response(self, status_code, body=None):
+        return httpx.Response(
+            status_code,
+            json=body if body is not None else {"response": "{}"},
+            request=httpx.Request("POST", "http://ollama.test/api/generate"),
+        )
+
+    def test_falls_back_and_retries_once_on_a_think_unsupported_400(self):
+        provider = self._provider()
+        with patch.object(provider.client, "post", side_effect=[self._response(400), self._response(200)]) as mock_post:
+            result = provider._post({"model": "gemma3:12b", "think": True})
+        assert result == {"response": "{}"}
+        assert mock_post.call_count == 2
+        assert mock_post.call_args_list[1].kwargs["json"]["think"] is False
+
+    def test_caches_think_unsupported_so_later_calls_skip_the_wasted_request(self):
+        provider = self._provider()
+        with patch.object(provider.client, "post", side_effect=[self._response(400), self._response(200)]):
+            provider._post({"model": "gemma3:12b", "think": True})
+        assert provider._think_unsupported is True
+
+        with patch.object(provider.client, "post", return_value=self._response(200)) as mock_post:
+            provider._post({"model": "gemma3:12b", "think": True})
+        # Only one request this time -- no wasted 400 round-trip.
+        assert mock_post.call_count == 1
+        assert mock_post.call_args.kwargs["json"]["think"] is False
+
+    def test_does_not_touch_think_when_the_model_supports_it(self):
+        provider = self._provider()
+        with patch.object(provider.client, "post", return_value=self._response(200)) as mock_post:
+            provider._post({"model": "qwen3:8b", "think": True})
+        assert mock_post.call_count == 1
+        assert mock_post.call_args.kwargs["json"]["think"] is True
+        assert provider._think_unsupported is False
+
+    def test_a_400_unrelated_to_think_is_not_retried(self):
+        provider = self._provider()
+        with patch.object(provider.client, "post", return_value=self._response(400)) as mock_post:
+            try:
+                provider._post({"model": "gemma3:12b"})  # no "think" key at all
+                raised = False
+            except httpx.HTTPStatusError:
+                raised = True
+        assert raised
+        assert mock_post.call_count == 1
 
 
 class TestTimeoutFor:

@@ -13,7 +13,7 @@ import {
   ExternalLink,
   Info,
 } from "lucide-react";
-import { Accordion } from "./Accordion";
+import { Accordion } from "../ui/Accordion";
 
 function TechDetails({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -126,6 +126,10 @@ export default function AboutPanel() {
 
       <Accordion title={t("about.podcastTitle")}>
         <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{t("about.podcastBody")}</p>
+      </Accordion>
+
+      <Accordion title={t("about.analyticsTitle")}>
+        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{t("about.analyticsBody")}</p>
       </Accordion>
     </div>
   );

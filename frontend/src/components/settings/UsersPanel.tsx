@@ -4,7 +4,7 @@ import { Plus, Trash2, ShieldCheck, KeyRound, BookOpen, ThumbsUp, Bookmark, News
 import { useTranslation } from "react-i18next";
 import { useToast } from "../ui/Toaster";
 import { useUsers, useCreateUser, useDeleteUser, useResetUserPassword, useUserStats } from "../../hooks/useAuth";
-import { Accordion } from "./Accordion";
+import { Accordion } from "../ui/Accordion";
 import type { UserStats } from "../../api/auth";
 
 export default function UsersPanel() {

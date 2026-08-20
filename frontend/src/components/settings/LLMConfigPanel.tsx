@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Loader } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import client from "../../api/client";
-import { Accordion } from "./Accordion";
+import { Accordion } from "../ui/Accordion";
 
 interface ProviderInfo {
   name: string;

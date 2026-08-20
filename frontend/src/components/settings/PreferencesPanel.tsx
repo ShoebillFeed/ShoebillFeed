@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, Copy, Trash2 } from "lucide-react";
-import { Accordion } from "./Accordion";
+import { Accordion } from "../ui/Accordion";
 import { useTranslation } from "react-i18next";
 import { formatDistanceToNow } from "date-fns";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";

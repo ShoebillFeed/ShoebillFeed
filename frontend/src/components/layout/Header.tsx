@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Newspaper, Podcast, Settings, LogOut, Sun, Moon } from "lucide-react";
+import { Newspaper, Podcast, ChartColumn, Settings, LogOut, Sun, Moon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ShoebillIcon } from "../icons/ShoebillIcon";
 import { cn } from "../../lib/utils";
@@ -47,6 +47,7 @@ export default function Header() {
         <nav className="flex items-center gap-1">
           <NavLink to="/" active={pathname === "/"} icon={<Newspaper size={16} />} label={t("header.feed")} />
           <NavLink to="/podcasts" active={pathname === "/podcasts"} icon={<Podcast size={16} />} label={t("header.podcasts")} />
+          <NavLink to="/analyse" active={pathname === "/analyse"} icon={<ChartColumn size={16} />} label={t("header.analyse")} />
           <NavLink to="/settings" active={pathname === "/settings"} icon={<Settings size={16} />} label={t("header.settings")} />
 
           <ThemeToggle />

@@ -6,6 +6,7 @@ import { useRegisterSW } from "virtual:pwa-register/react";
 import AppShell from "./components/layout/AppShell";
 import FeedPage from "./pages/FeedPage";
 import PodcastsPage from "./pages/PodcastsPage";
+import AnalysePage from "./pages/AnalysePage";
 import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import { useMe } from "./hooks/useAuth";
@@ -94,6 +95,7 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<FeedPage />} />
                   <Route path="/podcasts" element={<PodcastsPage />} />
+                  <Route path="/analyse" element={<AnalysePage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                 </Routes>
               </AppShell>

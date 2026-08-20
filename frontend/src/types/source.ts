@@ -10,6 +10,9 @@ export interface Source {
   last_fetched_at: string | null;
   created_at: string;
   item_count: number;
+  // True when active, at least a week old, and zero articles fetched in
+  // that week -- see backend api/sources.py::_is_stale.
+  is_stale: boolean;
 }
 
 export interface SourceCreate {
