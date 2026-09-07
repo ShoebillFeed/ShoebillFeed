@@ -113,6 +113,52 @@ startup — remove it and let Docker recreate it with the correct ownership:
   see "Running TTS synthesis on separate hardware" in {doc}`configuration`
   for offloading it to a standalone, optionally GPU-backed container.
 
+## Health checks and auto-recovery
+
+`postgres`, `redis`, and `backend` have always had Docker healthchecks. The
+four Celery services (`celery-worker`, `celery-worker-process`,
+`celery-worker-podcast`, `celery-beat`) do too. This matters because
+`restart: unless-stopped` alone only restarts a container when it actually
+*exits* — a worker that's alive but stuck (e.g. it lost its Redis broker
+connection and never reconnected) keeps showing `Up` in `docker ps` forever,
+silently not processing anything, with nothing to notice or recover it.
+
+The three worker services check in via Celery's own control bus
+(`celery inspect ping`), which is answered by the worker's control thread
+independently of whatever its pool child is currently executing — so the
+check stays fast even mid-task, including `celery-worker-process` sitting
+on a long-running Ollama call:
+
+```yaml
+celery-worker-process:
+  healthcheck:
+    test: ["CMD-SHELL", "celery -A app.tasks.celery_app inspect ping -d celery@$$(hostname) --timeout 10 2>&1 | grep -q OK"]
+    interval: 60s
+    timeout: 15s
+    retries: 3
+    start_period: 30s
+```
+
+`celery-beat` has no equivalent control-ping RPC — there's no
+consumer/task-execution machinery to answer one — so its healthcheck is
+weaker: a plain `/proc` scan confirming the process is still resident,
+not that it's still ticking:
+
+```yaml
+celery-beat:
+  healthcheck:
+    test: ["CMD", "python", "-c", "import os,sys; sys.exit(0 if any(b'beat' in open(f'/proc/{p}/cmdline','rb').read() for p in os.listdir('/proc') if p.isdigit()) else 1)"]
+    interval: 60s
+    timeout: 10s
+    retries: 3
+    start_period: 20s
+```
+
+Both checks avoid `pgrep`/`ps` deliberately — the backend image is
+`python:3.12-slim` with only `libpq-dev gcc ffmpeg` installed, no
+`procps` — so anything shelled out to in a healthcheck needs to be either
+`celery` itself or plain Python.
+
 ## Upgrading
 
 Migrations run automatically as part of the backend image's startup.
