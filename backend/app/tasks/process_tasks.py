@@ -393,6 +393,40 @@ def process_cluster(self, cluster_id: str) -> None:
         db.close()
 
 
+def unprocessed_item_ids(db, user_id, limit: int) -> list:
+    """Oldest-last: the newest unprocessed standalone items for one user.
+
+    LIFO is deliberate. When the process queue is backed up, a reader wants
+    this morning's news to reach the feed before the worker grinds through
+    yesterday's leftovers. The tradeoff is real and worth knowing: if inflow
+    outruns throughput for long enough, the oldest items at the back never
+    get picked up at all, where FIFO would have drained them eventually.
+    They stay queryable, just unprocessed.
+
+    Previously this had no ORDER BY at all, which with a LIMIT meant
+    Postgres returned whatever the plan yielded -- arbitrary, and not stable
+    between runs.
+    """
+    return list(db.scalars(
+        select(NewsItem.id)
+        .where(NewsItem.llm_processed == False, NewsItem.cluster_id == None, NewsItem.user_id == user_id)  # noqa: E711,E712
+        .order_by(NewsItem.fetched_at.desc())
+        .limit(limit)
+    ).all())
+
+
+def unprocessed_cluster_ids(db, user_id, limit: int) -> list:
+    """Newest unprocessed clusters for one user. NewsCluster has no
+    fetched_at -- created_at is when clustering first grouped the story,
+    which is the closest equivalent."""
+    return list(db.scalars(
+        select(NewsCluster.id)
+        .where(NewsCluster.llm_processed == False, NewsCluster.user_id == user_id)  # noqa: E712
+        .order_by(NewsCluster.created_at.desc())
+        .limit(limit)
+    ).all())
+
+
 @celery_app.task(name="app.tasks.process_tasks.batch_process_unprocessed", queue="process")
 def batch_process_unprocessed(limit: int = 150) -> int:
     settings = get_settings()
@@ -406,19 +440,11 @@ def batch_process_unprocessed(limit: int = 150) -> int:
 
         item_ids = []
         for uid in user_ids:
-            item_ids.extend(db.scalars(
-                select(NewsItem.id)
-                .where(NewsItem.llm_processed == False, NewsItem.cluster_id == None, NewsItem.user_id == uid)  # noqa: E711,E712
-                .limit(per_user)
-            ).all())
+            item_ids.extend(unprocessed_item_ids(db, uid, per_user))
 
         cluster_ids = []
         for uid in user_ids:
-            cluster_ids.extend(db.scalars(
-                select(NewsCluster.id)
-                .where(NewsCluster.llm_processed == False, NewsCluster.user_id == uid)  # noqa: E712
-                .limit(per_user)
-            ).all())
+            cluster_ids.extend(unprocessed_cluster_ids(db, uid, per_user))
 
         anthropic = get_anthropic_provider()
         if anthropic is None:

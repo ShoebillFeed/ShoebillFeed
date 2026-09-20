@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from hashlib import sha256
 
-from sqlalchemy import select, func, update, exists
+from sqlalchemy import select, func, update, exists, nulls_last
 
 from app.database import SessionLocal
 from app.models import NewsItem, NewsCluster, Source
@@ -151,8 +151,21 @@ def fetch_source(self, source_id: str, companion_ids: list[str] | None = None) -
             cluster_map = cluster_new_items(db, all_new_item_ids)
             db.commit()
 
+            # Newest first (LIFO), matching the sweep in
+            # process_tasks.unprocessed_item_ids: a single fetch can add
+            # hundreds of items to a serialized, concurrency-1 queue, so the
+            # order they're enqueued in decides what reaches the feed first.
+            # published_at is what a reader means by "newer"; it's nullable
+            # (not every feed supplies one), so fall back to fetch time.
+            ordered_ids = db.scalars(
+                select(NewsItem.id)
+                .where(NewsItem.id.in_(list(cluster_map.keys())))
+                .order_by(nulls_last(NewsItem.published_at.desc()), NewsItem.fetched_at.desc())
+            ).all()
+
             dispatched_clusters: set[uuid.UUID] = set()
-            for item_id, cluster_id in cluster_map.items():
+            for item_id in ordered_ids:
+                cluster_id = cluster_map.get(item_id)
                 if cluster_id is not None:
                     if cluster_id not in dispatched_clusters:
                         process_cluster.apply_async(args=[str(cluster_id)], queue="process")
