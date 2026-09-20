@@ -43,7 +43,17 @@ services:
         condition: service_healthy
     environment:
       - OLLAMA_HOST=http://ollama:11434
-    entrypoint: ["ollama", "pull", "gemma3:12b"]
+    # Pulls whatever OLLAMA_MODEL is set to rather than a hardcoded model:
+    # switching models in .env otherwise left this pulling the old one, so
+    # the stack came up with the configured model missing entirely. The
+    # embedding model is pulled alongside it because services/embedding.py
+    # needs it for semantic clustering regardless of which model generates
+    # text -- and nothing else ever pulls it.
+    # One-element list, not a bare string: Compose word-splits a string
+    # command into argv, which would hand `sh -c` only the first token.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - ollama pull ${OLLAMA_MODEL:-qwen3:8b} && ollama pull ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
     restart: "no"
 
 volumes:
