@@ -356,6 +356,8 @@ const ja = {
     database: "データベース",
     redis: "Redis",
     podcastTts: "ポッドキャスト（音声合成）",
+    ttsEngine: "エンジン",
+    serviceUrl: "サービス URL",
     healthy: "正常",
     unreachable: "到達不能",
     configuredProviders: "設定済みプロバイダー",

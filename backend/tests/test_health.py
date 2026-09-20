@@ -38,6 +38,7 @@ def test_podcast_health_reports_piper_by_default(client, podcast_dirs):
     assert body["supports_speech_rate"] is True
     assert body["supports_exaggeration"] is False
     assert body["network_configured"] is False
+    assert body["engine"] == "piper"  # in-process, fixed and known without a probe
 
 
 def test_podcast_health_does_not_require_auth(client, podcast_dirs):
@@ -127,6 +128,48 @@ def test_podcast_health_reports_supports_exaggeration_from_a_network_provider(cl
         with patch.object(NetworkTTSProvider, "health_check", fake_health_check):
             resp = client.get("/api/settings/podcast-health")
         assert resp.json()["supports_exaggeration"] is True
+    finally:
+        get_tts_provider.cache_clear()
+
+
+def test_podcast_health_reports_the_remote_engine_name(client, podcast_dirs, monkeypatch):
+    # "network" alone says nothing about what synthesizes; the engine comes
+    # off the remote /health response during the health check itself.
+    from app.config import get_settings
+    from app.services.tts.factory import get_tts_provider
+    from app.services.tts.network_provider import NetworkTTSProvider
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "tts_provider", "network")
+    monkeypatch.setattr(settings, "tts_service_url", "http://tts.internal:8100")
+    get_tts_provider.cache_clear()
+
+    def fake_health_check(self):
+        self.engine = "chatterbox"
+        return True
+
+    try:
+        with patch.object(NetworkTTSProvider, "health_check", fake_health_check):
+            resp = client.get("/api/settings/podcast-health")
+        assert resp.json()["engine"] == "chatterbox"
+    finally:
+        get_tts_provider.cache_clear()
+
+
+def test_podcast_health_reports_no_engine_for_an_unreachable_network_provider(client, podcast_dirs, monkeypatch):
+    from app.config import get_settings
+    from app.services.tts.factory import get_tts_provider
+    from app.services.tts.network_provider import NetworkTTSProvider
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "tts_provider", "network")
+    monkeypatch.setattr(settings, "tts_service_url", "http://tts.internal:8100")
+    get_tts_provider.cache_clear()
+
+    try:
+        with patch.object(NetworkTTSProvider, "health_check", return_value=False):
+            resp = client.get("/api/settings/podcast-health")
+        assert resp.json()["engine"] is None
     finally:
         get_tts_provider.cache_clear()
 

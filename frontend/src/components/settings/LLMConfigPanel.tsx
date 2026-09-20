@@ -31,11 +31,19 @@ interface TTSHealth {
   provider: string;
   healthy: boolean;
   base_url: string | null;
+  engine: string | null;
 }
 
 const PROVIDER_LABEL: Record<string, string> = {
   anthropic: "Anthropic",
   ollama: "Ollama",
+};
+
+// "network" on its own says nothing about what actually synthesizes, so the
+// card below pairs this label with the engine reported by the remote service.
+const TTS_PROVIDER_LABEL: Record<string, string> = {
+  piper: "Piper",
+  network: "tts_service",
 };
 
 export default function LLMConfigPanel() {
@@ -45,26 +53,36 @@ export default function LLMConfigPanel() {
   const [ttsHealth, setTtsHealth] = useState<TTSHealth | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
 
-  useEffect(() => {
-    client.get<LLMConfig>("/settings/llm").then((r) => setConfig(r.data));
-  }, []);
-
   const checkHealth = async () => {
     setHealthLoading(true);
     try {
       // Two independent endpoints (podcast-health is deliberately not folded
       // into /health -- see backend api/settings.py) fetched together so
       // one "Check" click still covers everything on this tab.
-      const [healthResp, ttsResp] = await Promise.all([
+      // allSettled, not all: these report on different services, so an
+      // unreachable TTS host must not also discard a perfectly good
+      // /settings/health result (and, now that this runs unattended on
+      // mount, must not surface as an unhandled rejection either).
+      const [healthResp, ttsResp] = await Promise.allSettled([
         client.get<Health>("/settings/health"),
         client.get<TTSHealth>("/settings/podcast-health"),
       ]);
-      setHealth(healthResp.data);
-      setTtsHealth(ttsResp.data);
+      if (healthResp.status === "fulfilled") setHealth(healthResp.value.data);
+      if (ttsResp.status === "fulfilled") setTtsHealth(ttsResp.value.data);
     } finally {
       setHealthLoading(false);
     }
   };
+
+  useEffect(() => {
+    client.get<LLMConfig>("/settings/llm").then((r) => setConfig(r.data));
+    // Both accordions start open, so run the check up front: an auto-opened
+    // Service Health panel that stays empty until you press "Check" would be
+    // worse than not opening it. The Configured providers TTS card needs
+    // /settings/podcast-health for its engine/URL rows anyway.
+    void checkHealth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!config) return <p className="text-sm text-gray-400">{t("common.loading")}</p>;
 
@@ -110,11 +128,38 @@ export default function LLMConfigPanel() {
               </div>
             </div>
           ))}
+          {ttsHealth && (
+            <div className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {TTS_PROVIDER_LABEL[ttsHealth.provider] ?? ttsHealth.provider}
+                </span>
+                <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                  {t("llm.podcastTts")}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                {ttsHealth.engine && (
+                  <div className="flex gap-2 text-xs">
+                    <span className="text-gray-400 w-16 shrink-0">{t("llm.ttsEngine")}</span>
+                    <span className="font-mono text-gray-700 dark:text-gray-300">{ttsHealth.engine}</span>
+                  </div>
+                )}
+                {ttsHealth.base_url && (
+                  <div className="flex gap-2 text-xs">
+                    <span className="text-gray-400 w-16 shrink-0">{t("llm.serviceUrl")}</span>
+                    <span className="font-mono text-gray-700 dark:text-gray-300 break-all">{ttsHealth.base_url}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </Accordion>
 
       <Accordion
         title={t("llm.serviceHealth")}
+        defaultOpen
         action={
           <button
             onClick={checkHealth}
@@ -148,6 +193,8 @@ export default function LLMConfigPanel() {
               />
             )}
           </div>
+        ) : healthLoading ? (
+          <p className="text-sm text-gray-400">{t("common.loading")}</p>
         ) : null}
       </Accordion>
     </div>

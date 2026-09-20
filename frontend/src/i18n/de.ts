@@ -356,6 +356,8 @@ const de = {
     database: "Datenbank",
     redis: "Redis",
     podcastTts: "Podcast (TTS)",
+    ttsEngine: "Engine",
+    serviceUrl: "Dienst-URL",
     healthy: "erreichbar",
     unreachable: "nicht erreichbar",
     configuredProviders: "Konfigurierte Anbieter",

@@ -356,6 +356,8 @@ const da = {
     database: "Database",
     redis: "Redis",
     podcastTts: "Podcast (TTS)",
+    ttsEngine: "Motor",
+    serviceUrl: "Tjeneste-URL",
     healthy: "sund",
     unreachable: "utilgængelig",
     configuredProviders: "Konfigurerede udbydere",

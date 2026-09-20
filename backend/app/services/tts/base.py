@@ -31,6 +31,14 @@ class TTSProvider(ABC):
     # the per-host exaggeration control when this is True.
     supports_exaggeration: bool = False
 
+    # Which concrete engine is actually doing the synthesis. For in-process
+    # providers this is fixed and known upfront; for "network" it's whatever
+    # TTS_ENGINE the remote tts_service/ container runs, so it stays None
+    # until a health_check() has read it off that service's /health response.
+    # Purely informational -- surfaced in Settings so "network" isn't an
+    # opaque label that says nothing about what's generating the audio.
+    engine: str | None = None
+
     @abstractmethod
     def list_voices(self, language: str) -> list[VoiceInfo]:
         """Return all voices/speakers available for `language`. May be a single

@@ -78,10 +78,14 @@ def podcast_health_check():
         healthy = provider.health_check()
         supports_speech_rate = provider.supports_speech_rate
         supports_exaggeration = provider.supports_exaggeration
+        # Read after health_check(), not before: NetworkTTSProvider only
+        # learns the remote engine's name from that call's /health response.
+        engine = provider.engine
     except Exception:
         healthy = False
         supports_speech_rate = True
         supports_exaggeration = False
+        engine = None
 
     return TTSHealthOut(
         provider=settings.tts_provider,
@@ -90,6 +94,7 @@ def podcast_health_check():
         supports_speech_rate=supports_speech_rate,
         supports_exaggeration=supports_exaggeration,
         network_configured=bool(settings.tts_service_url),
+        engine=engine,
     )
 
 

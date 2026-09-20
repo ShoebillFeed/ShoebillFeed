@@ -357,6 +357,8 @@ const ru = {
     database: "База данных",
     redis: "Redis",
     podcastTts: "Подкаст (озвучка)",
+    ttsEngine: "Движок",
+    serviceUrl: "URL сервиса",
     healthy: "работает",
     unreachable: "недоступен",
     configuredProviders: "Настроенные провайдеры",

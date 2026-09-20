@@ -356,6 +356,8 @@ const zh = {
     database: "数据库",
     redis: "Redis",
     podcastTts: "播客（语音合成）",
+    ttsEngine: "引擎",
+    serviceUrl: "服务 URL",
     healthy: "正常",
     unreachable: "不可达",
     configuredProviders: "已配置的提供商",

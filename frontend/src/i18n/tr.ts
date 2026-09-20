@@ -356,6 +356,8 @@ const tr = {
     database: "Veritabanı",
     redis: "Redis",
     podcastTts: "Podcast (TTS)",
+    ttsEngine: "Motor",
+    serviceUrl: "Servis URL'si",
     healthy: "sağlıklı",
     unreachable: "erişilemiyor",
     configuredProviders: "Yapılandırılmış sağlayıcılar",

@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class PiperProvider(TTSProvider):
     provider_name = "piper"
+    engine = "piper"
 
     def __init__(self, model_dir: str):
         self.model_dir = model_dir

@@ -138,3 +138,7 @@ class TTSHealthOut(BaseModel):
     # which provider is the deployment's global default -- Piper needs no
     # such check since it's always available in-process.
     network_configured: bool = False
+    # Which engine actually synthesizes ("piper" in-process, or whatever
+    # TTS_ENGINE the remote tts_service runs). None when the provider is
+    # "network" and the health check couldn't reach it to find out.
+    engine: str | None = None

@@ -356,6 +356,8 @@ const en = {
     database: "Database",
     redis: "Redis",
     podcastTts: "Podcast (TTS)",
+    ttsEngine: "Engine",
+    serviceUrl: "Service URL",
     healthy: "healthy",
     unreachable: "unreachable",
     configuredProviders: "Configured providers",

@@ -358,6 +358,8 @@ const uk = {
     database: "База даних",
     redis: "Redis",
     podcastTts: "Подкаст (озвучення)",
+    ttsEngine: "Рушій",
+    serviceUrl: "URL сервісу",
     healthy: "працює",
     unreachable: "недоступний",
     configuredProviders: "Налаштовані провайдери",

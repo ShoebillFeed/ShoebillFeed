@@ -356,6 +356,8 @@ const nl = {
     database: "Database",
     redis: "Redis",
     podcastTts: "Podcast (TTS)",
+    ttsEngine: "Engine",
+    serviceUrl: "Service-URL",
     healthy: "bereikbaar",
     unreachable: "onbereikbaar",
     configuredProviders: "Geconfigureerde providers",

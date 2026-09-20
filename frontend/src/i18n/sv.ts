@@ -356,6 +356,8 @@ const sv = {
     database: "Databas",
     redis: "Redis",
     podcastTts: "Podcast (TTS)",
+    ttsEngine: "Motor",
+    serviceUrl: "Tjänst-URL",
     healthy: "felfri",
     unreachable: "onåbar",
     configuredProviders: "Konfigurerade leverantörer",

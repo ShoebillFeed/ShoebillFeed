@@ -356,6 +356,8 @@ const hu = {
     database: "Adatbázis",
     redis: "Redis",
     podcastTts: "Podcast (TTS)",
+    ttsEngine: "Motor",
+    serviceUrl: "Szolgáltatás URL",
     healthy: "egészséges",
     unreachable: "nem elérhető",
     configuredProviders: "Konfigurált szolgáltatók",

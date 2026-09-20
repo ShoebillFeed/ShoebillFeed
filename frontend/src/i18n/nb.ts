@@ -356,6 +356,8 @@ const nb = {
     database: "Database",
     redis: "Redis",
     podcastTts: "Podkast (TTS)",
+    ttsEngine: "Motor",
+    serviceUrl: "Tjeneste-URL",
     healthy: "frisk",
     unreachable: "utilgjengelig",
     configuredProviders: "Konfigurerte leverandører",

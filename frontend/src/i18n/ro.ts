@@ -356,6 +356,8 @@ const ro = {
     database: "Bază de date",
     redis: "Redis",
     podcastTts: "Podcast (TTS)",
+    ttsEngine: "Motor",
+    serviceUrl: "URL serviciu",
     healthy: "funcțional",
     unreachable: "inaccesibil",
     configuredProviders: "Furnizori configurați",

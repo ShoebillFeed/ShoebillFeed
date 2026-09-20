@@ -356,6 +356,8 @@ const fi = {
     database: "Tietokanta",
     redis: "Redis",
     podcastTts: "Podcast (TTS)",
+    ttsEngine: "Moottori",
+    serviceUrl: "Palvelun URL",
     healthy: "toimii",
     unreachable: "tavoittamaton",
     configuredProviders: "Määritetyt palveluntarjoajat",

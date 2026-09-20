@@ -42,6 +42,8 @@ class NetworkTTSProvider(TTSProvider):
         # inert), so hiding it until a health check confirms Chatterbox is
         # actually running is the safer failure mode.
         self.supports_exaggeration = False
+        # Unknown until health_check() reads it off the remote /health.
+        self.engine: str | None = None
 
     def list_voices(self, language: str) -> list[VoiceInfo]:
         resp = self.client.get(f"{self.base_url}/voices", params={"language": language})
@@ -74,6 +76,8 @@ class NetworkTTSProvider(TTSProvider):
             if resp.status_code != 200:
                 return False
             data = resp.json()
+            if data.get("engine"):
+                self.engine = str(data["engine"])
             if "supports_speech_rate" in data:
                 self.supports_speech_rate = bool(data["supports_speech_rate"])
             if "supports_exaggeration" in data:

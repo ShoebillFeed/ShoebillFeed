@@ -204,6 +204,40 @@ class TestHealthCheck:
             provider.health_check()
         assert provider.supports_exaggeration is False
 
+    def test_engine_is_unknown_before_any_check(self):
+        assert _provider().engine is None
+
+    def test_reads_the_engine_name_from_the_health_response(self):
+        provider = _provider()
+        fake_resp = MagicMock(status_code=200)
+        fake_resp.json.return_value = {"status": "ok", "engine": "chatterbox"}
+        with patch.object(provider.client, "get", return_value=fake_resp):
+            provider.health_check()
+        assert provider.engine == "chatterbox"
+
+    def test_leaves_engine_unknown_when_the_response_omits_it(self):
+        provider = _provider()
+        fake_resp = MagicMock(status_code=200)
+        fake_resp.json.return_value = {"status": "ok"}
+        with patch.object(provider.client, "get", return_value=fake_resp):
+            provider.health_check()
+        assert provider.engine is None
+
+    def test_does_not_clobber_a_known_engine_on_a_failed_check(self):
+        # A transient blip shouldn't downgrade Settings from "chatterbox"
+        # back to an unknown engine -- the last known-good answer still
+        # describes the deployment.
+        provider = _provider()
+        fake_resp = MagicMock(status_code=200)
+        fake_resp.json.return_value = {"status": "ok", "engine": "kokoro"}
+        with patch.object(provider.client, "get", return_value=fake_resp):
+            provider.health_check()
+        assert provider.engine == "kokoro"
+
+        with patch.object(provider.client, "get", return_value=MagicMock(status_code=503)):
+            provider.health_check()
+        assert provider.engine == "kokoro"
+
 
 class TestTTSFactoryNetworkProvider:
     def test_selects_network_provider_when_configured(self, monkeypatch):

@@ -356,6 +356,8 @@ const ko = {
     database: "데이터베이스",
     redis: "Redis",
     podcastTts: "팟캐스트 (TTS)",
+    ttsEngine: "엔진",
+    serviceUrl: "서비스 URL",
     healthy: "정상",
     unreachable: "연결 불가",
     configuredProviders: "구성된 공급자",

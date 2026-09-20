@@ -356,6 +356,8 @@ const cs = {
     database: "Databáze",
     redis: "Redis",
     podcastTts: "Podcast (TTS)",
+    ttsEngine: "Engine",
+    serviceUrl: "URL služby",
     healthy: "funkční",
     unreachable: "nedostupný",
     configuredProviders: "Nakonfigurovaní poskytovatelé",
