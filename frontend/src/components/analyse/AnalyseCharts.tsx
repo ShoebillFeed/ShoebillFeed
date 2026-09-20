@@ -1140,53 +1140,63 @@ function ClusterBubbleMap({ data }: { data: KeywordClusterMapEntry[] }) {
         })}
       </svg>
 
-      {active ? (
-        <div className="mt-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <div>
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: active.category_color }} />
-                <span className="text-xs text-gray-500 dark:text-gray-400">{active.category_name}</span>
+      {/* Fixed-height slot. The detail card is driven by hover, so without
+          reserved space the card's own appearance resizes the accordion --
+          and everything below it -- every time the pointer crosses a bubble,
+          which is what made it unreadable. The placeholder fills the same
+          box, and a cluster with more keywords than fit scrolls inside the
+          slot instead of growing it. */}
+      <div className="mt-3 h-[168px]">
+        {active ? (
+          <div className="h-full flex flex-col p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <div className="flex items-start justify-between gap-3 mb-2 shrink-0">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: active.category_color }} />
+                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{active.category_name}</span>
+                </div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{active.cluster_label}</p>
               </div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{active.cluster_label}</p>
+              <span
+                className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 shrink-0 mt-0.5"
+                title={t("stats.clusterSizeHint")}
+              >
+                <ThumbsUp size={11} />
+                {active.cluster_size}
+              </span>
             </div>
-            <span
-              className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 shrink-0 mt-0.5"
-              title={t("stats.clusterSizeHint")}
-            >
-              <ThumbsUp size={11} />
-              {active.cluster_size}
-            </span>
+            <div className="flex flex-wrap content-start gap-1.5 flex-1 min-h-0 overflow-y-auto">
+              {active.keywords.map((kw) => {
+                const hasWeight = kw.weight > 1.0;
+                return (
+                  <span
+                    key={kw.keyword}
+                    title={`TF-IDF: ${kw.score.toFixed(3)}${hasWeight ? ` · liked ×${kw.weight.toFixed(1)}` : ""}`}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 h-fit rounded text-xs text-gray-700 dark:text-gray-300"
+                    style={{
+                      borderWidth: "1px",
+                      borderStyle: "solid",
+                      borderColor: hasWeight ? active.category_color + "80" : "rgb(229 231 235)",
+                      backgroundColor: hasWeight ? active.category_color + "18" : undefined,
+                    }}
+                  >
+                    {kw.keyword}
+                    {hasWeight && (
+                      <span className="text-[10px] font-semibold tabular-nums" style={{ color: active.category_color }}>
+                        ×{kw.weight.toFixed(1)}
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {active.keywords.map((kw) => {
-              const hasWeight = kw.weight > 1.0;
-              return (
-                <span
-                  key={kw.keyword}
-                  title={`TF-IDF: ${kw.score.toFixed(3)}${hasWeight ? ` · liked ×${kw.weight.toFixed(1)}` : ""}`}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-gray-700 dark:text-gray-300"
-                  style={{
-                    borderWidth: "1px",
-                    borderStyle: "solid",
-                    borderColor: hasWeight ? active.category_color + "80" : "rgb(229 231 235)",
-                    backgroundColor: hasWeight ? active.category_color + "18" : undefined,
-                  }}
-                >
-                  {kw.keyword}
-                  {hasWeight && (
-                    <span className="text-[10px] font-semibold tabular-nums" style={{ color: active.category_color }}>
-                      ×{kw.weight.toFixed(1)}
-                    </span>
-                  )}
-                </span>
-              );
-            })}
+        ) : (
+          <div className="h-full flex items-center justify-center rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+            <p className="text-center text-xs text-gray-400">{t("stats.clusterClickHint")}</p>
           </div>
-        </div>
-      ) : (
-        <p className="mt-2 text-center text-xs text-gray-400">{t("stats.clusterClickHint")}</p>
-      )}
+        )}
+      </div>
     </div>
   );
 }
