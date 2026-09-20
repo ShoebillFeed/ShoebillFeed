@@ -65,13 +65,29 @@ class PiperProvider(TTSProvider):
         return SynthesisResult(audio_path=out_path, duration_seconds=duration)
 
     def health_check(self) -> bool:
-        # Fully in-process, no remote service to ping -- "healthy" here means
-        # "can actually persist a downloaded/synthesized voice model", the
-        # one way this provider fails that's worth surfacing proactively.
+        # Fully in-process, so there is no remote service to ping -- "healthy"
+        # here means "could actually synthesize right now", which takes two
+        # things: a writable model dir (so a voice can be downloaded and
+        # cached) and a Piper runtime that imports at all.
         try:
-            return os.path.isdir(self.model_dir) and os.access(self.model_dir, os.W_OK)
+            if not (os.path.isdir(self.model_dir) and os.access(self.model_dir, os.W_OK)):
+                return False
         except OSError:
             return False
+
+        # The import is the real failure surface: it pulls in onnxruntime,
+        # and a broken/missing wheel only ever surfaced mid-episode as a
+        # failed generation while this check reported healthy. Deliberately
+        # only an import -- loading a voice would download a model, far too
+        # heavy for a health check. Cached by sys.modules after the first
+        # call, so the cost is paid once per process.
+        try:
+            from piper import PiperVoice  # noqa: F401
+        except Exception:
+            logger.warning("Piper health check failed: the piper runtime could not be imported", exc_info=True)
+            return False
+
+        return True
 
     def _parse_voice_id(self, voice_id: str) -> tuple[str, int | None]:
         if "#" in voice_id:

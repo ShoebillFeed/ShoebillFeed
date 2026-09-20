@@ -39,6 +39,14 @@ def _timeout_for(max_tokens: int, floor: float) -> float:
     return max(floor, max_tokens * _SECONDS_PER_TOKEN_ESTIMATE)
 
 
+def _qualified_model(model: str) -> str:
+    """Ollama resolves a bare model name to its ":latest" tag, and /api/tags
+    always reports the fully-qualified form -- so compare on that rather
+    than the raw configured string, or `OLLAMA_MODEL=qwen3` would never
+    match the installed `qwen3:latest`."""
+    return model if ":" in model else f"{model}:latest"
+
+
 class OllamaProvider(LLMProvider):
     provider_name = "ollama"
 
@@ -180,6 +188,18 @@ class OllamaProvider(LLMProvider):
     def health_check(self) -> bool:
         try:
             resp = self.client.get(f"{self.base_url}/api/tags", timeout=5.0)
-            return resp.status_code == 200
+            if resp.status_code != 200:
+                return False
+            # A reachable daemon isn't enough. If OLLAMA_MODEL was never
+            # pulled on that host, every real call 404s with "model not
+            # found" while this check stayed green -- the single most common
+            # way an Ollama deployment is broken while looking fine.
+            # /api/tags already lists what's installed, so verifying it here
+            # costs no extra request.
+            installed = {
+                _qualified_model(m.get("name", ""))
+                for m in resp.json().get("models", [])
+            }
+            return _qualified_model(self.model) in installed
         except Exception:
             return False
