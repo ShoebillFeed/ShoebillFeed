@@ -27,6 +27,16 @@ interface Health {
   provider_health: ProviderHealth[];
 }
 
+interface ModelUsage {
+  model: string;
+  hour: number;
+  day: number;
+}
+
+interface LLMUsage {
+  models: ModelUsage[];
+}
+
 interface TTSHealth {
   provider: string;
   healthy: boolean;
@@ -51,6 +61,7 @@ export default function LLMConfigPanel() {
   const [config, setConfig] = useState<LLMConfig | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
   const [ttsHealth, setTtsHealth] = useState<TTSHealth | null>(null);
+  const [usage, setUsage] = useState<LLMUsage | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
 
   const checkHealth = async () => {
@@ -63,12 +74,14 @@ export default function LLMConfigPanel() {
       // unreachable TTS host must not also discard a perfectly good
       // /settings/health result (and, now that this runs unattended on
       // mount, must not surface as an unhandled rejection either).
-      const [healthResp, ttsResp] = await Promise.allSettled([
+      const [healthResp, ttsResp, usageResp] = await Promise.allSettled([
         client.get<Health>("/settings/health"),
         client.get<TTSHealth>("/settings/podcast-health"),
+        client.get<LLMUsage>("/settings/llm-usage"),
       ]);
       if (healthResp.status === "fulfilled") setHealth(healthResp.value.data);
       if (ttsResp.status === "fulfilled") setTtsHealth(ttsResp.value.data);
+      if (usageResp.status === "fulfilled") setUsage(usageResp.value.data);
     } finally {
       setHealthLoading(false);
     }
@@ -84,6 +97,9 @@ export default function LLMConfigPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const usageFor = (model: string | null) =>
+    model ? usage?.models.find((m) => m.model === model) ?? null : null;
+
   if (!config) return <p className="text-sm text-gray-400">{t("common.loading")}</p>;
 
   return (
@@ -93,7 +109,9 @@ export default function LLMConfigPanel() {
           {t("llm.readOnlyNotice")}
         </div>
         <div className="flex flex-col gap-2">
-          {config.providers.map((p) => (
+          {config.providers.map((p) => {
+            const used = usageFor(p.model);
+            return (
             <div
               key={p.name}
               className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg"
@@ -125,9 +143,25 @@ export default function LLMConfigPanel() {
                     <span className="font-mono text-gray-700 dark:text-gray-300 break-all">{p.base_url}</span>
                   </div>
                 )}
+                {used && (
+                  <div className="flex gap-2 text-xs">
+                    <span className="text-gray-400 w-16 shrink-0">{t("llm.requests")}</span>
+                    <span
+                      className="font-mono text-gray-700 dark:text-gray-300 tabular-nums"
+                      title={t("llm.requestsHint")}
+                    >
+                      {used.hour.toLocaleString()}
+                      <span className="text-gray-400"> / {t("llm.lastHour")}</span>
+                      <span className="text-gray-300 dark:text-gray-600"> · </span>
+                      {used.day.toLocaleString()}
+                      <span className="text-gray-400"> / {t("llm.lastDay")}</span>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-          ))}
+            );
+          })}
           {ttsHealth && (
             <div className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
               <div className="flex items-center gap-2 mb-2">

@@ -1,6 +1,8 @@
 import json
 import anthropic
 
+from app.services.llm.usage import record_request
+
 from app.services.llm.base import (
     LLMProvider, ProcessedResult, ClusterResult, NewsletterResult,
     SYSTEM_PROMPT, SOCIAL_SYSTEM_PROMPT, SHORT_ITEM_SYSTEM_PROMPT,
@@ -20,13 +22,23 @@ class AnthropicProvider(LLMProvider):
         self.model_name = model
 
     def _complete(self, system: str, user: str, max_tokens: int = 512) -> str:
-        message = self.client.messages.create(
+        message = self._create(
             model=self.model,
             max_tokens=max_tokens,
             system=self._cached_system(system),
             messages=[{"role": "user", "content": user}],
         )
         return message.content[0].text
+
+    def _create(self, **kwargs):
+        """Every synchronous Messages call goes through here so request
+        counting has one place to live. Recorded only after the call
+        returns -- a request the model never answered isn't one it handled.
+        Batch API requests are counted separately, where their results are
+        applied (see llm/batch_service.py)."""
+        message = self.client.messages.create(**kwargs)
+        record_request(self.model)
+        return message
 
     def _cached_system(self, text: str) -> list[dict]:
         """Wrap a system prompt for Anthropic prompt caching.
@@ -40,7 +52,7 @@ class AnthropicProvider(LLMProvider):
         system = prompt_template.format(categories_json=json.dumps(categories)) + language_suffix(output_language, translate_title=not social_post)
         user = f"Post: {truncated}" if social_post else f"Title: {title}\n\nContent: {truncated}"
 
-        message = self.client.messages.create(
+        message = self._create(
             model=self.model,
             max_tokens=1024,
             system=self._cached_system(system),
@@ -60,7 +72,7 @@ class AnthropicProvider(LLMProvider):
             content = (item.get("content") or item["title"])[:max_content_chars]
             parts.append(f"Item {i} (Source: {item['source_name']}):\nTitle: {item['title']}\nContent: {content}")
 
-        message = self.client.messages.create(
+        message = self._create(
             model=self.model,
             max_tokens=2048,
             system=self._cached_system(system),
@@ -74,7 +86,7 @@ class AnthropicProvider(LLMProvider):
     def extract_newsletter_items(self, content: str, categories: list[dict], output_language=None) -> NewsletterResult:
         known = [c["name"] for c in categories]
         system = NEWSLETTER_SYSTEM_PROMPT.format(categories_json=json.dumps(categories, ensure_ascii=False)) + language_suffix(output_language)
-        message = self.client.messages.create(
+        message = self._create(
             model=self.model,
             max_tokens=4096,
             system=self._cached_system(system),

@@ -1,6 +1,7 @@
 import json
 import httpx
 
+from app.services.llm.usage import record_request
 from app.services.llm.base import (
     LLMProvider, ProcessedResult, ClusterResult, NewsletterResult,
     SYSTEM_PROMPT, SOCIAL_SYSTEM_PROMPT, CLUSTER_SYSTEM_PROMPT, NEWSLETTER_SYSTEM_PROMPT,
@@ -80,6 +81,10 @@ class OllamaProvider(LLMProvider):
             payload = {**payload, "think": False}
             resp = self.client.post(f"{self.base_url}/api/generate", json=payload, **kw)
         resp.raise_for_status()
+        # After raise_for_status, so a call the model never answered isn't
+        # counted as one it handled. The think-retry above is one logical
+        # request, not two, and is counted once for the same reason.
+        record_request(self.model)
         return resp.json()
 
     def _complete(self, system: str, user: str, max_tokens: int = 512) -> str:

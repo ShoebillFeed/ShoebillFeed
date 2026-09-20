@@ -121,6 +121,18 @@ class HealthOut(BaseModel):
     provider_health: list[ProviderHealth] = []
 
 
+class ModelUsageOut(BaseModel):
+    model: str
+    # Successful requests in rolling windows ending now -- not calendar
+    # hour/day buckets. See services/llm/usage.py.
+    hour: int
+    day: int
+
+
+class LLMUsageOut(BaseModel):
+    models: list[ModelUsageOut]
+
+
 class TTSHealthOut(BaseModel):
     provider: str  # "piper" or "network"
     healthy: bool

@@ -7,7 +7,10 @@ from app.api.deps import get_db, get_current_user
 from app.config import get_settings
 from app.models.user import User
 from app.models.user_settings import UserSettings
-from app.schemas.news_item import HealthOut, LLMConfigOut, LLMConfigUpdate, ProviderInfo, ProviderHealth, TTSHealthOut
+from app.schemas.news_item import (
+    HealthOut, LLMConfigOut, LLMConfigUpdate, LLMUsageOut, ModelUsageOut,
+    ProviderInfo, ProviderHealth, TTSHealthOut,
+)
 from app.schemas.user_settings import UserSettingsOut, UserSettingsUpdate
 from app.services.llm.factory import get_llm_provider
 
@@ -115,6 +118,33 @@ def _build_llm_config() -> LLMConfigOut:
 @router.get("/llm", response_model=LLMConfigOut)
 def get_llm_config():
     return _build_llm_config()
+
+
+@router.get("/llm-usage", response_model=LLMUsageOut)
+def get_llm_usage():
+    """How many requests each configured model actually handled, over
+    rolling 1h/24h windows. Kept out of /llm because that one is static
+    config the frontend fetches once, while this changes continuously and
+    is refreshed alongside the health check."""
+    from app.services.llm.usage import request_counts
+
+    settings = get_settings()
+    models: list[str] = []
+    for name in settings.llm_provider_list:
+        if name == "anthropic":
+            models.append(settings.anthropic_model)
+        elif name == "ollama":
+            models.append(settings.ollama_model)
+
+    # dict.fromkeys, not set(): two providers can be configured against the
+    # same model name, and the panel should list it once, in config order.
+    counts = request_counts(list(dict.fromkeys(models)))
+    return LLMUsageOut(
+        models=[
+            ModelUsageOut(model=model, hour=c["hour"], day=c["day"])
+            for model, c in counts.items()
+        ]
+    )
 
 
 @router.patch("/llm", response_model=LLMConfigOut)

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models import NewsItem, NewsCluster, Source, Category
 from app.models.llm_batch import LLMBatch
+from app.services.llm.usage import record_request
 from app.models.category_weight import CategoryWeight
 from app.models.user_settings import UserSettings
 from app.services.llm.base import (
@@ -239,6 +240,12 @@ def apply_batch_results(db: Session, llm_batch: LLMBatch, results, provider=None
             applied.add(cid)
         except Exception:
             logger.exception("Failed to apply result for %s", cid)
+
+    # A batch is N requests the model handled, not one. Counted here rather
+    # than at submission time so it matches the sync path: only requests
+    # that actually came back succeeded are counted.
+    if model_name and applied:
+        record_request(model_name, len(applied))
 
     db.commit()
 
