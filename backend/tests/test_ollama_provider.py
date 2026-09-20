@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import httpx
 
@@ -242,3 +242,43 @@ class TestQualifiedModel:
 
     def test_leaves_an_explicit_tag_alone(self):
         assert _qualified_model("qwen3:8b") == "qwen3:8b"
+
+
+class TestOllamaThinkingFieldFallback:
+    """Some thinking models answer into `thinking` and leave `response`
+    empty (qwen3:4b on Ollama 0.30.10, confirmed against a real deployment).
+    It comes back 200 with done_reason "stop", so the 400-based
+    _think_unsupported fallback can't catch it -- every item would parse an
+    empty string instead. qwen3:8b answers normally, so this is per-model,
+    not per-family."""
+
+    def _provider(self):
+        return OllamaProvider(base_url="http://ollama.test", model="qwen3:4b")
+
+    def _post(self, provider, payload_json):
+        fake = MagicMock(status_code=200)
+        fake.json.return_value = payload_json
+        fake.raise_for_status.return_value = None
+        with patch.object(provider.client, "post", return_value=fake):
+            return provider._post({"model": "qwen3:4b", "prompt": "x"})
+
+    def test_uses_thinking_when_response_is_empty(self):
+        out = self._post(self._provider(), {"response": "", "thinking": '{"ok": true}'})
+        assert out["response"] == '{"ok": true}'
+
+    def test_uses_thinking_when_response_is_only_whitespace(self):
+        out = self._post(self._provider(), {"response": "   \n", "thinking": '{"ok": true}'})
+        assert out["response"] == '{"ok": true}'
+
+    def test_prefers_a_real_response_over_thinking(self):
+        # The normal case for every other model: never let reasoning text
+        # override an actual answer.
+        out = self._post(self._provider(), {"response": '{"real": 1}', "thinking": "musing"})
+        assert out["response"] == '{"real": 1}'
+
+    def test_leaves_an_empty_response_alone_when_there_is_no_thinking(self):
+        out = self._post(self._provider(), {"response": "", "thinking": ""})
+        assert out["response"] == ""
+
+    def test_tolerates_a_payload_with_neither_key(self):
+        assert self._post(self._provider(), {"done_reason": "stop"}) == {"done_reason": "stop"}

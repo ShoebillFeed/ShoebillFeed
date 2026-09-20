@@ -85,7 +85,24 @@ class OllamaProvider(LLMProvider):
         # counted as one it handled. The think-retry above is one logical
         # request, not two, and is counted once for the same reason.
         record_request(self.model)
-        return resp.json()
+        data = resp.json()
+
+        # Some thinking models emit the whole answer into `thinking` and
+        # leave `response` empty -- confirmed on Ollama 0.30.10 with
+        # qwen3:4b, where every `think: true` call (process_item's, i.e. the
+        # main per-article path) comes back 200 with done_reason "stop",
+        # an empty `response`, and the requested JSON sitting in `thinking`.
+        # The 400-based _think_unsupported fallback above cannot catch this:
+        # there is no error, just an empty answer that parse_llm_response
+        # then fails on for every single item. Note this is model-specific,
+        # not family-wide -- qwen3:8b answers in `response` normally, which
+        # is why the documented default never surfaced it.
+        if not (data.get("response") or "").strip():
+            thinking = (data.get("thinking") or "").strip()
+            if thinking:
+                data["response"] = thinking
+
+        return data
 
     def _complete(self, system: str, user: str, max_tokens: int = 512) -> str:
         payload = {
