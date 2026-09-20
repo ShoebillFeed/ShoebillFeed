@@ -119,6 +119,15 @@ class TestPiperProviderHealthCheck:
         provider.model_dir = str(not_a_dir)
         assert provider.health_check() is False
 
+    def test_unhealthy_when_the_piper_runtime_cannot_be_imported(self, tmp_path):
+        # A writable dir says nothing about whether synthesis would work --
+        # a broken/missing onnxruntime wheel used to surface only mid-episode.
+        import sys
+
+        provider = PiperProvider(model_dir=str(tmp_path / "voices"))
+        with patch.dict(sys.modules, {"piper": None}):
+            assert provider.health_check() is False
+
 
 class TestPickDistinctVoicesDefault:
     def test_returns_each_available_voice_once_when_enough_exist(self):

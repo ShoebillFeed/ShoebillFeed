@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import httpx
 
-from app.services.llm.ollama_provider import OllamaProvider, _num_ctx_for, _timeout_for
+from app.services.llm.ollama_provider import OllamaProvider, _num_ctx_for, _qualified_model, _timeout_for
 
 
 class TestNumCtxFor:
@@ -184,3 +184,61 @@ class TestOllamaProviderIncludesTimeout:
         with patch.object(provider, "_post", return_value={"response": '{"items": []}'}) as mock_post:
             provider.extract_newsletter_items(content="hello", categories=[])
         assert mock_post.call_args.kwargs["timeout"] is not None
+
+
+class TestOllamaHealthCheck:
+    """A reachable daemon is not the same as a usable one: the configured
+    model has to actually be pulled, or every real call 404s while the
+    health row stays green."""
+
+    def _provider(self, model="qwen3:8b"):
+        return OllamaProvider(base_url="http://ollama.test", model=model)
+
+    def _resp(self, names, status=200):
+        resp = httpx.Response(status, json={"models": [{"name": n} for n in names]})
+        return resp
+
+    def test_healthy_when_the_configured_model_is_installed(self):
+        provider = self._provider()
+        with patch.object(provider.client, "get", return_value=self._resp(["llama3:8b", "qwen3:8b"])):
+            assert provider.health_check() is True
+
+    def test_unhealthy_when_the_configured_model_is_not_installed(self):
+        provider = self._provider()
+        with patch.object(provider.client, "get", return_value=self._resp(["llama3:8b"])):
+            assert provider.health_check() is False
+
+    def test_unhealthy_when_nothing_is_installed_at_all(self):
+        provider = self._provider()
+        with patch.object(provider.client, "get", return_value=httpx.Response(200, json={})):
+            assert provider.health_check() is False
+
+    def test_a_bare_model_name_matches_the_latest_tag(self):
+        # Ollama resolves "qwen3" to "qwen3:latest"; /api/tags only ever
+        # reports the qualified form.
+        provider = self._provider(model="qwen3")
+        with patch.object(provider.client, "get", return_value=self._resp(["qwen3:latest"])):
+            assert provider.health_check() is True
+
+    def test_an_explicit_tag_must_match_exactly(self):
+        provider = self._provider(model="qwen3:8b")
+        with patch.object(provider.client, "get", return_value=self._resp(["qwen3:4b"])):
+            assert provider.health_check() is False
+
+    def test_unhealthy_on_non_200(self):
+        provider = self._provider()
+        with patch.object(provider.client, "get", return_value=httpx.Response(503)):
+            assert provider.health_check() is False
+
+    def test_unhealthy_when_the_request_raises(self):
+        provider = self._provider()
+        with patch.object(provider.client, "get", side_effect=httpx.ConnectError("refused")):
+            assert provider.health_check() is False
+
+
+class TestQualifiedModel:
+    def test_appends_latest_to_a_bare_name(self):
+        assert _qualified_model("qwen3") == "qwen3:latest"
+
+    def test_leaves_an_explicit_tag_alone(self):
+        assert _qualified_model("qwen3:8b") == "qwen3:8b"
