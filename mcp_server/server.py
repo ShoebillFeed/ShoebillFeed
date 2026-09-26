@@ -14,8 +14,10 @@ Run with:
   python server.py
 """
 
+import json
 import os
 import sys
+from urllib.parse import quote
 from typing import Any
 
 try:
@@ -58,6 +60,12 @@ def _post(path: str, body: dict | None = None, params: dict | None = None) -> An
             return resp.json()
         except Exception:
             return {}
+
+
+def _delete(path: str) -> None:
+    with httpx.Client(timeout=30) as client:
+        resp = client.delete(f"{API_URL}{path}", headers=_HEADERS)
+        resp.raise_for_status()
 
 
 def _patch(path: str, body: dict | None = None) -> Any:
@@ -349,6 +357,264 @@ async def list_tools() -> list[types.Tool]:
             ),
             inputSchema={"type": "object", "properties": {}},
         ),
+        # ── Learning profile ────────────────────────────────────────────
+        types.Tool(
+            name="get_learning_profile",
+            description=(
+                "Show what Shoebill has learned about the user's interests: per-category "
+                "learned and manual weights with how many articles were marked in each, "
+                "plus the top learned keyword weights. Use this to explain WHY something "
+                "ranks highly in the Relevant tab, or before adjusting a preference."
+            ),
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        types.Tool(
+            name="set_category_weight",
+            description=(
+                "Set a category's MANUAL weight multiplier (0.0-5.0). This is the "
+                "user-controlled dial; it multiplies the separately learned weight rather "
+                "than replacing it. 1.0 is neutral, 0.0 suppresses the category. Use when "
+                "the user says a topic is over- or under-represented."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "category_id": {"type": "string", "description": "Category UUID (see list_categories)."},
+                    "manual_weight": {"type": "number", "description": "0.0-5.0; 1.0 is neutral."},
+                },
+                "required": ["category_id", "manual_weight"],
+            },
+        ),
+        types.Tool(
+            name="forget_keyword",
+            description=(
+                "Delete a learned keyword weight, so it stops influencing ranking. Use "
+                "when a keyword was learned by accident. The keyword is normalized "
+                "server-side, so surface variants resolve to the same entry."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {"keyword": {"type": "string", "description": "Keyword to forget."}},
+                "required": ["keyword"],
+            },
+        ),
+        # ── Source curation ─────────────────────────────────────────────────
+        types.Tool(
+            name="add_source",
+            description=(
+                "Add a news source. `config` is type-specific: rss/atom take {\"url\": ...}, "
+                "reddit {\"subreddit\": ...}, arxiv {\"query\": ...}, mastodon {\"instance\", \"hashtag\"}, "
+                "github/lemmy/bluesky/telegram/scraper their own keys. Prefer suggest_scraper_config "
+                "first for a plain website."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Display name."},
+                    "source_type": {
+                        "type": "string",
+                        "enum": ["rss", "atom", "reddit", "email", "mastodon", "arxiv",
+                                 "lemmy", "github", "bluesky", "telegram", "scraper"],
+                    },
+                    "config": {"type": "object", "description": "Type-specific config object."},
+                    "fetch_interval": {"type": "integer", "description": "Seconds between fetches (min 300)."},
+                },
+                "required": ["name", "source_type", "config"],
+            },
+        ),
+        types.Tool(
+            name="update_source",
+            description="Rename a source, change its config, pause/resume it, or change its fetch interval.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string", "description": "Source UUID."},
+                    "name": {"type": "string"},
+                    "config": {"type": "object"},
+                    "is_active": {"type": "boolean", "description": "False pauses fetching without deleting."},
+                    "fetch_interval": {"type": "integer"},
+                },
+                "required": ["id"],
+            },
+        ),
+        types.Tool(
+            name="delete_source",
+            description="Permanently delete a source and its articles. Confirm with the user first.",
+            inputSchema={
+                "type": "object",
+                "properties": {"id": {"type": "string", "description": "Source UUID."}},
+                "required": ["id"],
+            },
+        ),
+        types.Tool(
+            name="fetch_source",
+            description=(
+                "Fetch one source immediately, instead of trigger_fetch's every-source sweep. "
+                "Use after adding a source to confirm it actually returns articles."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {"id": {"type": "string", "description": "Source UUID."}},
+                "required": ["id"],
+            },
+        ),
+        types.Tool(
+            name="list_shared_sources",
+            description="List sources other users on this instance have made shareable, as suggestions to subscribe to.",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        types.Tool(
+            name="suggest_scraper_config",
+            description=(
+                "Given a URL, inspect the page and suggest CSS selectors for a `scraper` "
+                "source. Use for sites with no RSS feed, then pass the result to add_source."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {"url": {"type": "string", "description": "Page listing articles."}},
+                "required": ["url"],
+            },
+        ),
+        types.Tool(
+            name="export_sources",
+            description="Export every source as JSON, for backup or moving to another instance.",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        # ── Category curation ───────────────────────────────────────────────
+        types.Tool(
+            name="add_category",
+            description=(
+                "Create a category. Categories drive what the LLM bothers to summarize: "
+                "Stage 1 classification gates the expensive abstract call, so an article "
+                "matching no category never gets summarized."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "keywords": {"type": "array", "items": {"type": "string"},
+                                 "description": "Seed keywords for matching."},
+                    "color": {"type": "string", "description": "Hex like #6366f1."},
+                    "prompt": {"type": "string", "description": "Optional extra guidance for the classifier."},
+                },
+                "required": ["name"],
+            },
+        ),
+        types.Tool(
+            name="update_category",
+            description="Rename a category, change its keywords/color/prompt, or deactivate it.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string", "description": "Category UUID."},
+                    "name": {"type": "string"},
+                    "keywords": {"type": "array", "items": {"type": "string"}},
+                    "color": {"type": "string"},
+                    "prompt": {"type": "string"},
+                    "is_active": {"type": "boolean"},
+                },
+                "required": ["id"],
+            },
+        ),
+        types.Tool(
+            name="delete_category",
+            description="Delete a category. Confirm with the user first.",
+            inputSchema={
+                "type": "object",
+                "properties": {"id": {"type": "string", "description": "Category UUID."}},
+                "required": ["id"],
+            },
+        ),
+        # ── Podcasts ────────────────────────────────────────────────────────
+        types.Tool(
+            name="list_podcast_shows",
+            description="List configured podcast shows, with schedule, language, and public feed URL when enabled.",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        types.Tool(
+            name="list_podcast_episodes",
+            description=(
+                "List generated podcast episodes, newest first: status, duration, and "
+                "shownote story titles."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {"page_size": {"type": "integer", "description": "Max episodes (default 10)."}},
+            },
+        ),
+        types.Tool(
+            name="generate_podcast_episode",
+            description=(
+                "Queue an episode for a show right now, instead of waiting for its daily "
+                "schedule. Returns once queued -- generation (LLM script + TTS) runs in "
+                "the background and takes minutes; poll list_podcast_episodes for status."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {"show_id": {"type": "string", "description": "Show UUID (see list_podcast_shows)."}},
+                "required": ["show_id"],
+            },
+        ),
+        types.Tool(
+            name="get_podcast_feed_url",
+            description=(
+                "Get a show's public RSS URL for subscribing in a podcast app, enabling it "
+                "if needed. This creates an UNAUTHENTICATED link -- anyone holding it can "
+                "fetch the show's audio. Confirm with the user before enabling."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "show_id": {"type": "string", "description": "Show UUID."},
+                    "enable": {"type": "boolean", "description": "Enable the feed if not already on (default false)."},
+                },
+                "required": ["show_id"],
+            },
+        ),
+        # ── Trends ──────────────────────────────────────────────────────────
+        types.Tool(
+            name="keyword_momentum",
+            description=(
+                "Which topics in the feed are gaining or losing ground -- answers 'what's "
+                "rising this month?' without needing to know what to look for. Ranks "
+                "keywords by relative growth over weekly (8 buckets) and monthly (6 "
+                "buckets) windows, and flags newcomers/dormant keywords."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "direction": {"type": "string", "enum": ["rising", "falling"], "description": "Default rising."},
+                    "limit": {"type": "integer", "description": "Max keywords to report (default 15)."},
+                },
+            },
+        ),
+        types.Tool(
+            name="keyword_trend",
+            description=(
+                "Day-by-day coverage counts for keywords you already have in mind. Each "
+                "topic OR-matches its keyword list, so one topic can be a single keyword "
+                "or a group of synonyms. Use keyword_momentum instead to discover topics."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "topics": {
+                        "type": "array",
+                        "description": "1-6 topics, each {label, keywords[]}.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {"type": "string"},
+                                "keywords": {"type": "array", "items": {"type": "string"}},
+                            },
+                            "required": ["label", "keywords"],
+                        },
+                    },
+                    "days": {"type": "integer", "description": "Lookback window; omit for all time."},
+                },
+                "required": ["topics"],
+            },
+        ),
     ]
 
 
@@ -502,6 +768,211 @@ def _handle(name: str, args: dict) -> str:
     if name == "trigger_fetch":
         _post("/sources/fetch-all")
         return "Fetch triggered. New articles will appear within a minute."
+
+    # ── Learning profile ────────────────────────────────────────────────────
+
+    if name == "get_learning_profile":
+        profile = _get("/learning/profile")
+        lines = ["**Categories** (learned x manual = effective ranking weight)"]
+        for cat in profile.get("categories", []):
+            learned, manual = cat["learned_weight"], cat["manual_weight"]
+            lines.append(
+                f"- {cat['name']}: learned {learned}, manual {manual}, "
+                f"effective {round(learned * manual, 3)} "
+                f"({cat['total_marked']} marked relevant) [id: {cat['id']}]"
+            )
+        keywords = profile.get("keywords", [])
+        if keywords:
+            lines.append("\n**Top learned keywords**")
+            for kw in keywords:
+                lines.append(f"- {kw['keyword']}: {kw['weight']} ({kw['total_marked']} marked)")
+        return "\n".join(lines) if len(lines) > 1 else "Nothing learned yet — like some articles first."
+
+    if name == "set_category_weight":
+        weight = float(args["manual_weight"])
+        if not 0.0 <= weight <= 5.0:
+            return "manual_weight must be between 0.0 and 5.0."
+        _patch(f"/learning/categories/{args['category_id']}/weight", {"manual_weight": weight})
+        return f"Manual weight set to {weight} (1.0 is neutral)."
+
+    if name == "forget_keyword":
+        # 204 whether or not the keyword existed, so this is idempotent and
+        # there's nothing to report back beyond the normalized form.
+        _delete(f"/learning/keywords/{quote(str(args['keyword']), safe='')}")
+        return f"Forgot learned keyword {args['keyword']!r}."
+
+    # ── Source curation ─────────────────────────────────────────────────────
+
+    if name == "add_source":
+        body = {
+            "name": args["name"],
+            "source_type": args["source_type"],
+            "config": args.get("config") or {},
+        }
+        if args.get("fetch_interval"):
+            body["fetch_interval"] = int(args["fetch_interval"])
+        src = _post("/sources", body)
+        return (f"Created source '{src['name']}' ({src['source_type']}), id {src['id']}. "
+                f"Call fetch_source to pull it now and confirm it works.")
+
+    if name == "update_source":
+        body = {k: args[k] for k in ("name", "config", "is_active", "fetch_interval") if k in args}
+        if not body:
+            return "Nothing to update — pass at least one of name, config, is_active, fetch_interval."
+        src = _patch(f"/sources/{args['id']}", body)
+        state = "active" if src.get("is_active") else "paused"
+        return f"Updated '{src['name']}' ({state})."
+
+    if name == "delete_source":
+        _delete(f"/sources/{args['id']}")
+        return "Source deleted."
+
+    if name == "fetch_source":
+        _post(f"/sources/{args['id']}/fetch")
+        return "Fetch queued for that source. Give it a few seconds, then check get_feed."
+
+    if name == "list_shared_sources":
+        shared = _get("/sources/shared")
+        if not shared:
+            return "No shared sources available."
+        return "\n".join(
+            f"- {x.get('name')} ({x.get('source_type')}) [id: {x.get('id')}]" for x in shared
+        )
+
+    if name == "suggest_scraper_config":
+        suggestion = _post("/sources/scraper/suggest", {"url": args["url"]})
+        return json.dumps(suggestion, indent=2)
+
+    if name == "export_sources":
+        return json.dumps(_get("/sources/export"), indent=2)
+
+    # ── Category curation ───────────────────────────────────────────────────
+
+    if name == "add_category":
+        body: dict = {"name": args["name"]}
+        for key in ("keywords", "color", "prompt"):
+            if key in args:
+                body[key] = args[key]
+        cat = _post("/categories", body)
+        return f"Created category '{cat['name']}', id {cat['id']}."
+
+    if name == "update_category":
+        body = {k: args[k] for k in ("name", "keywords", "color", "prompt", "is_active") if k in args}
+        if not body:
+            return "Nothing to update — pass at least one field."
+        cat = _patch(f"/categories/{args['id']}", body)
+        return f"Updated category '{cat['name']}'."
+
+    if name == "delete_category":
+        _delete(f"/categories/{args['id']}")
+        return "Category deleted."
+
+    # ── Podcasts ────────────────────────────────────────────────────────────
+
+    if name == "list_podcast_shows":
+        shows = _get("/podcasts/shows")
+        if not shows:
+            return "No podcast shows configured."
+        lines = []
+        for show in shows:
+            bits = [f"**{show.get('name')}**"]
+            if show.get("schedule_time"):
+                bits.append(f"daily at {show['schedule_time']} {show.get('timezone', 'UTC')}")
+            if show.get("target_length_minutes"):
+                bits.append(f"~{show['target_length_minutes']} min")
+            if show.get("language"):
+                bits.append(show["language"])
+            line = " · ".join(bits)
+            if show.get("public_feed_enabled") and show.get("public_feed_url"):
+                line += f"\n  Public feed: {show['public_feed_url']}"
+            line += f"\n  id: {show.get('id')}"
+            lines.append(line)
+        return "\n\n".join(lines)
+
+    if name == "list_podcast_episodes":
+        page_size = min(int(args.get("page_size", 10)), 100)
+        data = _get("/podcasts/episodes", {"page_size": page_size})
+        episodes = data.get("items", [])
+        if not episodes:
+            return "No episodes yet."
+        lines = []
+        for ep in episodes:
+            bits = [f"**{ep.get('show_name') or 'Episode'}** — {ep.get('status')}"]
+            if ep.get("duration_seconds"):
+                bits.append(f"{round(ep['duration_seconds'] / 60)} min")
+            if ep.get("generated_at"):
+                bits.append(ep["generated_at"][:16].replace("T", " "))
+            line = " · ".join(bits)
+            if ep.get("error_message"):
+                line += f"\n  Error: {ep['error_message']}"
+            for note in (ep.get("shownotes") or [])[:8]:
+                line += f"\n  - {note.get('title')}"
+            line += f"\n  id: {ep.get('id')}"
+            lines.append(line)
+        return "\n\n".join(lines)
+
+    if name == "generate_podcast_episode":
+        _post(f"/podcasts/shows/{args['show_id']}/generate")
+        return ("Episode queued. Script generation and speech synthesis take several "
+                "minutes; check list_podcast_episodes for status.")
+
+    if name == "get_podcast_feed_url":
+        show_id = args["show_id"]
+        show = _get(f"/podcasts/shows/{show_id}")
+        if not show.get("public_feed_enabled"):
+            if not args.get("enable"):
+                return ("The public feed is disabled for this show. Re-run with enable=true "
+                        "to turn it on — note the resulting URL is unauthenticated, so "
+                        "anyone holding it can fetch the audio.")
+            show = _post(f"/podcasts/shows/{show_id}/public-feed")
+        url = show.get("public_feed_url")
+        if not url:
+            return ("The feed is enabled but the server has no PUBLIC_BASE_URL configured, "
+                    "so it cannot build a usable URL.")
+        return f"Public RSS feed: {url}"
+
+    # ── Trends ──────────────────────────────────────────────────────────────
+
+    if name == "keyword_momentum":
+        direction = args.get("direction", "rising")
+        limit = min(int(args.get("limit", 15)), 50)
+        rows = _get("/stats/keyword-momentum", {"direction": direction})
+        if not rows:
+            return f"No {direction} keywords found — needs a few months of history."
+        lines = []
+        for row in rows[:limit]:
+            bits = [f"**{row.get('keyword')}**"]
+            for field, label in (("weekly_slope", "weekly"), ("monthly_slope", "monthly")):
+                if row.get(field) is not None:
+                    bits.append(f"{label} {row[field]:+.2f}")
+            if row.get("total_mentions") is not None:
+                bits.append(f"{row['total_mentions']} mentions")
+            if row.get("is_newcomer"):
+                bits.append("NEW")
+            if row.get("is_dormant"):
+                bits.append("DORMANT")
+            lines.append(" · ".join(bits))
+        return f"**{direction.title()} keywords**\n" + "\n".join(lines)
+
+    if name == "keyword_trend":
+        topics = args["topics"]
+        if not isinstance(topics, list) or not topics:
+            return "Pass at least one topic as {label, keywords[]}."
+        body = {"topics": [{"label": t["label"], "keywords": t["keywords"]} for t in topics[:6]]}
+        # days is intentionally omitted (not sent as null) when absent: the
+        # endpoint treats an explicit null as "all time".
+        if "days" in args:
+            body["days"] = args["days"]
+        results = _post("/stats/keyword-trend", body)
+        lines = []
+        for result in results:
+            points = result.get("points", [])
+            total = sum(p.get("count", 0) for p in points)
+            lines.append(f"**{result.get('label')}** — {total} articles total")
+            for point in points:
+                if point.get("count"):
+                    lines.append(f"  {point.get('date')}: {point['count']}")
+        return "\n".join(lines) if lines else "No matches in that window."
 
     return f"Unknown tool: {name}"
 
