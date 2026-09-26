@@ -9,7 +9,7 @@ Configuration (environment variables):
   SHOEBILL_API_TOKEN  API token generated in Settings → Preferences → API Tokens
 
 Run with:
-  uv run --with 'mcp<2' --with httpx server.py
+  uv run --with 'mcp>=2' --with httpx server.py
   # or after: pip install mcp httpx
   python server.py
 """
@@ -22,9 +22,7 @@ from typing import Any
 
 try:
     import httpx
-    import mcp.server.stdio
-    import mcp.types as types
-    from mcp.server import Server
+    from mcp.server import MCPServer
 except ImportError:
     print("Missing dependencies. Install with: pip install mcp httpx", file=sys.stderr)
     sys.exit(1)
@@ -161,473 +159,6 @@ def _fmt_item(item: dict) -> str:
             url = member.get("url") or ""
             lines.append(f"  - {title} ({url})")
     return "\n".join(lines)
-
-
-server = Server("shoebill-feed")
-
-
-@server.list_tools()
-async def list_tools() -> list[types.Tool]:
-    return [
-        types.Tool(
-            name="get_feed",
-            description=(
-                "Get news items from the feed. Returns articles ordered by the selected sort mode, "
-                "optionally filtered by read status, categories, or sources."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "tab": {
-                        "type": "string",
-                        "description": (
-                            "Sort/filter mode: 'newest' (by date), 'relevant' (by personalised score), "
-                            "'impact' (by impact score), or 'read_later' (bookmarked items). Defaults to 'newest'."
-                        ),
-                    },
-                    "page_size": {
-                        "type": "integer",
-                        "description": "Number of items to return (1–50, default 20).",
-                    },
-                    "unread_only": {
-                        "type": "boolean",
-                        "description": "If true, return only unread articles.",
-                    },
-                    "category_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Filter by category UUIDs (use list_categories to discover IDs).",
-                    },
-                    "source_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Filter by source UUIDs (use list_sources to discover IDs).",
-                    },
-                },
-            },
-        ),
-        types.Tool(
-            name="search_news",
-            description=(
-                "Search news articles by keyword across title, abstract, and content. "
-                "Supports the same sort modes and filters as the main feed."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Search query."},
-                    "sort": {
-                        "type": "string",
-                        "description": "Sort order: 'newest' (default), 'relevant', or 'impact'.",
-                    },
-                    "category_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Filter results to these category UUIDs (use list_categories to discover IDs).",
-                    },
-                    "source_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Filter results to these source UUIDs (use list_sources to discover IDs).",
-                    },
-                    "unread_only": {
-                        "type": "boolean",
-                        "description": "If true, return only unread articles.",
-                    },
-                    "bookmarked_only": {
-                        "type": "boolean",
-                        "description": "If true, return only bookmarked (Read Later) articles.",
-                    },
-                    "page_size": {
-                        "type": "integer",
-                        "description": "Number of results (1–50, default 50).",
-                    },
-                },
-                "required": ["query"],
-            },
-        ),
-        types.Tool(
-            name="get_item",
-            description="Get full details for a single news article by its ID.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."},
-                },
-                "required": ["id"],
-            },
-        ),
-        types.Tool(
-            name="mark_read",
-            description="Mark a news article as read (if not already read).",
-            inputSchema={
-                "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
-                "required": ["id"],
-            },
-        ),
-        types.Tool(
-            name="mark_unread",
-            description="Mark a news article as unread (if currently read).",
-            inputSchema={
-                "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
-                "required": ["id"],
-            },
-        ),
-        types.Tool(
-            name="mark_all_read",
-            description="Mark all currently visible feed items as read.",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="like",
-            description=(
-                "Like (mark as relevant) a news article to train the feed's personalisation. "
-                "Toggles the liked state."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
-                "required": ["id"],
-            },
-        ),
-        types.Tool(
-            name="dislike",
-            description="Dislike a news article to downgrade similar future articles.",
-            inputSchema={
-                "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
-                "required": ["id"],
-            },
-        ),
-        types.Tool(
-            name="bookmark",
-            description="Add a news article to Read Later.",
-            inputSchema={
-                "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
-                "required": ["id"],
-            },
-        ),
-        types.Tool(
-            name="unbookmark",
-            description="Remove a news article from Read Later.",
-            inputSchema={
-                "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
-                "required": ["id"],
-            },
-        ),
-        types.Tool(
-            name="get_digest",
-            description=(
-                "Get a concise digest of today's top articles from the Relevant or Impact "
-                "tab — useful for a quick briefing."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "page_size": {
-                        "type": "integer",
-                        "description": "Number of top articles to include (default 10).",
-                    },
-                    "tab": {
-                        "type": "string",
-                        "description": "'relevant' or 'impact' (default 'relevant').",
-                    },
-                },
-            },
-        ),
-        types.Tool(
-            name="list_sources",
-            description="List all configured news sources.",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="list_categories",
-            description="List all news categories.",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="trigger_fetch",
-            description=(
-                "Trigger an immediate fetch cycle for all sources "
-                "(normally runs every 5 minutes automatically)."
-            ),
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        # ── Learning profile ────────────────────────────────────────────
-        types.Tool(
-            name="get_learning_profile",
-            description=(
-                "Show what Shoebill has learned about the user's interests: per-category "
-                "learned and manual weights with how many articles were marked in each, "
-                "plus the top learned keyword weights. Use this to explain WHY something "
-                "ranks highly in the Relevant tab, or before adjusting a preference."
-            ),
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="set_category_weight",
-            description=(
-                "Set a category's MANUAL weight multiplier (0.0-5.0). This is the "
-                "user-controlled dial; it multiplies the separately learned weight rather "
-                "than replacing it. 1.0 is neutral, 0.0 suppresses the category. Use when "
-                "the user says a topic is over- or under-represented."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "category_id": {"type": "string", "description": "Category UUID (see list_categories)."},
-                    "manual_weight": {"type": "number", "description": "0.0-5.0; 1.0 is neutral."},
-                },
-                "required": ["category_id", "manual_weight"],
-            },
-        ),
-        types.Tool(
-            name="forget_keyword",
-            description=(
-                "Delete a learned keyword weight, so it stops influencing ranking. Use "
-                "when a keyword was learned by accident. The keyword is normalized "
-                "server-side, so surface variants resolve to the same entry."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {"keyword": {"type": "string", "description": "Keyword to forget."}},
-                "required": ["keyword"],
-            },
-        ),
-        # ── Source curation ─────────────────────────────────────────────────
-        types.Tool(
-            name="add_source",
-            description=(
-                "Add a news source. `config` is type-specific: rss/atom take {\"url\": ...}, "
-                "reddit {\"subreddit\": ...}, arxiv {\"query\": ...}, mastodon {\"instance\", \"hashtag\"}, "
-                "github/lemmy/bluesky/telegram/scraper their own keys. Prefer suggest_scraper_config "
-                "first for a plain website."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string", "description": "Display name."},
-                    "source_type": {
-                        "type": "string",
-                        "enum": ["rss", "atom", "reddit", "email", "mastodon", "arxiv",
-                                 "lemmy", "github", "bluesky", "telegram", "scraper"],
-                    },
-                    "config": {"type": "object", "description": "Type-specific config object."},
-                    "fetch_interval": {"type": "integer", "description": "Seconds between fetches (min 300)."},
-                },
-                "required": ["name", "source_type", "config"],
-            },
-        ),
-        types.Tool(
-            name="update_source",
-            description="Rename a source, change its config, pause/resume it, or change its fetch interval.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "id": {"type": "string", "description": "Source UUID."},
-                    "name": {"type": "string"},
-                    "config": {"type": "object"},
-                    "is_active": {"type": "boolean", "description": "False pauses fetching without deleting."},
-                    "fetch_interval": {"type": "integer"},
-                },
-                "required": ["id"],
-            },
-        ),
-        types.Tool(
-            name="delete_source",
-            description="Permanently delete a source and its articles. Confirm with the user first.",
-            inputSchema={
-                "type": "object",
-                "properties": {"id": {"type": "string", "description": "Source UUID."}},
-                "required": ["id"],
-            },
-        ),
-        types.Tool(
-            name="fetch_source",
-            description=(
-                "Fetch one source immediately, instead of trigger_fetch's every-source sweep. "
-                "Use after adding a source to confirm it actually returns articles."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {"id": {"type": "string", "description": "Source UUID."}},
-                "required": ["id"],
-            },
-        ),
-        types.Tool(
-            name="list_shared_sources",
-            description="List sources other users on this instance have made shareable, as suggestions to subscribe to.",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="suggest_scraper_config",
-            description=(
-                "Given a URL, inspect the page and suggest CSS selectors for a `scraper` "
-                "source. Use for sites with no RSS feed, then pass the result to add_source."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {"url": {"type": "string", "description": "Page listing articles."}},
-                "required": ["url"],
-            },
-        ),
-        types.Tool(
-            name="export_sources",
-            description="Export every source as JSON, for backup or moving to another instance.",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        # ── Category curation ───────────────────────────────────────────────
-        types.Tool(
-            name="add_category",
-            description=(
-                "Create a category. Categories drive what the LLM bothers to summarize: "
-                "Stage 1 classification gates the expensive abstract call, so an article "
-                "matching no category never gets summarized."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "keywords": {"type": "array", "items": {"type": "string"},
-                                 "description": "Seed keywords for matching."},
-                    "color": {"type": "string", "description": "Hex like #6366f1."},
-                    "prompt": {"type": "string", "description": "Optional extra guidance for the classifier."},
-                },
-                "required": ["name"],
-            },
-        ),
-        types.Tool(
-            name="update_category",
-            description="Rename a category, change its keywords/color/prompt, or deactivate it.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "id": {"type": "string", "description": "Category UUID."},
-                    "name": {"type": "string"},
-                    "keywords": {"type": "array", "items": {"type": "string"}},
-                    "color": {"type": "string"},
-                    "prompt": {"type": "string"},
-                    "is_active": {"type": "boolean"},
-                },
-                "required": ["id"],
-            },
-        ),
-        types.Tool(
-            name="delete_category",
-            description="Delete a category. Confirm with the user first.",
-            inputSchema={
-                "type": "object",
-                "properties": {"id": {"type": "string", "description": "Category UUID."}},
-                "required": ["id"],
-            },
-        ),
-        # ── Podcasts ────────────────────────────────────────────────────────
-        types.Tool(
-            name="list_podcast_shows",
-            description="List configured podcast shows, with schedule, language, and public feed URL when enabled.",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="list_podcast_episodes",
-            description=(
-                "List generated podcast episodes, newest first: status, duration, and "
-                "shownote story titles."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {"page_size": {"type": "integer", "description": "Max episodes (default 10)."}},
-            },
-        ),
-        types.Tool(
-            name="generate_podcast_episode",
-            description=(
-                "Queue an episode for a show right now, instead of waiting for its daily "
-                "schedule. Returns once queued -- generation (LLM script + TTS) runs in "
-                "the background and takes minutes; poll list_podcast_episodes for status."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {"show_id": {"type": "string", "description": "Show UUID (see list_podcast_shows)."}},
-                "required": ["show_id"],
-            },
-        ),
-        types.Tool(
-            name="get_podcast_feed_url",
-            description=(
-                "Get a show's public RSS URL for subscribing in a podcast app, enabling it "
-                "if needed. This creates an UNAUTHENTICATED link -- anyone holding it can "
-                "fetch the show's audio. Confirm with the user before enabling."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "show_id": {"type": "string", "description": "Show UUID."},
-                    "enable": {"type": "boolean", "description": "Enable the feed if not already on (default false)."},
-                },
-                "required": ["show_id"],
-            },
-        ),
-        # ── Trends ──────────────────────────────────────────────────────────
-        types.Tool(
-            name="keyword_momentum",
-            description=(
-                "Which topics in the feed are gaining or losing ground -- answers 'what's "
-                "rising this month?' without needing to know what to look for. Ranks "
-                "keywords by relative growth over weekly (8 buckets) and monthly (6 "
-                "buckets) windows, and flags newcomers/dormant keywords."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "direction": {"type": "string", "enum": ["rising", "falling"], "description": "Default rising."},
-                    "limit": {"type": "integer", "description": "Max keywords to report (default 15)."},
-                },
-            },
-        ),
-        types.Tool(
-            name="keyword_trend",
-            description=(
-                "Day-by-day coverage counts for keywords you already have in mind. Each "
-                "topic OR-matches its keyword list, so one topic can be a single keyword "
-                "or a group of synonyms. Use keyword_momentum instead to discover topics."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "topics": {
-                        "type": "array",
-                        "description": "1-6 topics, each {label, keywords[]}.",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "label": {"type": "string"},
-                                "keywords": {"type": "array", "items": {"type": "string"}},
-                            },
-                            "required": ["label", "keywords"],
-                        },
-                    },
-                    "days": {"type": "integer", "description": "Lookback window; omit for all time."},
-                },
-                "required": ["topics"],
-            },
-        ),
-    ]
-
-
-@server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
-    try:
-        result = _handle(name, arguments)
-    except httpx.HTTPStatusError as exc:
-        result = f"API error {exc.response.status_code}: {exc.response.text}"
-    except Exception as exc:
-        result = f"Error: {exc}"
-    return [types.TextContent(type="text", text=result)]
-
 
 def _handle(name: str, args: dict) -> str:
     if name == "get_feed":
@@ -977,16 +508,322 @@ def _handle(name: str, args: dict) -> str:
     return f"Unknown tool: {name}"
 
 
-async def main():
-    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            server.create_initialization_options(),
-        )
+# ── Tool surface ────────────────────────────────────────────────────────────
+#
+# mcp 2.x derives a tool's input schema from the Python signature and its
+# description from the docstring, replacing the hand-written JSON schemas the
+# 1.x low-level API needed. Each tool below is a thin typed wrapper over
+# _handle(), which keeps every tool's behaviour in one dispatcher and makes
+# the signature the single source of truth for the schema -- under 1.x the
+# schema and the handler branch were separate and could drift apart.
+#
+# Optional arguments default to None and are stripped before dispatch,
+# because several handlers distinguish "absent" from "explicitly set"
+# (update_source's partial patch, keyword_trend's days=None meaning all time).
+
+mcp = MCPServer("shoebill-feed")
+
+
+def _call(_tool: str, /, **kwargs: Any) -> str:
+    """Dispatch to _handle, dropping unset optional arguments, and turn API
+    failures into readable text rather than a protocol-level error.
+
+    The tool name is positional-only: four tools take a parameter literally
+    called `name` (add_source, update_source, add_category, update_category),
+    which would otherwise collide with this function's own first argument.
+    """
+    args = {k: v for k, v in kwargs.items() if v is not None}
+    try:
+        return _handle(_tool, args)
+    except httpx.HTTPStatusError as exc:
+        return f"API error {exc.response.status_code}: {exc.response.text}"
+    except Exception as exc:
+        return f"Error: {exc}"
+
+
+# ── Reading ─────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def get_feed(
+    tab: str = "newest",
+    page_size: int = 20,
+    unread_only: bool = False,
+    category_ids: list[str] | None = None,
+    source_ids: list[str] | None = None,
+) -> str:
+    """Read the news feed. `tab` is newest, relevant, impact, or read_later.
+    Multi-source stories come back with a cluster:<uuid> ID -- pass that
+    whole string back to any action tool."""
+    return _call("get_feed", tab=tab, page_size=page_size, unread_only=unread_only,
+                 category_ids=category_ids, source_ids=source_ids)
+
+
+@mcp.tool()
+def search_news(query: str, page_size: int = 50, sort: str = "newest") -> str:
+    """Full-text search across article titles and abstracts. `sort` is
+    newest, relevant, or impact. Returns articles only, never clusters."""
+    return _call("search_news", query=query, page_size=page_size, sort=sort)
+
+
+@mcp.tool()
+def get_item(id: str) -> str:
+    """Full details for one article or cluster, including its raw content.
+    Pass the ID exactly as the feed showed it, cluster: prefix included."""
+    return _call("get_item", id=id)
+
+
+@mcp.tool()
+def get_digest(tab: str = "relevant", page_size: int = 10) -> str:
+    """A short readable digest of the top items, for summarizing the day."""
+    return _call("get_digest", tab=tab, page_size=page_size)
+
+
+# ── Acting on articles ──────────────────────────────────────────────────────
+
+@mcp.tool()
+def mark_read(id: str) -> str:
+    """Mark an article or cluster as read. Idempotent."""
+    return _call("mark_read", id=id)
+
+
+@mcp.tool()
+def mark_unread(id: str) -> str:
+    """Mark an article or cluster as unread. Idempotent."""
+    return _call("mark_unread", id=id)
+
+
+@mcp.tool()
+def mark_all_read() -> str:
+    """Mark every unread article and cluster as read."""
+    return _call("mark_all_read")
+
+
+@mcp.tool()
+def like(id: str) -> str:
+    """Mark an article or cluster relevant. This trains ranking: it raises
+    the learned weight of its categories and keywords. Idempotent."""
+    return _call("like", id=id)
+
+
+@mcp.tool()
+def dislike(id: str) -> str:
+    """Mark an article or cluster as not relevant, downgrading similar
+    future articles."""
+    return _call("dislike", id=id)
+
+
+@mcp.tool()
+def bookmark(id: str) -> str:
+    """Add an article or cluster to Read Later. Idempotent. Read Later also
+    exempts it from the 30-day cleanup sweep."""
+    return _call("bookmark", id=id)
+
+
+@mcp.tool()
+def unbookmark(id: str) -> str:
+    """Remove an article or cluster from Read Later. Idempotent."""
+    return _call("unbookmark", id=id)
+
+
+# ── Learning profile ────────────────────────────────────────────────────────
+
+@mcp.tool()
+def get_learning_profile() -> str:
+    """What Shoebill has learned about the user's interests: per-category
+    learned and manual weights with how many articles were marked in each,
+    plus top learned keyword weights. Use this to explain WHY something ranks
+    highly, or before adjusting a preference."""
+    return _call("get_learning_profile")
+
+
+@mcp.tool()
+def set_category_weight(category_id: str, manual_weight: float) -> str:
+    """Set a category's manual weight multiplier (0.0-5.0). This is the
+    user-controlled dial; it multiplies the separately learned weight rather
+    than replacing it. 1.0 is neutral, 0.0 suppresses the category."""
+    return _call("set_category_weight", category_id=category_id, manual_weight=manual_weight)
+
+
+@mcp.tool()
+def forget_keyword(keyword: str) -> str:
+    """Delete a learned keyword weight so it stops influencing ranking. Use
+    when a keyword was learned by accident."""
+    return _call("forget_keyword", keyword=keyword)
+
+
+# ── Sources ─────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def list_sources() -> str:
+    """List configured news sources with their type and article counts."""
+    return _call("list_sources")
+
+
+@mcp.tool()
+def add_source(
+    name: str,
+    source_type: str,
+    config: dict,
+    fetch_interval: int | None = None,
+) -> str:
+    """Add a news source. `source_type` is one of rss, atom, reddit, email,
+    mastodon, arxiv, lemmy, github, bluesky, telegram, scraper. `config` is
+    type-specific: rss/atom take {"url": ...}, reddit {"subreddit": ...},
+    arxiv {"query": ...}. For a plain website with no feed, call
+    suggest_scraper_config first."""
+    return _call("add_source", name=name, source_type=source_type, config=config,
+                 fetch_interval=fetch_interval)
+
+
+@mcp.tool()
+def update_source(
+    id: str,
+    name: str | None = None,
+    config: dict | None = None,
+    is_active: bool | None = None,
+    fetch_interval: int | None = None,
+) -> str:
+    """Rename a source, change its config, pause/resume it, or change its
+    fetch interval. Only the fields you pass are changed."""
+    return _call("update_source", id=id, name=name, config=config,
+                 is_active=is_active, fetch_interval=fetch_interval)
+
+
+@mcp.tool()
+def delete_source(id: str) -> str:
+    """Permanently delete a source and its articles. Confirm with the user
+    first -- this cannot be undone."""
+    return _call("delete_source", id=id)
+
+
+@mcp.tool()
+def fetch_source(id: str) -> str:
+    """Fetch one source immediately, rather than trigger_fetch's
+    every-source sweep. Use after adding a source to confirm it works."""
+    return _call("fetch_source", id=id)
+
+
+@mcp.tool()
+def trigger_fetch() -> str:
+    """Fetch every active source now instead of waiting for the 5-minute
+    cycle."""
+    return _call("trigger_fetch")
+
+
+@mcp.tool()
+def list_shared_sources() -> str:
+    """List sources other users on this instance have made shareable."""
+    return _call("list_shared_sources")
+
+
+@mcp.tool()
+def suggest_scraper_config(url: str) -> str:
+    """Inspect a page and suggest CSS selectors for a `scraper` source. Use
+    for sites with no RSS feed, then pass the result to add_source."""
+    return _call("suggest_scraper_config", url=url)
+
+
+@mcp.tool()
+def export_sources() -> str:
+    """Export every source as JSON, for backup or moving instances."""
+    return _call("export_sources")
+
+
+# ── Categories ──────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def list_categories() -> str:
+    """List categories with their keywords and article counts."""
+    return _call("list_categories")
+
+
+@mcp.tool()
+def add_category(
+    name: str,
+    keywords: list[str] | None = None,
+    color: str | None = None,
+    prompt: str | None = None,
+) -> str:
+    """Create a category. Categories gate what the LLM bothers to summarize:
+    classification runs first, and an article matching no category never gets
+    an abstract generated."""
+    return _call("add_category", name=name, keywords=keywords, color=color, prompt=prompt)
+
+
+@mcp.tool()
+def update_category(
+    id: str,
+    name: str | None = None,
+    keywords: list[str] | None = None,
+    color: str | None = None,
+    prompt: str | None = None,
+    is_active: bool | None = None,
+) -> str:
+    """Rename a category, change its keywords/color/prompt, or deactivate
+    it. Only the fields you pass are changed."""
+    return _call("update_category", id=id, name=name, keywords=keywords,
+                 color=color, prompt=prompt, is_active=is_active)
+
+
+@mcp.tool()
+def delete_category(id: str) -> str:
+    """Delete a category. Confirm with the user first."""
+    return _call("delete_category", id=id)
+
+
+# ── Podcasts ────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def list_podcast_shows() -> str:
+    """List podcast shows with schedule, language, and public feed URL."""
+    return _call("list_podcast_shows")
+
+
+@mcp.tool()
+def list_podcast_episodes(page_size: int = 10) -> str:
+    """List generated episodes, newest first: status, duration, and
+    shownote story titles."""
+    return _call("list_podcast_episodes", page_size=page_size)
+
+
+@mcp.tool()
+def generate_podcast_episode(show_id: str) -> str:
+    """Queue an episode for a show now, instead of waiting for its daily
+    schedule. Returns once queued; generation takes minutes, so poll
+    list_podcast_episodes for status."""
+    return _call("generate_podcast_episode", show_id=show_id)
+
+
+@mcp.tool()
+def get_podcast_feed_url(show_id: str, enable: bool = False) -> str:
+    """Get a show's public RSS URL for a podcast app, enabling it if asked.
+    The resulting link is UNAUTHENTICATED -- anyone holding it can fetch the
+    audio -- so it refuses to enable without enable=true."""
+    return _call("get_podcast_feed_url", show_id=show_id, enable=enable)
+
+
+# ── Trends ──────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def keyword_momentum(direction: str = "rising", limit: int = 15) -> str:
+    """Which topics are gaining or losing ground -- answers "what's rising
+    this month?" without needing to know what to look for. `direction` is
+    rising or falling. Flags newcomers and newly dormant keywords."""
+    return _call("keyword_momentum", direction=direction, limit=limit)
+
+
+@mcp.tool()
+def keyword_trend(topics: list[dict], days: int | None = None) -> str:
+    """Day-by-day coverage counts for keywords already in mind. Each topic is
+    {"label": str, "keywords": [str]} and OR-matches its keywords, so one
+    topic can be a synonym group. Omit `days` for all time. Use
+    keyword_momentum instead to discover topics."""
+    return _call("keyword_trend", topics=topics, days=days)
+
+
+def main() -> None:
+    mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
-    import asyncio
-
-    asyncio.run(main())
+    main()
