@@ -523,6 +523,78 @@ def _handle(name: str, args: dict) -> str:
 
 mcp = MCPServer("shoebill-feed")
 
+# Which scope each tool's underlying API calls need. Kept in lockstep with
+# backend/app/services/token_scopes.py -- a tool listed under the wrong scope
+# here is only a cosmetic bug, because the API enforces the real boundary and
+# would reject the call anyway; the cost is a tool the model can see and
+# cannot use.
+_TOOL_SCOPES: dict[str, str] = {
+    'get_feed': 'read',
+    'search_news': 'read',
+    'get_item': 'read',
+    'get_digest': 'read',
+    'mark_read': 'act',
+    'mark_unread': 'act',
+    'mark_all_read': 'act',
+    'like': 'act',
+    'dislike': 'act',
+    'bookmark': 'act',
+    'unbookmark': 'act',
+    'get_learning_profile': 'learning',
+    'set_category_weight': 'learning',
+    'forget_keyword': 'learning',
+    'list_sources': 'read',
+    'add_source': 'curate',
+    'update_source': 'curate',
+    'delete_source': 'curate',
+    'fetch_source': 'curate',
+    'trigger_fetch': 'curate',
+    'list_shared_sources': 'read',
+    'suggest_scraper_config': 'curate',
+    'export_sources': 'curate',
+    'list_categories': 'read',
+    'add_category': 'curate',
+    'update_category': 'curate',
+    'delete_category': 'curate',
+    'list_podcast_shows': 'podcasts',
+    'list_podcast_episodes': 'podcasts',
+    'generate_podcast_episode': 'podcasts',
+    'get_podcast_feed_url': 'podcasts',
+    'keyword_momentum': 'stats',
+    'keyword_trend': 'stats',
+}
+
+
+def _granted_scopes() -> list[str] | None:
+    """Scopes of the token we hold, or None for unrestricted.
+
+    /api/settings/token-scopes is ungated precisely so this works for a
+    restricted token. Any failure (old server without the endpoint, network
+    blip) returns None: better to offer every tool and let the API reject
+    what isn't permitted than to silently hide the whole surface.
+    """
+    try:
+        return _get("/settings/token-scopes").get("scopes")
+    except Exception:
+        return None
+
+
+def _apply_scope_filter() -> None:
+    """Remove tools this token cannot use, so the model isn't offered them.
+
+    Purely a usability layer. The security boundary is the API's own scope
+    check, which applies whether or not a client bothers to filter -- see
+    the module docstring in backend/app/services/token_scopes.py.
+    """
+    granted = _granted_scopes()
+    if granted is None:
+        return
+    allowed = set(granted)
+    for tool_name, needed in _TOOL_SCOPES.items():
+        if needed not in allowed:
+            mcp.remove_tool(tool_name)
+
+
 
 def _call(_tool: str, /, **kwargs: Any) -> str:
     """Dispatch to _handle, dropping unset optional arguments, and turn API
@@ -822,6 +894,8 @@ def keyword_trend(topics: list[dict], days: int | None = None) -> str:
 
 
 def main() -> None:
+    # After registration, so every tool exists before any is removed.
+    _apply_scope_filter()
     mcp.run(transport="stdio")
 
 
