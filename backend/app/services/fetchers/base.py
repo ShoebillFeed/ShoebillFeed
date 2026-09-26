@@ -23,6 +23,12 @@ class RawNewsItem:
     raw_content: str
     published_at: datetime | None
     image_url: str | None = None
+    # Keywords the SOURCE itself supplied (arXiv subject categories, say),
+    # as opposed to the ones the LLM infers later. Persisted separately on
+    # NewsItem.source_keywords and merged into extracted_keywords at
+    # processing time -- the LLM overwrites extracted_keywords wholesale, so
+    # anything stored there up front would be clobbered.
+    keywords: list[str] | None = None
 
 
 class NewsFetcher(ABC):

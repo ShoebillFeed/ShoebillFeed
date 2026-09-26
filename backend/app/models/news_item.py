@@ -35,6 +35,11 @@ class NewsItem(Base):
     raw_content: Mapped[str | None] = mapped_column(Text, nullable=True)
     abstract: Mapped[str | None] = mapped_column(Text, nullable=True)
     extracted_keywords: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
+    # Keywords the source supplied itself (arXiv subject categories), kept
+    # apart from extracted_keywords because LLM processing overwrites that
+    # column wholesale and would otherwise clobber them. Merged into it at
+    # processing time; see tasks/process_tasks.py.
+    source_keywords: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
     source_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)

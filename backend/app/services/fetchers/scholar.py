@@ -6,6 +6,7 @@ from urllib.parse import quote_plus
 import feedparser
 from bs4 import BeautifulSoup
 
+from app.services.fetchers.arxiv_categories import category_label
 from app.services.fetchers.base import NewsFetcher, RawNewsItem, register_fetcher, socket_timeout
 
 logger = logging.getLogger(__name__)
@@ -60,11 +61,28 @@ class ScholarFetcher(NewsFetcher):
                     raw_content=content,
                     published_at=published_at,
                     image_url=None,
+                    keywords=self._categories(entry),
                 ))
             except Exception:
                 logger.exception("Error parsing scholar entry %s", entry.get("link"))
 
         return items
+
+    def _categories(self, entry) -> list[str] | None:
+        """arXiv's own subject tags, as readable labels.
+
+        These are curated and stable, which makes them better clustering
+        signal than inferred keywords -- two papers both tagged cs.CL and
+        cs.LG are reliably related, where two LLM keyword sets describing the
+        same idea can disagree on wording. Deduplicated because a paper's
+        primary category is usually repeated among its cross-lists.
+        """
+        labels: list[str] = []
+        for tag in entry.get("tags", []) or []:
+            label = category_label(tag.get("term", "") if isinstance(tag, dict) else str(tag))
+            if label and label not in labels:
+                labels.append(label)
+        return labels or None
 
     def _extract_content(self, entry) -> str:
         for key in ("content", "summary_detail", "summary"):

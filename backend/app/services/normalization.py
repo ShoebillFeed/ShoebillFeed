@@ -24,6 +24,31 @@ def _lemmatize_word(word: str) -> str:
     return _lemmatizer.lemmatize(word, pos="v")
 
 
+def merge_keywords(primary: list[str] | None, extra: list[str] | None) -> list[str] | None:
+    """Combine two keyword lists, `primary` first, dropping case-insensitive
+    duplicates. Returns None for an empty result so the column stays NULL
+    rather than holding an empty array.
+
+    Used to fold source-supplied keywords (NewsItem.source_keywords) into the
+    LLM's own output at processing time. Compared case-insensitively rather
+    than via normalize_keyword(): this guards the stored, human-readable list
+    against visible near-duplicates, while normalization is what the
+    clustering and weight code applies when it needs canonical forms.
+    """
+    merged: list[str] = []
+    seen: set[str] = set()
+    for kw in list(primary or []) + list(extra or []):
+        cleaned = (kw or "").strip()
+        if not cleaned:
+            continue
+        key = cleaned.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(cleaned)
+    return merged or None
+
+
 def normalize_keyword(kw: str) -> str:
     """Normalize a keyword or keyphrase to its canonical form.
 

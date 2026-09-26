@@ -83,6 +83,7 @@ def _save_items_for_source(
             raw_content=raw.raw_content,
             published_at=raw.published_at,
             image_url=donor.image_url if donor and donor.image_url else raw.image_url,
+            source_keywords=raw.keywords,
         )
 
         if donor and donor.abstract:

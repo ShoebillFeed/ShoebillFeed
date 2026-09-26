@@ -13,6 +13,7 @@ from app.models.category_weight import CategoryWeight
 from app.models.user import User
 from app.models.llm_batch import LLMBatch
 from app.models.user_settings import UserSettings
+from app.services.normalization import merge_keywords
 from app.services.clustering import recluster_processed_item
 from app.services.scoring import decay_learned_weights
 from app.services.deduplication import url_hash
@@ -231,7 +232,10 @@ def process_news_item(self, news_item_id: str) -> None:
                 # No category matched → skip Stage 2, use raw content as abstract
                 result = stage1
                 item.abstract = item.raw_content or item.title
-        item.extracted_keywords = result.keywords or None
+        # Source-supplied keywords are merged in rather than overwritten, and
+        # read from their own column rather than from extracted_keywords, so
+        # reprocessing an item can't accumulate stale LLM output.
+        item.extracted_keywords = merge_keywords(result.keywords, item.source_keywords)
         item.relevance_score = result.relevance_score
         item.impact_score = result.impact_score
         item.llm_processed = True
@@ -349,7 +353,13 @@ def process_cluster(self, cluster_id: str) -> None:
 
         cluster.title = result.title
         cluster.unified_abstract = result.unified_abstract
-        cluster.extracted_keywords = result.keywords or None
+        # Union of the members' source keywords: a cluster of arXiv papers
+        # should keep their taxonomy, not lose it by being clustered.
+        member_source_keywords: list[str] = []
+        for member in items:
+            for kw in member.source_keywords or []:
+                member_source_keywords.append(kw)
+        cluster.extracted_keywords = merge_keywords(result.keywords, member_source_keywords)
         cluster.relevance_score = result.relevance_score
         cluster.impact_score = result.impact_score
         cluster.llm_processed = True

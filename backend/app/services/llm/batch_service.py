@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import NewsItem, NewsCluster, Source, Category
+from app.services.normalization import merge_keywords
 from app.models.llm_batch import LLMBatch
 from app.services.llm.usage import record_request
 from app.models.category_weight import CategoryWeight
@@ -67,6 +68,7 @@ def propagate_llm_results(db: Session, donor: "NewsItem") -> int:
     for item in recipients:
         item.abstract = donor.abstract
         item.extracted_keywords = donor.extracted_keywords
+        item.source_keywords = item.source_keywords or donor.source_keywords
         item.impact_score = donor.impact_score
         item.relevance_score = donor.relevance_score
         item.llm_processed = True
@@ -323,7 +325,7 @@ def _apply_item_group_result(db: Session, meta: dict, text: str, provider_name: 
             if result.generated_title:
                 item.title = result.generated_title
 
-        item.extracted_keywords = result.keywords or None
+        item.extracted_keywords = merge_keywords(result.keywords, item.source_keywords)
         item.relevance_score = result.relevance_score
         item.impact_score = result.impact_score
         item.llm_processed = True
