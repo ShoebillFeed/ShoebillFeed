@@ -41,6 +41,7 @@ def generate_api_token() -> tuple[str, str]:
 def get_current_user(request: Request, db: Session = Depends(get_db)):
     from app.models.user import User
     from app.models.api_token import ApiToken
+    from app.services.token_scopes import ScopeDenied, check_request
 
     # Bearer token takes priority over cookie
     auth_header = request.headers.get("Authorization", "")
@@ -52,6 +53,30 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         )
         if not api_token:
             raise HTTPException(status_code=401, detail="Invalid API token")
+        # Scope check before anything else this token could touch. Done here
+        # rather than per-route because this is the only place that knows the
+        # request authenticated with a token rather than a browser session --
+        # and because the MCP server is a client holding one of these, so
+        # filtering tools there would be cosmetic. See token_scopes.py.
+        route = request.scope.get("route")
+        route_path = getattr(route, "path", None) or request.url.path
+        try:
+            check_request(api_token.scopes, request.method, route_path)
+        except ScopeDenied as denied:
+            if denied.scope is None:
+                raise HTTPException(
+                    status_code=403,
+                    detail="API tokens cannot access this endpoint",
+                )
+            raise HTTPException(
+                status_code=403,
+                detail=f"This API token lacks the '{denied.scope}' scope",
+            )
+
+        # Exposed for /api/settings/token-scopes, which reports a token its
+        # own capabilities; nothing else should reach for this.
+        request.state.api_token = api_token
+
         api_token.last_used_at = datetime.now(timezone.utc)
         db.commit()
         user = db.scalar(

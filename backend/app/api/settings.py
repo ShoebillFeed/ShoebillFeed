@@ -1,5 +1,5 @@
 import redis as redis_lib
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,7 @@ from app.schemas.news_item import (
 )
 from app.schemas.user_settings import UserSettingsOut, UserSettingsUpdate
 from app.services.llm.factory import get_llm_provider
+from app.services.token_scopes import ALL_SCOPES
 
 router = APIRouter()
 
@@ -99,6 +100,26 @@ def podcast_health_check():
         network_configured=bool(settings.tts_service_url),
         engine=engine,
     )
+
+
+@router.get("/token-scopes")
+def get_token_scopes(request: Request, current_user: User = Depends(get_current_user)):
+    """What the *calling credential* is allowed to do.
+
+    Lets an MCP client hide tools it cannot use. That is a usability layer,
+    not a security boundary -- the boundary is the scope check in
+    services/auth.py, which applies whether or not a client bothers to ask.
+
+    Ungated on purpose (see token_scopes.py): a token restricted to, say,
+    `read` still has to be able to discover that. A cookie session reports
+    `scopes: null`, same as an unrestricted token, since scopes only ever
+    limit tokens.
+    """
+    api_token = getattr(request.state, "api_token", None)
+    return {
+        "scopes": api_token.scopes if api_token else None,
+        "all_scopes": [{"key": k, "description": d} for k, d in ALL_SCOPES.items()],
+    }
 
 
 def _build_llm_config() -> LLMConfigOut:
