@@ -1,0 +1,38 @@
+name: MCP server tests
+
+# The MCP server had no CI at all: ~900 lines and 33 tools whose only
+# verification was running it by hand. It talks to the app purely over HTTP,
+# so it needs no database or services -- every test stubs the HTTP layer.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mcp_server/**"
+      - ".github/workflows/mcp-tests.yml"
+  pull_request:
+    paths:
+      - "mcp_server/**"
+      - ".github/workflows/mcp-tests.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp_server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: mcp_server/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest
