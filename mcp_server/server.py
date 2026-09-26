@@ -9,7 +9,7 @@ Configuration (environment variables):
   SHOEBILL_API_TOKEN  API token generated in Settings → Preferences → API Tokens
 
 Run with:
-  uv run --with mcp --with httpx server.py
+  uv run --with 'mcp<2' --with httpx server.py
   # or after: pip install mcp httpx
   python server.py
 """
