@@ -139,6 +139,15 @@ parameters behind scoring/decay/diversity (see
 external tools — notably the {doc}`mcp-server`, which lets Claude or
 other MCP clients read and interact with your feed.
 
+Each token can be limited to a subset of capabilities — reading, acting on
+articles, curating sources and categories, adjusting learned weights,
+podcasts, and statistics — by ticking the relevant boxes when you create
+it. Leave them all ticked for an unrestricted token. This lets you hand a
+read-only token to one client and a fully-privileged one to another, and
+revoking either is just deleting that token. A token's permissions are
+shown as badges in the list, and no token can manage tokens regardless of
+its permissions. See {doc}`mcp-server` for what each one covers.
+
 ## Notifications
 
 Push notifications (Web Push — see {doc}`configuration` for the VAPID

@@ -159,6 +159,16 @@ reachable under a `"scholar"` type name — that legacy alias has since
 been removed; any existing sources that used it were migrated to
 `"arxiv"` automatically).
 
+arXiv papers also keep their own subject categories. arXiv tags every
+paper with a curated taxonomy (`cs.LG`, `quant-ph`, …), and those tags are
+translated to readable labels — `cs.LG` becomes "machine learning" — and
+merged into the paper's keywords alongside the ones the LLM infers. This
+gives clustering a much steadier signal than inferred wording alone: two
+papers both tagged `cs.CL` and `cs.LG` are reliably related, where two
+generated keyword sets describing the same idea can disagree on phrasing.
+Categories outside the curated list fall back to their archive name
+(`math.AT` → "mathematics"), so nothing is silently dropped.
+
 ## Telegram
 
 ```{code-block} json
