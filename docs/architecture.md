@@ -32,6 +32,17 @@ shared external network.
    {doc}`llm-providers` for the two-stage/batch/newsletter logic, and
    {doc}`clustering` for the second clustering pass that runs after
    processing.
+
+   Newest articles are processed first. Because the `process` queue is
+   deliberately serialized (one worker, concurrency 1), the order things
+   are queued in decides what reaches your feed first — so both the
+   per-item dispatch and the 15-minute sweep work newest-first, and a
+   backlog surfaces this morning's news before yesterday's leftovers. The
+   tradeoff is inherent to that choice: if articles arrive faster than the
+   LLM can process them for long enough, the oldest ones at the back stop
+   being picked up at all. They stay in the database, just unprocessed, so
+   a persistently growing unprocessed count is the signal that your
+   throughput is under-provisioned.
 3. **Batch polling** (every 2 minutes): checks in on any in-flight
    Anthropic Batch API jobs.
 4. **Weight decay** (daily): learned category/keyword weights decay
