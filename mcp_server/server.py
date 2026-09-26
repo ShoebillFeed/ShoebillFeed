@@ -72,6 +72,40 @@ def _patch(path: str, body: dict | None = None) -> Any:
             return {}
 
 
+# The feed mixes two resource types that live under different API prefixes:
+# standalone articles at /news/{id} and multi-source stories at
+# /clusters/{id}. They were previously rendered identically, so the model
+# would read a cluster's bare UUID out of the feed and every action tool
+# would aim it at /news/{id} -- a 404, i.e. a like or bookmark that silently
+# did nothing on exactly the stories a reader most wants to act on.
+# Cluster IDs are therefore exposed with a "cluster:" prefix, which makes
+# them self-describing: no extra probe request, and no reliance on the model
+# passing a separate kind argument it would have to remember.
+_CLUSTER_PREFIX = "cluster:"
+
+
+def _is_cluster(entry: dict) -> bool:
+    return entry.get("kind") == "cluster"
+
+
+def _exposed_id(entry: dict) -> str:
+    """The ID string handed to the model for a feed entry."""
+    return (_CLUSTER_PREFIX if _is_cluster(entry) else "") + str(entry["id"])
+
+
+def _resolve_id(raw: str) -> tuple[str, str]:
+    """Split an exposed ID into (api_prefix, plain_id).
+
+    A bare UUID stays an article, so IDs from search results (which are
+    always articles -- /news/search returns no clusters) keep working
+    untouched.
+    """
+    raw = (raw or "").strip()
+    if raw.startswith(_CLUSTER_PREFIX):
+        return "/clusters", raw[len(_CLUSTER_PREFIX):].strip()
+    return "/news", raw
+
+
 def _fmt_item(item: dict) -> str:
     lines = []
     if item.get("title"):
@@ -79,12 +113,21 @@ def _fmt_item(item: dict) -> str:
     cats = ", ".join(c["name"] for c in item.get("categories", []))
     if cats:
         lines.append(f"Categories: {cats}")
-    if item.get("abstract"):
-        lines.append(item["abstract"])
+    # A cluster carries unified_abstract, not abstract -- reading only the
+    # latter meant clustered stories previously showed no summary at all.
+    abstract = item.get("abstract") or item.get("unified_abstract")
+    if abstract:
+        lines.append(abstract)
     if item.get("url"):
         lines.append(f"URL: {item['url']}")
     meta = []
-    if item.get("source"):
+    if _is_cluster(item):
+        members = item.get("items", [])
+        names = [m["source"]["name"] for m in members if m.get("source")]
+        # Clusters have no top-level source; the member sources are the
+        # point of a cluster, so name them rather than showing nothing.
+        meta.append(f"{len(members)} sources" + (f" ({', '.join(names)})" if names else ""))
+    elif item.get("source"):
         meta.append(item["source"]["name"])
     if item.get("relevance_score"):
         meta.append(f"Relevance: {item['relevance_score']}/10")
@@ -103,7 +146,12 @@ def _fmt_item(item: dict) -> str:
         flags.append("bookmarked")
     if flags:
         lines.append(f"[{', '.join(flags)}]")
-    lines.append(f"ID: {item['id']}")
+    lines.append(f"ID: {_exposed_id(item)}")
+    if _is_cluster(item):
+        for member in item.get("items", []):
+            title = member.get("title") or ""
+            url = member.get("url") or ""
+            lines.append(f"  - {title} ({url})")
     return "\n".join(lines)
 
 
@@ -196,7 +244,7 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "id": {"type": "string", "description": "Article ID (UUID)."},
+                    "id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."},
                 },
                 "required": ["id"],
             },
@@ -206,7 +254,7 @@ async def list_tools() -> list[types.Tool]:
             description="Mark a news article as read (if not already read).",
             inputSchema={
                 "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID."}},
+                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
                 "required": ["id"],
             },
         ),
@@ -215,7 +263,7 @@ async def list_tools() -> list[types.Tool]:
             description="Mark a news article as unread (if currently read).",
             inputSchema={
                 "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID."}},
+                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
                 "required": ["id"],
             },
         ),
@@ -232,7 +280,7 @@ async def list_tools() -> list[types.Tool]:
             ),
             inputSchema={
                 "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID."}},
+                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
                 "required": ["id"],
             },
         ),
@@ -241,7 +289,7 @@ async def list_tools() -> list[types.Tool]:
             description="Dislike a news article to downgrade similar future articles.",
             inputSchema={
                 "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID."}},
+                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
                 "required": ["id"],
             },
         ),
@@ -250,7 +298,7 @@ async def list_tools() -> list[types.Tool]:
             description="Add a news article to Read Later.",
             inputSchema={
                 "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID."}},
+                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
                 "required": ["id"],
             },
         ),
@@ -259,7 +307,7 @@ async def list_tools() -> list[types.Tool]:
             description="Remove a news article from Read Later.",
             inputSchema={
                 "type": "object",
-                "properties": {"id": {"type": "string", "description": "Article ID."}},
+                "properties": {"id": {"type": "string", "description": "Article ID, exactly as shown in the feed. Multi-source stories are prefixed cluster:<uuid> -- pass the whole string through unchanged."}},
                 "required": ["id"],
             },
         ),
@@ -352,46 +400,61 @@ def _handle(name: str, args: dict) -> str:
         return f"Results for '{query}':\n\n" + "\n\n---\n\n".join(_fmt_item(i) for i in items)
 
     if name == "get_item":
-        item = _get(f"/news/{args['id']}")
+        base, ident = _resolve_id(args["id"])
+        item = _get(f"{base}/{ident}")
         lines = [_fmt_item(item)]
         if item.get("raw_content"):
             lines.append(f"\nContent:\n{item['raw_content'][:3000]}")
         return "\n".join(lines)
 
     if name == "mark_read":
-        item = _get(f"/news/{args['id']}")
+        base, ident = _resolve_id(args["id"])
+        item = _get(f"{base}/{ident}")
         if not item.get("is_read"):
-            _patch(f"/news/{args['id']}/read")
+            _patch(f"{base}/{ident}/read")
         return "Marked as read."
 
     if name == "mark_unread":
-        item = _get(f"/news/{args['id']}")
+        base, ident = _resolve_id(args["id"])
+        item = _get(f"{base}/{ident}")
         if item.get("is_read"):
-            _patch(f"/news/{args['id']}/read")
+            _patch(f"{base}/{ident}/read")
         return "Marked as unread."
 
     if name == "mark_all_read":
+        # Already covers clusters server-side (api/news.py::mark_all_read
+        # sweeps NewsItem and NewsCluster both), so no routing needed here.
         _post("/news/mark-all-read")
         return "All items marked as read."
 
     if name == "like":
-        _patch(f"/news/{args['id']}/relevant")
+        # Pre-checked like every other action below: /relevant is a toggle,
+        # so an unconditional PATCH turned a second "like" into an un-like.
+        base, ident = _resolve_id(args["id"])
+        item = _get(f"{base}/{ident}")
+        if not item.get("is_relevant"):
+            _patch(f"{base}/{ident}/relevant")
         return "Liked."
 
     if name == "dislike":
-        _patch(f"/news/{args['id']}/dislike")
+        # Not a toggle -- /dislike sets is_read=True, is_relevant=False --
+        # so this one is already idempotent and needs no pre-read.
+        base, ident = _resolve_id(args["id"])
+        _patch(f"{base}/{ident}/dislike")
         return "Disliked."
 
     if name == "bookmark":
-        item = _get(f"/news/{args['id']}")
+        base, ident = _resolve_id(args["id"])
+        item = _get(f"{base}/{ident}")
         if not item.get("read_later"):
-            _patch(f"/news/{args['id']}/read-later")
+            _patch(f"{base}/{ident}/read-later")
         return "Added to Read Later."
 
     if name == "unbookmark":
-        item = _get(f"/news/{args['id']}")
+        base, ident = _resolve_id(args["id"])
+        item = _get(f"{base}/{ident}")
         if item.get("read_later"):
-            _patch(f"/news/{args['id']}/read-later")
+            _patch(f"{base}/{ident}/read-later")
         return "Removed from Read Later."
 
     if name == "get_digest":

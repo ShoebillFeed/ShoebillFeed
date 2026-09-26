@@ -34,6 +34,17 @@ def _get_cluster(cluster_id: uuid.UUID, db: Session, user_id: uuid.UUID) -> News
     return cluster
 
 
+@router.get("/{cluster_id}", response_model=NewsClusterOut)
+def get_cluster(cluster_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Fetch one cluster. The action routes below are all toggles, so any
+    client wanting idempotent "mark read" semantics has to read the current
+    state first -- which was impossible for clusters until this existed
+    (items have had GET /news/{id} all along). The MCP server needs exactly
+    that; see mcp_server/server.py.
+    """
+    return _load(cluster_id, db, current_user.id)
+
+
 @router.patch("/{cluster_id}/read", response_model=NewsClusterOut)
 def toggle_read(cluster_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     cluster = _get_cluster(cluster_id, db, current_user.id)
