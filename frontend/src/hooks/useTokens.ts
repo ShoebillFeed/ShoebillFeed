@@ -8,10 +8,20 @@ export function useTokens() {
   });
 }
 
+export function useTokenScopes() {
+  return useQuery({
+    queryKey: ["tokens", "scopes"],
+    queryFn: tokensApi.scopes,
+    // The scope catalog only changes when the server does.
+    staleTime: Infinity,
+  });
+}
+
 export function useCreateToken() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: tokensApi.create,
+    mutationFn: ({ name, scopes }: { name: string; scopes: string[] | null }) =>
+      tokensApi.create(name, scopes),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tokens"] }),
   });
 }

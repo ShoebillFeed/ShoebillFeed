@@ -6,7 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useAdvancedSettings, useUpdateAdvancedSettings } from "../../hooks/useSettings";
 import { useChangePassword } from "../../hooks/useAuth";
 import { usePreferencesStore } from "../../stores/preferencesStore";
-import { useTokens, useCreateToken, useDeleteToken } from "../../hooks/useTokens";
+import { useTokens, useCreateToken, useDeleteToken, useTokenScopes } from "../../hooks/useTokens";
 import type { ApiTokenCreated } from "../../api/tokens";
 import { Field } from "./SettingsControls";
 import { UI_LANGUAGES, CONTENT_LANGUAGES } from "../../lib/languages";
@@ -107,10 +107,15 @@ function ChangePasswordSection() {
 function ApiTokensContent() {
   const { t } = useTranslation();
   const { data: tokens = [] } = useTokens();
+  const { data: allScopes = [] } = useTokenScopes();
   const createToken = useCreateToken();
   const deleteToken = useDeleteToken();
 
   const [name, setName] = useState("");
+  // Empty set = every box ticked, which is sent as null (unrestricted)
+  // rather than an explicit list, so a token isn't silently frozen against
+  // today's scope list when the server later gains a new capability.
+  const [scopes, setScopes] = useState<string[]>([]);
   const [newToken, setNewToken] = useState<ApiTokenCreated | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -118,10 +123,17 @@ function ApiTokensContent() {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    const result = await createToken.mutateAsync(trimmed);
+    const result = await createToken.mutateAsync({
+      name: trimmed,
+      scopes: scopes.length === allScopes.length ? null : scopes,
+    });
     setNewToken(result);
     setName("");
+    setScopes([]);
   };
+
+  const toggleScope = (key: string) =>
+    setScopes((prev) => (prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]));
 
   const handleCopy = async () => {
     if (!newToken) return;
@@ -153,8 +165,8 @@ function ApiTokensContent() {
       <p className="text-xs text-gray-500 dark:text-gray-400">{t("advanced.apiTokensDesc")}</p>
 
       {/* Create new token */}
-      <form onSubmit={handleCreate} className="flex gap-2 items-end max-w-sm">
-        <div className="flex-1">
+      <form onSubmit={handleCreate} className="flex flex-col gap-3 max-w-lg">
+        <div className="max-w-sm">
           <label className="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">
             {t("advanced.tokenName")}
           </label>
@@ -167,10 +179,36 @@ function ApiTokensContent() {
             maxLength={100}
           />
         </div>
+
+        {allScopes.length > 0 && (
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">
+              {t("advanced.tokenScopes")}
+            </legend>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+              {t("advanced.tokenScopesHint")}
+            </p>
+            {allScopes.map((scope) => (
+              <label key={scope.key} className="flex items-start gap-2 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={scopes.includes(scope.key)}
+                  onChange={() => toggleScope(scope.key)}
+                  className="mt-0.5 shrink-0 accent-indigo-600"
+                />
+                <span>
+                  <code className="font-mono text-gray-700 dark:text-gray-300">{scope.key}</code>
+                  <span className="text-gray-500 dark:text-gray-400"> — {scope.description}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+
         <button
           type="submit"
           disabled={createToken.isPending || !name.trim()}
-          className="px-3 py-2 text-sm font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors shrink-0"
+          className="px-3 py-2 text-sm font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors self-start"
         >
           {createToken.isPending ? "…" : t("advanced.generateToken")}
         </button>
@@ -219,6 +257,26 @@ function ApiTokensContent() {
                       })
                     : t("advanced.tokenNeverUsed")}
                 </p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {tok.scopes === null ? (
+                    <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+                      {t("advanced.tokenScopeAll")}
+                    </span>
+                  ) : tok.scopes.length === 0 ? (
+                    <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                      {t("advanced.tokenScopeNone")}
+                    </span>
+                  ) : (
+                    tok.scopes.map((scope) => (
+                      <span
+                        key={scope}
+                        className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300"
+                      >
+                        {scope}
+                      </span>
+                    ))
+                  )}
+                </div>
               </div>
               <button
                 type="button"
