@@ -3,6 +3,8 @@
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![Backend tests](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/backend-tests.yml)
 [![Frontend tests](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/frontend-tests.yml/badge.svg)](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/frontend-tests.yml)
+[![MCP server tests](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/mcp-tests.yml/badge.svg)](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/mcp-tests.yml)
+[![TTS service tests](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/tts-tests.yml/badge.svg)](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/tts-tests.yml)
 [![Docs](https://github.com/ShoebillFeed/ShoebillFeed/actions/workflows/docs.yml/badge.svg)](https://shoebillfeed.github.io/ShoebillFeed/)
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-sebhoos-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/u/sebhoos)
 
@@ -16,7 +18,9 @@ Full documentation: **https://shoebillfeed.github.io/ShoebillFeed/**
 - **LLM processing** — automatic summaries, keyword extraction, category assignment, relevance/impact scoring, via a local model (Ollama) or a cloud provider (Anthropic), your choice
 - **Relevance learning** — the more you like/dislike articles, the better the feed gets ranked; every learned weight is visible and adjustable in Settings, never a black box
 - **Clustering** — related articles from different sources are grouped into one card with a synthesized summary of the common ground
-- **AI podcast** — configure up to three AI hosts, each with a text-promptable character, to discuss your top stories on a daily schedule; voices are generated locally with Piper, no cloud TTS service required
+- **AI podcast** — configure up to three AI hosts, each with a text-promptable character, to discuss your top stories on a daily schedule; voices are generated locally, no cloud TTS service required. Three engines to choose from (Piper, Kokoro, or Chatterbox's voice cloning), and synthesis can run in-process or be offloaded to a separate machine with a GPU. Episodes are playable in the app or subscribable in any podcast app via a private RSS link
+- **Claude / MCP integration** — a bundled [Model Context Protocol](https://modelcontextprotocol.io/) server exposes your feed to Claude or any MCP client through 33 tools: read and search it, mark and like articles, add sources and categories, ask why something ranks highly and correct it, generate a podcast episode, or find out which topics are gaining ground
+- **Scoped API tokens** — each token can be limited to a subset of capabilities (read, act, curate, learning, podcasts, stats), so a read-only client and a fully-privileged one hold different credentials and revoking either is just deleting that token
 - **Push notifications** — browser push for high-relevance articles
 - **Installable PWA** — add it to your home screen or desktop, works offline with your last-synced feed, and prompts you when an update is available
 - **Dark mode** — full light/dark theme support
@@ -106,14 +110,25 @@ alembic revision --autogenerate -m "description"
 
 ### Tests
 
+Four suites, each run by its own CI workflow on changes to its directory.
+
 ```bash
-# Backend tests run against a real Postgres+pgvector instance:
+# Backend — runs against a real Postgres+pgvector instance:
 docker run -d --rm -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=shoebill_test pgvector/pgvector:pg17
 cd backend
 DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/shoebill_test pytest
 
 cd ../frontend
 npm test     # Vitest
+
+# MCP server — no services needed, every test stubs the HTTP layer:
+cd ../mcp_server
+pip install -r requirements-dev.txt && pytest
+
+# TTS service — install torch from the CPU-only index unless you want the
+# multi-gigabyte CUDA wheels:
+cd ../tts_service
+pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-dev.txt && pytest
 ```
 
 ---
@@ -169,6 +184,14 @@ LLM_PROVIDERS=ollama,anthropic   # try Ollama first, fall back to Anthropic
 | `celery-worker-podcast` | Podcast episode generation queue (script + TTS + audio encoding) |
 | `celery-beat` | Cron scheduler — fetch every 5 min, process every 15 min |
 | `frontend` | React app served by Nginx, proxies `/api` to backend |
+
+Two further components ship in this repo but deliberately run outside that
+stack, each deployed on its own:
+
+| Component | Role |
+|---|---|
+| `mcp_server/` | MCP server exposing your instance to Claude and other MCP clients over its REST API. Needs no database access — it authenticates with an API token like any other client. See [the MCP docs](https://shoebillfeed.github.io/ShoebillFeed/mcp-server.html) |
+| `tts_service/` | Optional standalone TTS container (Piper, Kokoro or Chatterbox) so podcast synthesis can run on different hardware than the Celery workers — the same idea as pointing `OLLAMA_BASE_URL` at a GPU box. Deployed via `docker-compose.tts.yml` |
 
 ---
 
