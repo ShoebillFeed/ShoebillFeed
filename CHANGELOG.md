@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.3.1
+
+A base image update, no application changes.
+
+- **The frontend container moves to nginx's stable branch.** Pinning a
+  minor line (`nginx:1.27-alpine`) had left the only network-facing
+  container in the stack on Alpine 3.21, while the rest of the images had
+  moved on — the backend to Debian 13, the Node build stage to Alpine 3.23.
+  `nginx:stable-alpine` is on Alpine 3.24 and tracks the current Alpine
+  from here on, so this shouldn't need revisiting every few months.
+
+Nothing else was out of date: no tag in the repo is digest-pinned, so every
+build already picks up OS patches within its line, and only this line had
+drifted. Python 3.12 and Node 22 both remain supported.
+
+### Upgrading
+
+Nothing to do beyond pulling the new images. No migrations, no config
+changes.
+
 ## 1.3.0
 
 Largely an MCP release: the server that exposes your feed to Claude went
